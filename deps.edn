@@ -1,0 +1,21 @@
+{:paths ["src/main" "src/dev"]
+ :deps  {}
+
+ :aliases
+ {:dev
+  {:extra-deps {io.github.nubank/morse {:git/tag "v2023.04.30.01" :git/sha "d99b09c"}
+                babashka/process       {:mvn/version "0.5.21"}}}
+
+  :test {:extra-paths ["src/test"]
+         :main-opts   ["-m" "kaocha.runner"]
+         :extra-deps  {com.github.seancorfield/expectations {:mvn/version "2.2.214"}
+                       pjstadig/humane-test-output          {:mvn/version "0.11.0"}
+                       lambdaisland/kaocha                  {:mvn/version "1.91.1392"}}
+         :jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                       "-Dio.netty.tryReflectionSetAccessible=true"]}
+
+  :watch {:exec-fn   kaocha.runner/exec-fn
+          :exec-args {:watch? true}}
+
+  ;; This alias is useful if you need to develop a new hook for a macro
+  :clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "LATEST"}}}}}
