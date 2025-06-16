@@ -1,13 +1,14 @@
-{:binding {:force-nl? true}
- :extend  {:indent 0}
- :map     {:comma?    false
-           :force-nl? true}
- :style   [:justified
-           :rod-no-ma-nl
-           :sort-require
-           :hiccup
-           :extend-nl
-           :map-nl
-           :pair-nl
-           :binding-nl-all
-           :all-hang]}
+{:extend {:indent 0} ;; for extend-protocol et al.  Prevents indentation
+                     ;; there.
+ :map    {:comma?    false ;; no commas in maps
+          :force-nl? true} ;; newlines required in maps
+ :style  [:justified ;; justify pairs
+          :rod-no-ma-nl ;; function formattin
+          :sort-require ;; sorting
+          :hiccup ;; improved hiccup vector formatting
+          :extend-nl ;; require newlines in extend et al
+          :map-nl ;; require newlines in maps
+          :pair-nl ;; require newlines between pairs
+          :binding-nl ;; require newlines in bindings
+          :all-hang ;; hang where possible
+         ]}
