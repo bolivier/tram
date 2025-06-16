@@ -1,0 +1,14 @@
+#!/usr/bin/env bb
+
+(require '[babashka.cli :as cli])
+(require '[tram-cli.core :as tram])
+
+(defn -main [& args]
+  (let [cmd  (first args)
+        args (rest args)]
+    (case cmd
+      "new" (apply tram/new args)
+      (do (println "Unknown command:" cmd)
+          (println "Usage: tram <new|generate|...>")))))
+
+(apply -main *command-line-args*)
