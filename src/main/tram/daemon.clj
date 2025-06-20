@@ -77,14 +77,14 @@
                                        :split-cmd (get-split-cmd cmd)))
                          (catch Exception e
                            (response-for msg
-                                         {:status  #{"error" "done"}
+                                         {:status  #{"exception" "done"}
                                           :message (.getMessage e)
                                           :stdout  (str out)
-                                          :stderr  (str err)})))]
+                                          :stderr  (.getMessage e)})))]
             (transport/send transport
-                            (assoc result
-                              :stdout (str out)
-                              :stderr (str err))))))
+                            (merge {:stdout (str out)
+                                    :stderr (str err)}
+                                   result)))))
       ;; For other ops, delegate to the next handler in the chain:
       (handler msg))))
 
@@ -129,6 +129,6 @@
 
 
 (comment
-  (-main "/home/brandon/code/coverage")
+  (-main)
   (slurp "./tram.edn")
   (stop!))
