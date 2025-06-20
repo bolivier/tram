@@ -33,7 +33,7 @@
 (defn get-env []
   (System/getenv "TRAM_ENV"))
 
-(defn read-config []
+(defn get-tram-config []
   (with-open [r (java.io.PushbackReader. (io/reader (io/file "tram.edn")))]
     (edn/read r)))
 
@@ -42,7 +42,7 @@
    :dbname "tram"})
 
 (defn get-migration-config [env]
-  (let [config (read-config)
+  (let [config (get-tram-config)
         db-key (keyword "database" env)]
     (get config db-key)))
 
