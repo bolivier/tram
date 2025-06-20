@@ -1,5 +1,6 @@
 (ns tram-cli.nrepl-client
-  (:require [bencode.core :as b]))
+  (:require [bencode.core :as b]
+            [tram-cli.daemon-management :as dm]))
 
 (defn bytes->str [x]
   (if (bytes? x)
@@ -38,32 +39,9 @@
 (defn next-id []
   (str (swap! current-id inc)))
 
-(def host "localhost")
-(def port 7888)
-(defn nrepl-alive? [host port]
+(defn raw-send [msg]
   (try
-    (with-open [_ (java.net.Socket. host port)]
-      true)
-    (catch Exception _ false)))
-
-(defn wait-for-shutdown [timeout-ms]
-  (loop [remaining timeout-ms]
-    (if (or (zero? remaining)
-            (not (nrepl-alive? host
-                               port)))
-      (println "Daemon stopped.")
-      (do (Thread/sleep 100)
-          (recur (- remaining
-                    100))))))
-
-(defn start-daemon []
-  (let [_ (.start (ProcessBuilder. ["clojure" "-M" "-m" "tram.daemon"]))]
-    (println "Starting tram daemon...")
-    (Thread/sleep 1000)))
-
-(defn send [msg]
-  (try
-    (let [s   (java.net.Socket. "localhost" (coerce-long port))
+    (let [s   (java.net.Socket. "localhost" (coerce-long dm/default-port))
           out (.getOutputStream s)
           in  (java.io.PushbackInputStream. (.getInputStream s))
           id  (next-id)
@@ -96,3 +74,24 @@
               (recur m))))))
     (catch java.net.ConnectException _
       (println "The tram server isn't running."))))
+
+
+
+(defn send [msg]
+  (dm/ensure-daemon-is-running!)
+  (raw-send msg))
+
+(comment
+  (require '[clojure.java.io :as io])
+  (start-daemon)
+  (loop [times-left 30]
+    (let [ready? (dm/accepting?)]
+      (cond
+        (ready?) (println "Ready")
+        (zero? times-left)
+        (do (println "Server took too long to start")
+            (dm/kill-daemon))
+
+        :else
+        (do (Thread/sleep 1000)
+            (recur (dec times-left)))))))

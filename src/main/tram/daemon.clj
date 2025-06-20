@@ -52,7 +52,13 @@
                    [(str "DROP DATABASE IF EXISTS " db-name)])
     (catch Exception _ nil)))
 
+(defn database-precheck!
+  "Checks on database configuration.
 
+  Creates database if not exists."
+  [db-name]
+  (when-not (database-exists? db-name)
+    (create-database db-name)))
 
 (m/defmulti handle-cmd
   "Handle a cmd from the tram cli client.
@@ -89,6 +95,18 @@ config:generate")}))
                                                  (first (:args msg))))
                                           ::config
                                           (tram/get-zprint-config))}))
+
+(defn msg->env [{:keys [split-cmd]}]
+  (if (and (some? split-cmd)
+           (<= 3
+               (count split-cmd)))
+    (second split-cmd)
+    (tram/get-env)))
+
+(m/defmethod handle-cmd :before
+  ["db" :default :default]
+  [msg]
+  (database-precheck! (tram/get-database-name (msg->env msg))))
 
 (m/defmethod handle-cmd ["db" :default "reset"]
   [msg]
@@ -207,8 +225,10 @@ config:generate")}))
     (println "nREPL stopped")));1
 
 (defn start-tram! []
-  (start!)
-  @(promise))
+  (try
+    (start!)
+    @(promise)
+    (finally (clojure.java.io/delete-file "/tmp/tram-daemon.pid"))))
 
 (defn -main [& args]
   (future (start-tram!)))
