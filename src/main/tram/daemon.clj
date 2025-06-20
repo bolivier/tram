@@ -12,7 +12,6 @@
             [tram.core :as tram]
             [zprint.core :refer [zprint-file-str]]))
 
-
 (t/remove-handler! :default/console)
 (t/add-handler! :default/file (t/handler:file {:path "tram-daemon.log"}))
 
@@ -284,7 +283,6 @@ config:generate")}))
 
 (defn -main [& args]
   (future (start-tram!)))
-
 
 (comment
   (-main)
