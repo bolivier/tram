@@ -3,12 +3,14 @@
             [clojure.string :as str]
             [methodical.core :as m]
             [migratus.core :as migratus]
+            [next.jdbc :as jdbc]
             [nrepl.middleware :refer [set-descriptor!]]
             [nrepl.misc :refer [response-for]]
             [nrepl.server :as nrepl]
             [nrepl.transport :as transport]
             [toucan2.core :as t2]
-            [tram.core :as tram]))
+            [tram.core :as tram]
+            [zprint.core :refer [zprint zprint-file-str]]))
 
 (defn get-from-project
   "Reaches into the namespace `ns`, which exists in the user application (ie. not
@@ -19,18 +21,38 @@
   (when-let [ns-var (resolve (symbol (str ns) (str name)))]
     (deref ns-var)))
 
-(defn seed-database [msg env]
+(defn seed-database [migration-config]
   (let [up (get-from-project 'seeds.init 'up)]
     (if (fn? up)
-      (t2/with-connection [_ (tram/get-database-config env)]
+      (t2/with-connection [_ (:db migration-config)]
         (up))
       (throw
         (ex-info
           "Could not find seed function.  Please create seeds.init/up and try again."
           {})))))
 
-(defn migrate-database [msg env]
-  (migratus/migrate (tram/get-migration-config env)))
+(defn migrate-database [migration-config]
+  (migratus/migrate migration-config))
+
+(defn database-exists? [db-name]
+  (boolean (not-empty (jdbc/execute!
+                        (tram/get-database-config)
+                        ["SELECT 1 FROM pg_database WHERE datname = ?"
+                         db-name]))))
+
+(defn create-database [db-name]
+  (when-not (database-exists? db-name)
+    (jdbc/execute! (tram/get-database-config)
+                   [(str "CREATE DATABASE "
+                         db-name)])))
+
+(defn drop-database [db-name]
+  (try
+    (jdbc/execute! (tram/get-database-config)
+                   [(str "DROP DATABASE IF EXISTS " db-name)])
+    (catch Exception _ nil)))
+
+
 
 (m/defmulti handle-cmd
   "Handle a cmd from the tram cli client.
@@ -44,14 +66,43 @@
 (m/defmethod handle-cmd :default
   [{:keys [cmd]
     :as   msg}]
+  (response-for
+    msg
+    {:status #{"error" "done"}
+     :stdout
+     (str
+       "Unknown command: "
+       cmd
+       "
+
+Supported commands:
+db:env:migrate
+db:env:undo
+
+config:generate")}))
+
+(m/defmethod handle-cmd ["config" "generate"]
+  [msg]
   (response-for msg
-                {:status  #{"error" "done"}
-                 :message (str "Unknown command: " cmd)}))
+                {:status #{"done"}
+                 :stdout (zprint-file-str (str (tram/generate-config
+                                                 (first (:args msg))))
+                                          ::config
+                                          (tram/get-zprint-config))}))
+
+(m/defmethod handle-cmd ["db" :default "reset"]
+  [msg]
+  (let [[_ env] (:split-cmd msg)
+        db-name (tram/get-database-name env)]
+    (drop-database db-name)
+    (create-database db-name)
+    (migrate-database (tram/get-migration-config env))
+    (seed-database (tram/get-migration-config env))))
 
 (m/defmethod handle-cmd ["db" :default "migrate"]
   [msg]
   (let [[_ env] (:split-cmd msg)]
-    (migrate-database msg env)
+    (migrate-database (tram/get-migration-config env))
     (response-for msg
                   {:result "success"
                    :status #{"done"}})))
@@ -59,7 +110,7 @@
 (m/defmethod handle-cmd ["db" :default "seed"]
   [msg]
   (let [[_ env] (:split-cmd msg)]
-    (seed-database msg env)
+    (seed-database (tram/get-migration-config env))
     (response-for msg
                   {:result "success"
                    :status #{"done"}})))

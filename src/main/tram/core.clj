@@ -41,8 +41,11 @@
         db-key (keyword "database" env)]
     (get config db-key)))
 
-(defn get-database-config [env]
-  (get (get-migration-config env) :db))
+(defn get-database-config
+  ([]
+   (get-database-config "development"))
+  ([env]
+   (get (get-migration-config env) :db)))
 
 (defn get-database-name [env]
   (get (get-database-config env) :dbname))
