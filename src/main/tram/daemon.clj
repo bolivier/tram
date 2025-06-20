@@ -47,6 +47,17 @@
                   {:result "success"
                    :status #{"done"}})))
 
+(m/defmethod handle-cmd ["db" :default "create"]
+  [msg]
+  (let [[_ env]        (:split-cmd msg)
+        migration-name (first (:args msg))
+        files          (migratus/create (tram/get-migration-config env)
+                                        migration-name)]
+    (response-for msg
+                  {:result (str "created migration " migration-name)
+                   :stdout (str "Created " (str/join ", " files))
+                   :status #{"done"}})))
+
 (defn get-split-cmd
   "Split cmd into pieces separated by a :.
 

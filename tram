@@ -8,7 +8,8 @@
   (let [cmd (first args)]
     (case cmd
       "new" (println "not yet implemented")
-      (client/send {:op  :tram/op
-                    :cmd cmd}))))
+      (client/send {:op   :tram/op
+                    :cmd  cmd
+                    :args (rest args)}))))
 
 (apply -main *command-line-args*)
