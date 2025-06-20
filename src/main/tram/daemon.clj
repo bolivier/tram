@@ -10,19 +10,36 @@
             [toucan2.core :as t2]
             [tram.core :as tram]))
 
-(defn get-from-project [ns name]
+(defn get-from-project
+  "Reaches into the namespace `ns`, which exists in the user application (ie. not
+  a tram namespace), and grabs the var `name`, then fetches the value of that
+  var and returns it as data or a callable fn. "
+  [ns name]
   (require ns)
-  (deref (resolve (symbol (str ns) (str name)))))
+  (when-let [ns-var (resolve (symbol (str ns) (str name)))]
+    (deref ns-var)))
 
 (defn seed-database [msg env]
   (let [up (get-from-project 'seeds.init 'up)]
-    (t2/with-connection [_ (tram/get-database-config env)]
-      (up))))
+    (if (fn? up)
+      (t2/with-connection [_ (tram/get-database-config env)]
+        (up))
+      (throw
+        (ex-info
+          "Could not find seed function.  Please create seeds.init/up and try again."
+          {})))))
 
 (defn migrate-database [msg env]
   (migratus/migrate (tram/get-migration-config env)))
 
-(m/defmulti handle-cmd :split-cmd)
+(m/defmulti handle-cmd
+  "Handle a cmd from the tram cli client.
+
+   The format for these commands is <category>:<optional-env>:<task>.
+
+   There's no hard requirement for them to only be 3, but the category and optional
+   env in the second position are baked in to the implementation."
+  :split-cmd)
 
 (m/defmethod handle-cmd :default
   [{:keys [cmd]
@@ -43,6 +60,14 @@
   [msg]
   (let [[_ env] (:split-cmd msg)]
     (seed-database msg env)
+    (response-for msg
+                  {:result "success"
+                   :status #{"done"}})))
+
+(m/defmethod handle-cmd ["db" :default "undo"]
+  [msg]
+  (let [[_ env] (:split-cmd msg)]
+    (migratus/rollback (tram/get-migration-config env))
     (response-for msg
                   {:result "success"
                    :status #{"done"}})))
@@ -96,10 +121,9 @@
                             (merge {:stdout (str out)
                                     :stderr (str err)}
                                    result)))))
-      ;; For other ops, delegate to the next handler in the chain:
       (handler msg))))
 
-;; Register middleware descriptor for tooling (e.g. nREPL "describe"):
+;; Required registration for nrepl middleware.
 (set-descriptor!
   #'wrap-tram
   {:requires #{"clone"}
