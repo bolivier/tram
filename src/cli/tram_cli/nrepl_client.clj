@@ -75,23 +75,7 @@
     (catch java.net.ConnectException _
       (println "The tram server isn't running."))))
 
-
-
+;2
 (defn send [msg]
   (dm/ensure-daemon-is-running!)
   (raw-send msg))
-
-(comment
-  (require '[clojure.java.io :as io])
-  (start-daemon)
-  (loop [times-left 30]
-    (let [ready? (dm/accepting?)]
-      (cond
-        (ready?) (println "Ready")
-        (zero? times-left)
-        (do (println "Server took too long to start")
-            (dm/kill-daemon))
-
-        :else
-        (do (Thread/sleep 1000)
-            (recur (dec times-left)))))))

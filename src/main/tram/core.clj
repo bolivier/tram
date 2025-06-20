@@ -23,8 +23,6 @@
                            [:db :dbname]
                            (str project-name "_production"))})
 
-
-
 (defn new [& args]
   (prn "Running as main with args:" args))
 
