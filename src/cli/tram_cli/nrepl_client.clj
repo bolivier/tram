@@ -62,34 +62,37 @@
     (Thread/sleep 1000)))
 
 (defn send [msg]
-  (let [s   (java.net.Socket. "localhost" (coerce-long port))
-        out (.getOutputStream s)
-        in  (java.io.PushbackInputStream. (.getInputStream s))
-        id  (next-id)
-        _ (b/write-bencode out
-                           {"op" "clone"
-                            "id" id})
-        {session :new-session} (read-msg (b/read-bencode in))
-        id  (next-id)
-        _ (b/write-bencode out
-                           (assoc msg
-                             :id      id
-                             :session session))]
-    (loop [m {:vals      []
-              :responses []}]
-      (let [{:keys [status stdout value stderr]
-             :as   resp}
-            (read-reply in session id)]
-        (when stdout
-          (print stdout)
-          (flush))
-        (when stderr
-          (binding [*out* *err*]
-            (print stderr))
-          (flush))
-        (prn resp)
-        (let [m (cond-> (update m :responses conj resp)
-                  value (update :vals conj value))]
-          (when-not (some #{"done"}
-                          status)
-            (recur m)))))))
+  (try
+    (let [s   (java.net.Socket. "localhost" (coerce-long port))
+          out (.getOutputStream s)
+          in  (java.io.PushbackInputStream. (.getInputStream s))
+          id  (next-id)
+          _ (b/write-bencode out
+                             {"op" "clone"
+                              "id" id})
+          {session :new-session} (read-msg (b/read-bencode in))
+          id  (next-id)
+          _ (b/write-bencode out
+                             (assoc msg
+                               :id      id
+                               :session session))]
+      (loop [m {:vals      []
+                :responses []}]
+        (let [{:keys [status stdout value stderr]
+               :as   resp}
+              (read-reply in session id)]
+          (when stdout
+            (print stdout)
+            (flush))
+          (when stderr
+            (binding [*out* *err*]
+              (println stderr)))
+          (when (= "true" (System/getenv "TRAM_DEBUG"))
+            (prn resp))
+          (let [m (cond-> (update m :responses conj resp)
+                    value (update :vals conj value))]
+            (when-not (some #{"done"}
+                            status)
+              (recur m))))))
+    (catch java.net.ConnectException _
+      (println "The tram server isn't running."))))
