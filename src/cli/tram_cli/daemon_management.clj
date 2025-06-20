@@ -22,14 +22,20 @@
     (catch Exception _ false)))
 
 (defn start-daemon []
-  (let [proc (p/process {:out "tram-daemon.log"
-                         :err "tram-daemon.log"}
-                        "clj" "-M:dev"
-                        "-m"  "tram.daemon")]
-    (when-let [pid (some-> proc
-                           :proc
-                           (.pid))]
-      (spit daemon-pid-file pid))))
+  (when-not (or (accepting?)
+                 (fs/exists? daemon-pid-file))
+   (let [proc (p/process {:out "tram-daemon.log"
+                          :err "tram-daemon.log"}
+                         "clj" "-M:dev"
+                         "-m"  "tram.daemon")]
+     (when-let [pid (some-> proc
+                            :proc
+                            (.pid))]
+       (spit daemon-pid-file pid)))))
+
+(defn is-dead? []
+  (and (not (accepting?))
+       (not (fs/exists? daemon-pid-file))))
 
 (defn ensure-daemon-is-running! []
   (when-not (accepting?)
@@ -51,6 +57,14 @@
               (recur (dec times-left))))))))
 
 (defn restart-daemon []
+  (println "Killing daemon")
   (kill-daemon)
+  (loop [times 20]
+    (if (zero? times)
+      (println "Timed out trying to kill daemon, please handle manually.")
+      (when-not (is-dead?)
+        (Thread/sleep 250)
+        (recur (dec times)))))
   (start-daemon)
-  (ensure-daemon-is-running!))
+  (ensure-daemon-is-running!)
+  )

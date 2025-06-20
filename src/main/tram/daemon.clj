@@ -1,6 +1,5 @@
 (ns tram.daemon
-  (:require [cider.nrepl :refer [cider-middleware]]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [methodical.core :as m]
             [migratus.core :as migratus]
             [next.jdbc :as jdbc]
@@ -8,9 +7,14 @@
             [nrepl.misc :refer [response-for]]
             [nrepl.server :as nrepl]
             [nrepl.transport :as transport]
+            [taoensso.telemere :as t]
             [toucan2.core :as t2]
             [tram.core :as tram]
-            [zprint.core :refer [zprint zprint-file-str]]))
+            [zprint.core :refer [zprint-file-str]]))
+
+
+(t/remove-handler! :default/console)
+(t/add-handler! :default/file (t/handler:file {:path "tram-daemon.log"}))
 
 (defn get-from-project
   "Reaches into the namespace `ns`, which exists in the user application (ie. not
@@ -25,6 +29,9 @@
   (let [up (get-from-project 'seeds.init 'up)]
     (if (fn? up)
       (t2/with-connection [_ (:db migration-config)]
+        (t/log! {:level :info
+                 :id    :db/seeding
+                 :data  {:config migration-config}})
         (up))
       (throw
         (ex-info
@@ -32,25 +39,48 @@
           {})))))
 
 (defn migrate-database [migration-config]
+  (t/log! {:level :info
+           :id    :db/migrating
+           :data  {:config migration-config}})
   (migratus/migrate migration-config))
 
 (defn database-exists? [db-name]
-  (boolean (not-empty (jdbc/execute!
-                        (tram/get-database-config)
-                        ["SELECT 1 FROM pg_database WHERE datname = ?"
-                         db-name]))))
+  (try
+    (boolean (not-empty (jdbc/execute!
+                          (tram/get-database-config)
+                          ["SELECT 1 FROM pg_database WHERE datname = ?"
+                           db-name])))
+    (catch Exception _ false)))
 
 (defn create-database [db-name]
   (when-not (database-exists? db-name)
-    (jdbc/execute! (tram/get-database-config)
-                   [(str "CREATE DATABASE "
-                         db-name)])))
+    (t/log! {:level :info
+             :id    :db/creating
+             :data  {:db-name db-name}})
+    ;; Cannot connect to db config for nonexistent db!
+    (try
+      (jdbc/execute! (assoc (tram/get-tram-database-config)
+                       :dbname "postgres")
+                     [(str "CREATE DATABASE "
+                           db-name)])
+      (catch Exception e
+        (t/log! {:level :error
+                 :id    :error/failed-to-drop-db
+                 :data  {:err e}})
+        (throw e)))))
 
 (defn drop-database [db-name]
+  (t/log! {:level :info
+           :id    :db/dropping
+           :data  {:db-name db-name}})
   (try
-    (jdbc/execute! (tram/get-database-config)
+    (jdbc/execute! (tram/get-tram-database-config)
                    [(str "DROP DATABASE IF EXISTS " db-name)])
-    (catch Exception _ nil)))
+    (catch Exception e
+      (t/log! {:level :error
+               :id    :error/failed-to-drop-db
+               :data  {:err e}})
+      (throw (ex-info (.getMessage e) {})))))
 
 (defn database-precheck!
   "Checks on database configuration.
@@ -67,7 +97,10 @@
 
    There's no hard requirement for them to only be 3, but the category and optional
    env in the second position are baked in to the implementation."
-  :split-cmd)
+  (fn [{:keys [split-cmd]}]
+    (t/log! {:id   :handle-cmd/dispatcher
+             :data [split-cmd]})
+    split-cmd))
 
 (m/defmethod handle-cmd :default
   [{:keys [cmd]
@@ -89,6 +122,8 @@ config:generate")}))
 
 (m/defmethod handle-cmd ["config" "generate"]
   [msg]
+  (t/log! {:level :info
+           :data  {:msg (assoc msg :transport :omitted)}})
   (response-for msg
                 {:status #{"done"}
                  :stdout (zprint-file-str (str (tram/generate-config
@@ -106,7 +141,17 @@ config:generate")}))
 (m/defmethod handle-cmd :before
   ["db" :default :default]
   [msg]
-  (database-precheck! (tram/get-database-name (msg->env msg))))
+  (database-precheck! (tram/get-database-name (msg->env msg)))
+  msg)
+
+(m/defmethod handle-cmd ["db" :default "drop"]
+  [msg]
+  (let [[_ env] (:split-cmd msg)
+        db-name (tram/get-database-name env)]
+    (drop-database db-name)
+    (response-for msg
+                  {:result "success"
+                   :status #{"done"}})))
 
 (m/defmethod handle-cmd ["db" :default "reset"]
   [msg]
@@ -115,7 +160,10 @@ config:generate")}))
     (drop-database db-name)
     (create-database db-name)
     (migrate-database (tram/get-migration-config env))
-    (seed-database (tram/get-migration-config env))))
+    (seed-database (tram/get-migration-config env))
+    (response-for msg
+                  {:result "success"
+                   :status #{"done"}})))
 
 (m/defmethod handle-cmd ["db" :default "migrate"]
   [msg]
@@ -160,6 +208,7 @@ config:generate")}))
 
   Eventually I'll want a more robust data driven solution for this."
   [cmd]
+  (t/log! (str "splitting " cmd))
   (let [split' (str/split cmd #":")]
     (cond
       (and (= "db" (first split')) (= 2 (count split')))
@@ -214,6 +263,9 @@ config:generate")}))
 (defonce server (atom nil))
 
 (defn start! []
+  (t/log! {:level :info
+           :id    :starting
+           :data  {}})
   (reset! server (nrepl/start-server :port    7888 ;; or 0 for random
                                      :handler (nrepl/default-handler
                                                 #'wrap-tram))))
