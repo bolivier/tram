@@ -1,14 +1,14 @@
 #!/usr/bin/env bb
 
-(require '[babashka.cli :as cli])
-(require '[tram-cli.core :as tram])
+(require '[tram-cli.nrepl-client :as client])
+(require '[zprint.core :refer [zprint-file-str]])
+(require '[clojure.string :as str])
 
 (defn -main [& args]
-  (let [cmd  (first args)
-        args (rest args)]
+  (let [cmd (first args)]
     (case cmd
-      "new" (apply tram/new args)
-      (do (println "Unknown command:" cmd)
-          (println "Usage: tram <new|generate|...>")))))
+      "new" (println "not yet implemented")
+      (client/send {:op  :tram/op
+                    :cmd cmd}))))
 
 (apply -main *command-line-args*)
