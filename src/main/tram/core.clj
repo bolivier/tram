@@ -1,6 +1,45 @@
 (ns tram.core
   (:require [clojure.edn :as edn]
+            [camel-snake-kebab.core :refer [->snake_case ->kebab-case]]
+            [malli.core :as m]
             [clojure.java.io :as io]))
+
+(defn lower-case?
+  "Returns `s` if `s` consists of no capital letters [A-Z].
+
+  Returns `nil` otherwise
+  
+  Other non alphanumeric chars are allowd."
+  [s]
+  (re-matches #"[^A-Z]*" s))
+
+(defn snake-case?
+  "Returns `s` if `s` is a snake case variable."
+  [s]
+  (= (->snake_case s)
+     s))
+
+(def DatabaseConnectionSchema
+  [:map
+   [:store [:enum :database]]
+   [:migration-dir string?]
+   [:migration-table-name string?]
+   [:db [:map
+         [:dbtype [:enum "postgresql"]]
+         [:dbname [:and
+                   :string
+                   [:fn snake-case?]
+                   [:fn lower-case?]]]]]])
+
+(def DatabaseConfigSchema
+  [:map
+   [:project/name string?]
+   [:database/test DatabaseConnectionSchema]
+   [:database/development DatabaseConnectionSchema]
+   [:database/production DatabaseConnectionSchema]])
+
+(defn valid-config? [config]
+  (m/validate DatabaseConfigSchema config))
 
 (def base-database-config
   {:store :database
@@ -14,14 +53,14 @@
   [project-name]
   {:project/name         project-name
    :database/test        (assoc-in base-database-config
-                           [:db :dbname]
-                           (str project-name "_test"))
+                                   [:db :dbname]
+                                   (str project-name "_test"))
    :database/development (assoc-in base-database-config
-                           [:db :dbname]
-                           (str project-name "_development"))
-   :database/prod        (assoc-in base-database-config
-                           [:db :dbname]
-                           (str project-name "_production"))})
+                                   [:db :dbname]
+                                   (str project-name "_development"))
+   :database/production  (assoc-in base-database-config
+                                   [:db :dbname]
+                                   (str project-name "_production"))})
 
 (defn new [& args]
   (prn "Running as main with args:" args))
