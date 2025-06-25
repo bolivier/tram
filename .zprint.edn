@@ -1,8 +1,11 @@
 {:extend {:indent 0} ;; for extend-protocol et al.  Prevents indentation
-                     ;; there.
+ ;; there.
 
  :pair-fn {:hang? false}
  :binding {:force-nl? true}
+
+ :fn-force-nl #{:arg1-body :arg2}
+
  :fn-map {"if" [:arg1-body {:list {:force-nl? true}}]
           "when-not" [:arg1-body {:list {:force-nl? true}}]
           "when" [:arg1-body {:list {:force-nl? true}}]
@@ -13,19 +16,19 @@
                                    :nl-separator? true}}
 
                   #_{:pair-fn {:hang? true
-                                      :nl-separator? true}}]
+                               :nl-separator? true}}]
           "=" [:hang {:list {:force-nl? false}}]
           "try"   :flow-body}
  :map    {:comma?    false ;; no commas in maps
           :force-nl? true} ;; newlines required in maps
- :style  [:justified ;; justify pairs
-          :rod-no-ma-nl ;; function formattin
-          :sort-require ;; sorting
-          :hiccup ;; improved hiccup vector formatting
-          :extend-nl ;; require newlines in extend et al
+ :style  [:justified       ;; justify pairs
+          :rod-no-ma-nl    ;; function formattin
+          :sort-require    ;; sorting
+          :hiccup          ;; improved hiccup vector formatting
+          :extend-nl       ;; require newlines in extend et al
 
-          :map-nl ;; require newlines in maps
-          :pair-nl ;; require newlines between pairs
+          :map-nl     ;; require newlines in maps
+          :pair-nl    ;; require newlines between pairs
           :binding-nl ;; require newlines in bindings
-          :all-hang ;; hang where possible
-         ]}
+          :all-hang   ;; hang where possible
+          ]}

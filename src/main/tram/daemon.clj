@@ -10,6 +10,7 @@
             [taoensso.telemere :as t]
             [toucan2.core :as t2]
             [tram.core :as tram]
+            [tram.generators.model :as gen.model]
             [zprint.core :refer [zprint-file-str]]))
 
 (t/remove-handler! :default/console)
@@ -49,7 +50,8 @@
                           (tram/get-database-config)
                           ["SELECT 1 FROM pg_database WHERE datname = ?"
                            db-name])))
-    (catch Exception _ false)))
+    (catch Exception _
+      false)))
 
 (defn create-database [db-name]
   (when-not (database-exists? db-name)
@@ -129,6 +131,16 @@ config:generate")}))
                                                  (first (:args msg))))
                                           ::config
                                           (tram/get-zprint-config))}))
+
+(m/defmethod handle-cmd ["generate" "model"]
+  [msg]
+  (def msg
+    msg)
+  (let [blueprint (gen.model/parse-blueprint (:args msg))]
+    (gen.model/generate blueprint)
+    (response-for msg
+                  {:result "success"
+                   :status #{"done"}})))
 
 (defn msg->env [{:keys [split-cmd]}]
   (if (and (some? split-cmd)
@@ -259,7 +271,8 @@ config:generate")}))
 
       "message" "Error message (present if status is \"error\")."}}}})
 
-(defonce server (atom nil))
+(defonce server
+  (atom nil))
 
 (defn start! []
   (t/log! {:level :info
