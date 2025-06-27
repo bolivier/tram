@@ -12,6 +12,7 @@
             [tram.core :as tram]
             [tram.generators.blueprint :as gen.bp]
             [tram.generators.model :as gen.model]
+            [tram.generators.runtime-template :as gen.templ]
             [zprint.core :refer [zprint-file-str]]))
 
 (t/remove-handler! :default/console)
@@ -136,7 +137,7 @@ config:generate")}))
 (m/defmethod handle-cmd ["generate" "model"]
   [msg]
   (let [blueprint (gen.bp/parse gen.model/base-name (:args msg))]
-    (gen.bp/generate blueprint)
+    (gen.templ/write blueprint)
     (response-for msg
                   {:result "success"
                    :status #{"done"}})))

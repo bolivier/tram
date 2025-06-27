@@ -1,6 +1,6 @@
 (ns {{namespace}}
   (:require
-   [tram.migrations :refer [write-to-migration-file delete-migration-file]]))
+   [tram.migrations :refer [write-to-migration-files]]))
 
 
 (def blueprint
@@ -13,9 +13,6 @@
 (comment
 
   ;; run this to re/write the migration file
-  (write-to-migration-file blueprint)
-
-  ;; evaluate this to erase the migration file you created
-  (delete-migration-file blueprint)
+  (write-to-migration-files blueprint)
 
   nil)

@@ -128,6 +128,7 @@
   (let [model     (first cli-args)
         table     (dc/pluralize model)
         blueprint {:model          model
+                   :template       "model"
                    :timestamp      (time/timestamp)
                    :table          table
                    :migration-name (str base-name "-" table)
@@ -141,23 +142,3 @@
                        conj
                        (parse-attribute (first args)))
                (rest args))))))
-
-(defn generate [blueprint]
-  (let [ns-prefix   "runtime."
-        file-prefix "src/dev/runtime/"
-        filename    (str "generate_" (:model blueprint) ".clj")
-        namespace   (str ns-prefix
-                         (-> filename
-                             (str/replace ".clj" "")
-                             (str/replace "_" "-")))
-        fd          (str file-prefix filename)
-        file        (io/file fd)]
-    (io/make-parents file)
-    (spit fd
-          (zprint-file-str (binding [selmer.util/*escape-variables* false]
-                             (selmer/render-file
-                               "tram/templates/model.template.clj"
-                               {:namespace        namespace
-                                :blueprint-string blueprint}))
-                           ::model-template
-                           (tram/get-zprint-config)))))

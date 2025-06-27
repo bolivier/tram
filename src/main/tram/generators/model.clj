@@ -2,6 +2,3 @@
 
 (def base-name
   "create-table")
-
-
-

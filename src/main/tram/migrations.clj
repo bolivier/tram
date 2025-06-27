@@ -2,8 +2,7 @@
   (:require [honey.sql :as sql]
             [honey.sql.helpers :as hh]
             [methodical.core :as m]
-            [migratus.core :as migratus]
-            [tram.errors :as errors]))
+            [tram.core :as tram]))
 
 (m/defmulti serialize-attribute
   (fn [{:keys [name type]}] [name type]))
@@ -40,46 +39,38 @@
 (defn serialize-to-sql [blueprint]
   (first (sql/format (serialize-blueprint blueprint))))
 
+(defn serialize-to-down-sql [blueprint]
+  (first (sql/format (hh/drop-table (symbol (:table blueprint))))))
 
-(defn generate-migration-up-filename [blueprint])
+(defn generate-migration-filename
+  "Generate the path, filename included, for an up migration."
+  [direction blueprint]
+  (let [{:keys [migration-dir]} (tram/get-migration-config (tram/get-env))
+        filename (str (:timestamp blueprint)
+                      "-"
+                      (:migration-name blueprint)
+                      "."
+                      (name direction)
+                      ".sql")]
+    (str "resources/" migration-dir filename)))
 
-(defn ^:not-yet-implemented write-to-migration-file [blueprint]
+(def generate-migration-down-filename
+  "Generate the path, filename included, for an up migration."
+  (partial generate-migration-filename :down))
+
+(def generate-migration-up-filename
+  "Generate the path, filename included, for an up migration."
+  (partial generate-migration-filename :up))
+
+
+(defn write-to-migration-file [blueprint]
   (let [sql-string (serialize-to-sql blueprint)]
     (spit (generate-migration-up-filename blueprint) sql-string)))
 
-(defn ^:not-yet-implemented delete-migration-file []
-  (throw (errors/not-yet-implemented)))
+(defn write-to-migration-down [blueprint]
+  (let [sql-string (serialize-to-down-sql blueprint)]
+    (spit (generate-migration-down-filename blueprint) sql-string)))
 
-(sql/format (-> (hh/create-table "users")
-                (hh/with-columns
-                  [[:id :serial [:primary-key]]
-                   [:name :text [:not nil]]
-                   [:team-id :integer [:references :teams :id]]
-                   #_[:email :citext [:not nil] :unique]
-                   #_[:cool :text [:default "yes"]]
-                   #_[:updated_at :timestamptz [:not nil] [:default :now]]
-                   #_[:created_at :timestamptz [:not nil] [:default :now]]
-                   [:signup-date :timestamptz [:not nil] [:default [:now]]]])))
-
-(def attr
-  {:type :reference
-   :name "team-id"})
-
-(def blueprint
-  {:model          "user"
-   :timestamp      "20250627143956"
-   :migration-name "create-model-users"
-   :table          "users"
-   :attributes     [{:type      :text
-                     :required? true
-                     :name      "name"}
-                    {:type      :citext
-                     :unique?   true
-                     :required? true
-                     :name      "email"}
-                    {:type    :text
-                     :name    "cool"
-                     :default "yes"}
-                    {:type    :timestamptz
-                     :name    "signup_date"
-                     :default :fn/now}]})
+(defn write-to-migration-files [blueprint]
+  (write-to-migration-down blueprint)
+  (write-to-migration-file blueprint))
