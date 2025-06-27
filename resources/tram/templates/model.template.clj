@@ -1,6 +1,6 @@
 (ns {{namespace}}
   (:require
-   [tram.migrations :refer [serialize-to-sql write-to-migration-file delete-migration-file]]))
+   [tram.migrations :refer [write-to-migration-file delete-migration-file]]))
 
 
 (def blueprint
@@ -10,20 +10,12 @@
    this directly and write and rewrite the migration file as needed."
   {{blueprint-string}})
 
-(defn write  []
-  (-> blueprint
-      serialize-to-sql
-      write-to-migration-file))
-
-(defn erase []
-  (delete-migration-file))
-
 (comment
 
   ;; run this to re/write the migration file
-  (write)
+  (write-to-migration-file blueprint)
 
   ;; evaluate this to erase the migration file you created
-  (erase)
+  (delete-migration-file blueprint)
 
   nil)

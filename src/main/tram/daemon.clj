@@ -10,6 +10,7 @@
             [taoensso.telemere :as t]
             [toucan2.core :as t2]
             [tram.core :as tram]
+            [tram.generators.blueprint :as gen.bp]
             [tram.generators.model :as gen.model]
             [zprint.core :refer [zprint-file-str]]))
 
@@ -134,8 +135,8 @@ config:generate")}))
 
 (m/defmethod handle-cmd ["generate" "model"]
   [msg]
-  (let [blueprint (gen.model/parse-blueprint (:args msg))]
-    (gen.model/generate blueprint)
+  (let [blueprint (gen.bp/parse gen.model/base-name (:args msg))]
+    (gen.bp/generate blueprint)
     (response-for msg
                   {:result "success"
                    :status #{"done"}})))

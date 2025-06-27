@@ -12,7 +12,10 @@
          com.taoensso/telemere             {:mvn/version "1.0.0"}
          org.clj-commons/humanize          {:mvn/version "1.1"}
          cider/cider-nrepl                 {:mvn/version "0.56.0"}
-         selmer/selmer                     {:mvn/version "1.12.62"}}
+         selmer/selmer                     {:mvn/version "1.12.62"}
+         metosin/malli                     {:mvn/version "0.18.0"}
+         io.github.bolivier/declensia      {:git/branch "main"
+                                            :git/sha    "fc3b72da03002d464d69639a4e8e2b2b003339a6"}}
 
  :aliases
  {:dev

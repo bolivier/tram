@@ -2,3 +2,4 @@
 .lsp
 .cpcache
 /.nrepl-port
+/tram-daemon.log
