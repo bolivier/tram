@@ -1,8 +1,8 @@
 (ns tram.core
-  (:require [clojure.edn :as edn]
-            [camel-snake-kebab.core :refer [->snake_case ->kebab-case]]
-            [malli.core :as m]
-            [clojure.java.io :as io]))
+  (:require [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [malli.core :as m]))
 
 (defn lower-case?
   "Returns `s` if `s` consists of no capital letters [A-Z].
@@ -16,20 +16,17 @@
 (defn snake-case?
   "Returns `s` if `s` is a snake case variable."
   [s]
-  (= (->snake_case s)
-     s))
+  (= (->snake_case s) s))
 
 (def DatabaseConnectionSchema
   [:map
    [:store [:enum :database]]
    [:migration-dir string?]
    [:migration-table-name string?]
-   [:db [:map
-         [:dbtype [:enum "postgresql"]]
-         [:dbname [:and
-                   :string
-                   [:fn snake-case?]
-                   [:fn lower-case?]]]]]])
+   [:db
+    [:map
+     [:dbtype [:enum "postgresql"]]
+     [:dbname [:and :string [:fn snake-case?] [:fn lower-case?]]]]]])
 
 (def DatabaseConfigSchema
   [:map
@@ -51,16 +48,17 @@
 (defn generate-config
   "Creates default configuration file contents for tram."
   [project-name]
-  {:project/name         project-name
-   :database/test        (assoc-in base-database-config
-                                   [:db :dbname]
-                                   (str project-name "_test"))
-   :database/development (assoc-in base-database-config
-                                   [:db :dbname]
-                                   (str project-name "_development"))
-   :database/production  (assoc-in base-database-config
-                                   [:db :dbname]
-                                   (str project-name "_production"))})
+  (let [db-safe-project-name (->snake_case project-name)]
+    {:project/name         project-name
+     :database/test        (assoc-in base-database-config
+                             [:db :dbname]
+                             (str db-safe-project-name "_test"))
+     :database/development (assoc-in base-database-config
+                             [:db :dbname]
+                             (str db-safe-project-name "_development"))
+     :database/production  (assoc-in base-database-config
+                             [:db :dbname]
+                             (str db-safe-project-name "_production"))}))
 
 (defn new [& args]
   (prn "Running as main with args:" args))

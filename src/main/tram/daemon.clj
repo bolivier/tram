@@ -134,8 +134,6 @@ config:generate")}))
 
 (m/defmethod handle-cmd ["generate" "model"]
   [msg]
-  (def msg
-    msg)
   (let [blueprint (gen.model/parse-blueprint (:args msg))]
     (gen.model/generate blueprint)
     (response-for msg
