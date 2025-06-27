@@ -4,38 +4,54 @@ Tram provides some generators from the cli. Generators in Tram differ from
 generators in most other frameworks because they do not directly generate the
 requested code. 
 
-Instead Tram generators create runtimes.  Those runtimes are written to
-`/src/main/dev/runtimes*`.  They contain a **blueprint**, data that represents
-the code generation, and invocations for the code that will generate the code
-based on that blueprint. 
+Instead Tram generators create **runtimes**. A runtime is a namespace that isn't
+in source control that lives at `/src/main/dev/runtimes`.
 
-The rationale for this is that it is that it's hard to know exactly what you
-want from the cli and type it correctly in an abbreviated syntax on the fly.
-The more verbose blueprint representation gives you an extra moment to modify
-your generated code in an easier way without retyping it into a terminal.  
+These runtimes contain two things: a **blueprint** data structure representing
+the changes to make in your project, and a comment block with an invocation of a
+tram function that will write those changes to your project.  The tram function
+to write changes will overwrite previous changes.
 
-TODO: add a flag to generators for "immediate mode" that will immediately output
-the code.
+The rationale for this workflow is that it can be hard to get the CLI command
+correct in one go.  Rather than rewriting it, you can modify the blueprint,
+which is more verbose and easier to understand and then modify those changes
+without typing everything again.
+
+TODO: add a flag to generators for "immediate mode" that will immediately write
+the changes. enable by default?
 
 ## Migration generators 
 
-These generators can be invoked to create runtimes that contain the code for
-data migrations.  The CLI syntax works like this:
+These generators can be invoked to create runtimesfor data migrations. The CLI
+syntax looks like this:
 
-[modifiers][column-name]:[column-type]=[default value]
+`tram generate:model <attributes>`
+
+The attribute syntax looks like this:
+
+`[modifiers][column-name]:[column-type]=[default value]`
     
-The only required field is `column-name`, which will default to type `text`
+The only required field is `column-name`, which will default to `TEXT`
     
-The two supported modifiers are
+### Modifiers
+    
+    The two supported modifiers are
 * `!` for required fields
 * `^` for unique fields
 
+### Column Type
 Postgres column types are supported, see
-`tram.generators.blueprint/PostgresType` for supported column types.  If omitted
-this will default to `:text`.
+`tram.generators.blueprint/PostgresType` for a full list. If omitted this will
+default to `:text`. 
 
-Default values can be provided, and to use a builtin function, prefix the name
-with `fn`, eg. `created-at:timestamptz=fn/now`.
+### Default Value
+
+Default values can either be literals (which will be parsed from strings into
+the matching data type from `column-type`) or they can be postgres functions.
+Function default values are indicated with the prefix `fn/`, eg.
+`created-at:timestamptz=fn/now`.
+
+### Examples
 
 Here are some examples of attributes and how they are parsed:
 
