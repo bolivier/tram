@@ -51,6 +51,13 @@ the matching data type from `column-type`) or they can be postgres functions.
 Function default values are indicated with the prefix `fn/`, eg.
 `created-at:timestamptz=fn/now`.
 
+### References (foreign keys)
+
+Foreign key references do not follow this same syntax, they are declared by
+writing `references(table-name)`.  This will automatically be converted into a
+singularized version of the table name apended with `-id`.  Nothing else is
+required for you to write these.  
+
 ### Examples
 
 Here are some examples of attributes and how they are parsed:
