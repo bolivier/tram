@@ -1,22 +1,9 @@
 (ns tram.core
-  (:require [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
+  (:require [camel-snake-kebab.core :refer [->snake_case]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [malli.core :as m]))
-
-(defn lower-case?
-  "Returns `s` if `s` consists of no capital letters [A-Z].
-
-  Returns `nil` otherwise
-  
-  Other non alphanumeric chars are allowd."
-  [s]
-  (re-matches #"[^A-Z]*" s))
-
-(defn snake-case?
-  "Returns `s` if `s` is a snake case variable."
-  [s]
-  (= (->snake_case s) s))
+            [malli.core :as m]
+            [tram.utils.language :as lang]))
 
 (def DatabaseConnectionSchema
   [:map
@@ -26,7 +13,7 @@
    [:db
     [:map
      [:dbtype [:enum "postgresql"]]
-     [:dbname [:and :string [:fn snake-case?] [:fn lower-case?]]]]]])
+     [:dbname [:and :string [:fn lang/snake-case?] [:fn lang/lower-case?]]]]]])
 
 (def DatabaseConfigSchema
   [:map
