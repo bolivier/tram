@@ -1,15 +1,10 @@
 (ns tram.generators.blueprint
-  (:require [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
-            [clojure.java.io :as io]
+  (:require [camel-snake-kebab.core :refer [->snake_case]]
             [clojure.string :as str]
             [declensia.core :as dc]
-            [selmer.parser :as selmer]
             [selmer.util]
-            [tram.core :as tram]
-            [tram.utils.english :refer [pluralize]]
             [tram.utils.language :as lang]
-            [tram.utils.time :as time]
-            [zprint.core :refer [zprint-file-str]]))
+            [tram.utils.time :as time]))
 
 (def PostgresType
   [:enum

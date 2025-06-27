@@ -1,1 +1,0 @@
-(ns tram.generators.postgres)
