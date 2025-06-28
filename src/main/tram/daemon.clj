@@ -170,6 +170,7 @@ config:generate")}))
         db-name (tram/get-database-name env)]
     (drop-database db-name)
     (create-database db-name)
+    (migratus/init (tram/get-migration-config env))
     (migrate-database (tram/get-migration-config env))
     (seed-database (tram/get-migration-config env))
     (response-for msg

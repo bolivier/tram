@@ -1,8 +1,14 @@
 (ns tram.migrations
-  (:require [honey.sql :as sql]
+  (:require [camel-snake-kebab.core :refer [->snake_case_string]]
+            [clojure.string :as str]
+            [honey.sql :as sql]
             [honey.sql.helpers :as hh]
             [methodical.core :as m]
-            [tram.core :as tram]))
+            [tram.core :as tram])
+  (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
+
+(defn format-sql [sql]
+  (SqlFormatter/format sql))
 
 (m/defmulti serialize-attribute
   (fn [{:keys [name type]}] [name type]))
@@ -36,11 +42,56 @@
       (hh/with-columns (mapv serialize-attribute (:attributes blueprint)))))
 
 
+(sql/register-fn! :on
+                  (fn on-formatter [f args]
+                    [(str "ON " (->snake_case_string (first args)))]))
+
+(defn generic-formatter [clause x]
+  (let [[sql & params] (if (or (vector? x)
+                               (ident? x))
+                         (sql/format-expr x)
+                         (sql/format-dsl x))]
+    (into [(str (sql/sql-kw clause) " " sql)] params)))
+
+(sql/register-clause!
+  :execute-function
+  (fn [clause x] [(str (sql/sql-kw clause) " " (->snake_case_string x) "()")])
+  nil)
+(sql/register-clause! :for-each #'generic-formatter :execute-function)
+
+(sql/register-clause! :before-update #'generic-formatter :for-each)
+
+(sql/register-clause! :create-trigger #'generic-formatter :before-update)
+
+
+(defmulti render-trigger
+  (fn [attr _] (:trigger attr)))
+
+(defmethod render-trigger :update-updated-at
+  [_ blueprint]
+  (format-sql (first (sql/format
+                       {:create-trigger   (keyword (str "set-updated-at-on-"
+                                                        (:table blueprint)))
+                        :before-update    [:on (:table blueprint)]
+                        :for-each         :row
+                        :execute-function :update-updated-at-column}))))
+
+(defmethod render-trigger :default
+  [_ _]
+  nil)
+
+(defn serialize-to-trigger-sqls
+  "Finds any references to triggers that need to be added to the migration file."
+  [blueprint]
+  (remove nil?
+    (map (fn [attr] (render-trigger attr blueprint))
+      (filter :trigger (:attributes blueprint)))))
+
 (defn serialize-to-sql [blueprint]
-  (first (sql/format (serialize-blueprint blueprint))))
+  (format-sql (first (sql/format (serialize-blueprint blueprint)))))
 
 (defn serialize-to-down-sql [blueprint]
-  (first (sql/format (hh/drop-table (symbol (:table blueprint))))))
+  (format-sql (first (sql/format (hh/drop-table (symbol (:table blueprint)))))))
 
 (defn generate-migration-filename
   "Generate the path, filename included, for an up migration."
@@ -63,8 +114,12 @@
   (partial generate-migration-filename :up))
 
 
+
 (defn write-to-migration-file [blueprint]
-  (let [sql-string (serialize-to-sql blueprint)]
+  (let [primary-migration (serialize-to-sql blueprint)
+        triggers          (serialize-to-trigger-sqls blueprint)
+        sql-string        (str/join "\n\n--;;\n\n"
+                                    (into [primary-migration] triggers))]
     (spit (generate-migration-up-filename blueprint) sql-string)))
 
 (defn write-to-migration-down [blueprint]
@@ -73,4 +128,35 @@
 
 (defn write-to-migration-files [blueprint]
   (write-to-migration-down blueprint)
-  (write-to-migration-file blueprint))
+  (write-to-migration-file blueprint)
+  nil)
+
+(comment
+  (def blueprint
+    {:model          "user"
+     :template       "model"
+     :timestamp      "20250628192301"
+     :table          "users"
+     :migration-name "create-table-users"
+     :attributes     [{:type      :text
+                       :required? true
+                       :name      "name"}
+                      {:type      :citext
+                       :unique?   true
+                       :required? true
+                       :name      "email"}
+                      {:type    :text
+                       :name    "cool"
+                       :default "yes"}
+                      {:type    :timestamptz
+                       :name    "signup_date"
+                       :default :fn/now}
+                      {:name      :created-at
+                       :type      :timestamptz
+                       :required? true
+                       :default   :fn/now}
+                      {:name      :updated-at
+                       :type      :timestamptz
+                       :required? true
+                       :default   :fn/now
+                       :trigger   :update-updated-at}]}))

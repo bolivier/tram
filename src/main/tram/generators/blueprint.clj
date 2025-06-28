@@ -2,6 +2,7 @@
   (:require [camel-snake-kebab.core :refer [->snake_case]]
             [clojure.string :as str]
             [declensia.core :as dc]
+            [malli.core :as m]
             [selmer.util]
             [tram.utils.language :as lang]
             [tram.utils.time :as time]))
@@ -10,6 +11,7 @@
   [:enum
    :string
    :text
+   :citext
    :integer
    :bigint
    :smallint
@@ -27,6 +29,22 @@
    :bytea
    :inet
    :cidr])
+
+(def type-aliases
+  {:int :integer})
+
+(defn coerce-to-type
+  "Some types have aliases"
+  [t]
+  (let [safe-type (get type-aliases t t)]
+    (if (m/validate PostgresType
+                    safe-type)
+      safe-type
+      (throw (ex-info (str t
+                           " is not a known postgres type. Please use one of: "
+                           (str/join "\n"
+                                     (rest PostgresType)))
+                      {:found t})))))
 
 (def Attribute
   [:map
@@ -84,7 +102,7 @@
                          builder))
                  (assoc attribute
                    :type
-                   (keyword s))))
+                   (coerce-to-type (keyword s)))))
 
         (= \= (first builder))
         (let [default* (apply str
@@ -104,7 +122,8 @@
         (references? builder)
         {:type      :integer
          :name      (-> (reference-attr->table-name builder)
-                        lang/table-name->foreign-key-id)
+                        lang/table-name->foreign-key-id
+                        keyword)
          :required? true}
 
         :else
@@ -117,21 +136,37 @@
                          builder))
                  (assoc attribute
                    :name
-                   (->snake_case n))))))))
+                   (keyword n))))))))
 
-(defn parse [base-name cli-args]
-  (let [model     (first cli-args)
-        table     (dc/pluralize model)
+(def default-attributes
+  [{:name      :created-at
+    :type      :timestamptz
+    :required? true
+    :default   :fn/now}
+   {:name      :updated-at
+    :type      :timestamptz
+    :required? true
+    :default   :fn/now
+    :trigger   :update-updated-at}])
+
+(defn parse
+  "Model name is expected to be plural."
+  [base-name cli-args]
+  (let [model     (keyword (first cli-args))
+        table     model
         blueprint {:model          model
-                   :template       "model"
+                   :template       :model
                    :timestamp      (time/timestamp)
                    :table          table
-                   :migration-name (str base-name "-" table)
+                   :migration-name (str base-name "-" (name table))
                    :attributes     []}]
     (loop [blueprint blueprint
            args      (rest cli-args)]
       (if (empty? args)
-        blueprint
+        (update blueprint
+                :attributes
+                into
+                default-attributes)
         (recur (update blueprint
                        :attributes
                        conj

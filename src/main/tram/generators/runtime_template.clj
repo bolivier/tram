@@ -9,6 +9,7 @@
   then execute those functions repeatedly to modify the migration in a data
   driven way."
   (:require [clojure.java.io :as io]
+            [camel-snake-kebab.core :refer [->snake_case]]
             [clojure.string :as str]
             [selmer.parser :as selmer]
             [selmer.util]
@@ -17,7 +18,7 @@
 
 (defn get-runtime-filename [blueprint]
   (let [file-prefix "src/dev/runtime/"
-        filename    (str "generate_" (:model blueprint) ".clj")]
+        filename    (str "generate_" (->snake_case (:model blueprint)) ".clj")]
     (str file-prefix filename)))
 
 (defn get-runtime-ns [blueprint]

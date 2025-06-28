@@ -1,5 +1,6 @@
 (ns tram.migrations-test
-  (:require [expectations.clojure.test :as e]
+  (:require [clojure.string :as str]
+            [expectations.clojure.test :as e]
             [tram.core :as tram]
             [tram.migrations :as sut]
             [tram.test.fixtures :refer [tram-config]]))
@@ -67,7 +68,11 @@
                   spit (fn [fd content]
                          (swap! calls (fn [calls] (conj calls [fd content]))))]
       (sut/write-to-migration-file blueprint)
-      (let [[filename contents] (first @calls)]
+      (let [[filename contents] (first @calls)
+            contents (-> contents
+                         (str/replace #" +" " ")
+                         (str/replace #"\n" "")
+                         (str/replace #"\( " "("))]
         (e/expect (str "resources/migrations/"
                        (:timestamp blueprint)
                        "-create-table-users.up.sql")
@@ -101,9 +106,30 @@
   (do (require '[tram.generators.model :refer [base-name]])
       (require '[tram.generators.blueprint :refer [parse]])
       (def blueprint
-           (parse base-name
-                  ["user"
-                   "!name"
-                   "^!email:citext"
-                   "cool=yes"
-                   "signup_date:timestamptz=fn/now"]))))
+           {:model          "user"
+            :template       "model"
+            :timestamp      "20250628192301"
+            :table          "users"
+            :migration-name "create-table-users"
+            :attributes     [{:type      :text
+                              :required? true
+                              :name      "name"}
+                             {:type      :citext
+                              :unique?   true
+                              :required? true
+                              :name      "email"}
+                             {:type    :text
+                              :name    "cool"
+                              :default "yes"}
+                             {:type    :timestamptz
+                              :name    "signup_date"
+                              :default :fn/now}
+                             {:name      :created-at
+                              :type      :timestamptz
+                              :required? true
+                              :default   :fn/now}
+                             {:name      :updated-at
+                              :type      :timestamptz
+                              :required? true
+                              :default   :fn/now
+                              :trigger   :updated-trigger}]})))
