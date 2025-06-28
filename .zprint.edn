@@ -7,6 +7,8 @@
  :fn-force-nl #{:arg1-body :arg2}
 
  :fn-map {"if" [:arg1-body {:list {:force-nl? true}}]
+          "with-mock-tram-config" :binding
+
           "when-not" [:arg1-body {:list {:force-nl? true}}]
           "when" [:arg1-body {:list {:force-nl? true}}]
           "do"   [:noarg1-body {:list {:force-nl? true}}]

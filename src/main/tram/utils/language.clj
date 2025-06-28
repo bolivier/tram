@@ -22,3 +22,6 @@
 
 (defn foreign-key-id->table-name [fk-id]
   (dc/pluralize (str/replace fk-id #"[-_]id$" "")))
+
+(defn model->filename [model]
+  (str (name (dc/singularize model)) ".clj"))

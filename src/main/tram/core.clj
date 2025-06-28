@@ -17,7 +17,7 @@
 
 (def DatabaseConfigSchema
   [:map
-   [:project/name string?]
+   [:project/name keyword?]
    [:database/test DatabaseConnectionSchema]
    [:database/development DatabaseConnectionSchema]
    [:database/production DatabaseConnectionSchema]])
@@ -36,7 +36,7 @@
   "Creates default configuration file contents for tram."
   [project-name]
   (let [db-safe-project-name (->snake_case project-name)]
-    {:project/name         project-name
+    {:project/name         (keyword project-name)
      :database/test        (assoc-in base-database-config
                              [:db :dbname]
                              (str db-safe-project-name "_test"))
