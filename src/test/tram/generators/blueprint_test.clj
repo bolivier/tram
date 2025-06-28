@@ -20,9 +20,10 @@
            :default   :fn/now}
           (sut/parse-attribute "!created-at:timestamptz=fn/now"))
 
-  (expect {:name      :team-id
-           :type      :integer
-           :required? true}
+  (expect {:name       :team-id
+           :type       :integer
+           :required?  true
+           :references :teams}
           (sut/parse-attribute "references(teams)"))
 
   (expect {:name    :cool

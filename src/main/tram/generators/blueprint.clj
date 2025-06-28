@@ -120,11 +120,13 @@
                    :default default)))
 
         (references? builder)
-        {:type      :integer
-         :name      (-> (reference-attr->table-name builder)
-                        lang/table-name->foreign-key-id
-                        keyword)
-         :required? true}
+        {:type       :integer
+         :name       (-> (reference-attr->table-name builder)
+                         lang/table-name->foreign-key-id
+                         keyword)
+         :references (-> (reference-attr->table-name builder)
+                         keyword)
+         :required?  true}
 
         :else
         (let [n (apply str
