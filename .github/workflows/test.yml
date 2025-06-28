@@ -19,8 +19,11 @@ jobs:
           distribution: 'zulu'
           java-version: '23'
 
-      - name: Install Clojure
-        run: sudo bin/install-clojure.sh
+      - name: Install Clojure CLI tools
+        run: |
+          curl -O https://download.clojure.org/install/linux-install.sh
+          chmod +x linux-install.sh
+          sudo ./linux-install.sh
 
       - name: Run tests
         run: clj -X:test
