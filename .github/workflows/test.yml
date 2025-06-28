@@ -26,4 +26,4 @@ jobs:
           sudo ./linux-install.sh
 
       - name: Run tests
-        run: clojure -X:test
+        run: clojure -M:test
