@@ -76,10 +76,26 @@
        (re-find #"references\((.*)\)")
        second))
 
-(defn coerce-default [attr]
-  (case (:type attr)
-    :integer (update attr :default (comp int parse-long))
-    attr))
+(def supports-default-value?
+  #{:string :text :citext :integer :bigint :smallint :decimal :float :double
+    :boolean :date :datetime :timestamp :timestamptz :uuid :json :jsonb})
+
+(def int-coercion?
+  #{:integer :bigint :smallint})
+
+(def double-coercion?
+  #{:decimal :float :double})
+
+(def boolean-coercion?
+  #{:boolean})
+
+(defn coerce-default [{:keys [type]
+                       :as   attr}]
+  (cond
+    (int-coercion? type)     (update attr :default parse-long)
+    (double-coercion? type)  (update attr :default parse-double)
+    (boolean-coercion? type) (update attr :default boolean)
+    :else                    attr))
 
 (defn parse-attribute [arg]
   (loop [builder   arg

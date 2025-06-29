@@ -26,6 +26,16 @@
            :references :teams}
           (sut/parse-attribute "references(teams)"))
 
+  (expect {:name    :is-good
+           :type    :boolean
+           :default true}
+          (sut/parse-attribute "is-good:boolean=true"))
+
+  (expect {:name    :percentage
+           :type    :double
+           :default 0.1}
+          (sut/parse-attribute "percentage:double=0.1"))
+
   (expect {:name    :likes
            :type    :integer
            :default 0}
