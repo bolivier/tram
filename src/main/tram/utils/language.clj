@@ -1,7 +1,8 @@
 (ns tram.utils.language
   (:require [camel-snake-kebab.core :refer [->snake_case]]
             [clojure.string :as str]
-            [declensia.core :as dc]))
+            [declensia.core :as dc]
+            [tram.utils :refer [with-same-output]]))
 
 (defn lower-case?
   "Returns `s` if `s` consists of no capital letters [A-Z].
@@ -18,10 +19,15 @@
   (= (->snake_case s) s))
 
 (defn table-name->foreign-key-id [table-name]
-  (str (dc/singularize table-name) "-id"))
+  (with-same-output [table table-name]
+    (str (dc/singularize table) "-id")))
 
 (defn foreign-key-id->table-name [fk-id]
-  (dc/pluralize (str/replace fk-id #"[-_]id$" "")))
+  (with-same-output [fk fk-id]
+    (dc/pluralize (str/replace fk #"[-_]id$" ""))))
+
+(defn modelize [kw]
+  (keyword "model" (name kw)))
 
 (defn model->filename [model]
   (str (name (dc/singularize model)) ".clj"))
