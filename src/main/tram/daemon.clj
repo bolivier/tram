@@ -10,6 +10,9 @@
             [taoensso.telemere :as t]
             [toucan2.core :as t2]
             [tram.core :as tram]
+            [tram.generators.blueprint :as gen.bp]
+            [tram.generators.model :as gen.model]
+            [tram.generators.runtime-template :as gen.templ]
             [zprint.core :refer [zprint-file-str]]))
 
 (t/remove-handler! :default/console)
@@ -49,7 +52,8 @@
                           (tram/get-database-config)
                           ["SELECT 1 FROM pg_database WHERE datname = ?"
                            db-name])))
-    (catch Exception _ false)))
+    (catch Exception _
+      false)))
 
 (defn create-database [db-name]
   (when-not (database-exists? db-name)
@@ -130,6 +134,14 @@ config:generate")}))
                                           ::config
                                           (tram/get-zprint-config))}))
 
+(m/defmethod handle-cmd ["generate" "model"]
+  [msg]
+  (let [blueprint (gen.bp/parse gen.model/base-name (:args msg))]
+    (gen.templ/write blueprint)
+    (response-for msg
+                  {:result "success"
+                   :status #{"done"}})))
+
 (defn msg->env [{:keys [split-cmd]}]
   (if (and (some? split-cmd)
            (<= 3
@@ -158,6 +170,7 @@ config:generate")}))
         db-name (tram/get-database-name env)]
     (drop-database db-name)
     (create-database db-name)
+    (migratus/init (tram/get-migration-config env))
     (migrate-database (tram/get-migration-config env))
     (seed-database (tram/get-migration-config env))
     (response-for msg
@@ -259,7 +272,8 @@ config:generate")}))
 
       "message" "Error message (present if status is \"error\")."}}}})
 
-(defonce server (atom nil))
+(defonce server
+  (atom nil))
 
 (defn start! []
   (t/log! {:level :info

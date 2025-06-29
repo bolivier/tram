@@ -24,5 +24,12 @@ and wire them together yourself just to write a Hello World application.
 ## Development (Fix this)
 
 The workflow is atypical. Go to the application context where the daemon needs
-to run. Jack in a regular cider project there, then require tram, and run the
-daemon with `(tram.daemon/-main)`, and you should be good to eval and live code.
+to run. 
+
+Start a nrepl server you want to connect to.  I use this for cider
+
+```shell
+clojure -Sdeps \{\:deps\ \{nrepl/nrepl\ \{\:mvn/version\ \"1.3.1\"\}\ cider/cider-nrepl\ \{\:mvn/version\ \"0.53.2\"\}\ refactor-nrepl/refactor-nrepl\ \{\:mvn/version\ \"3.10.0\"\}\}\ \:aliases\ \{\:cider/nrepl\ \{\:main-opts\ \[\"-m\"\ \"nrepl.cmdline\"\ \"--middleware\"\ \"\[refactor-nrepl.middleware/wrap-refactor\,cider.nrepl/cider-middleware\]\"\]\}\}\} -M:dev:test:cider/nrepl
+```
+
+After that is running, connect to it from your editor, and execute `(tram.daemon/-main)`, and you should be good to eval and live code.
