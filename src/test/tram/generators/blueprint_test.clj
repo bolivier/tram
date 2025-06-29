@@ -26,6 +26,11 @@
            :references :teams}
           (sut/parse-attribute "references(teams)"))
 
+  (expect {:name    :likes
+           :type    :integer
+           :default 0}
+          (sut/parse-attribute "likes:int=0"))
+
   (expect {:name    :cool
            :type    :text
            :default "yes"}

@@ -76,11 +76,16 @@
        (re-find #"references\((.*)\)")
        second))
 
+(defn coerce-default [attr]
+  (case (:type attr)
+    :integer (update attr :default (comp int parse-long))
+    attr))
+
 (defn parse-attribute [arg]
   (loop [builder   arg
          attribute {:type :text}]
     (if (empty? builder)
-      attribute
+      (coerce-default attribute)
       (cond
         (= \^ (first builder))
         (recur (rest builder)
