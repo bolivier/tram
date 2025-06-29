@@ -1,7 +1,7 @@
 (ns tram.associations-test
   (:require [expectations.clojure.test :as e]
-            [tram.core]
-            [tram.hydration :as sut]))
+            [tram.associations :as sut]
+            [tram.core]))
 
 (binding [sut/*relationships* (atom {})]
   (e/defexpect relationship-methods

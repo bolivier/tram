@@ -3,8 +3,8 @@
 Tram only supports 3 kinds of associations.  
 
 - has-one (implicit)
-- has-many (call `tram.hydration/has-many!`)
-- belongs-to (call `tram.hydration/belongs-to!`)
+- has-many (call `tram.associations/has-many!`)
+- belongs-to (call `tram.associations/belongs-to!`)
 
 ## Rationale
 
@@ -20,7 +20,7 @@ can be done with minimal configuration.
 Call an association in your model files, like this 
 
 ```clj
-(tram.hydration/has-many! :models/users :models/projects :through :users-projects)
+(tram.associations/has-many! :models/users :models/projects :through :users-projects)
 ```
 
 This declares that a user has many projects, and there exists a join table
@@ -42,7 +42,7 @@ foreign keys.
 You can also use `belongs-to!` like this 
 
 ```clj
-(tram.hydration/belongs-to! :models/users :models/settings)
+(tram.associations/belongs-to! :models/users :models/settings)
 ```
 
 This declares that a foreign key exists on a table `settings` which refers to
@@ -59,3 +59,12 @@ This association requires these tables
 | column  | value                    |
 |---------|--------------------------|
 | user-id | foreign key to users(id) |
+
+`has-one` associations are implicit and will work whenever a table has a foreign
+key.  In this instance you would write 
+
+```clj
+(t2/hydrate <settings-model> :user)
+```
+
+and you would have the user object

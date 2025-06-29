@@ -31,7 +31,6 @@
   :test {:extra-paths ["src/test"]
          :main-opts   ["-m" "kaocha.runner"]
          :extra-deps  {com.github.seancorfield/expectations {:mvn/version "2.2.214"}
-                       tortue/spy                           {:mvn/version "2.15.0"}
                        lambdaisland/kaocha                  {:mvn/version "1.91.1392"}}
          :jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"
                        "-Dio.netty.tryReflectionSetAccessible=true"]}
