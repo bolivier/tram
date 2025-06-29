@@ -1,0 +1,1 @@
+{:lint-as {tram.utils/with-same-output clojure.core/let}}
