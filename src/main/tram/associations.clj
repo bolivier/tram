@@ -1,11 +1,12 @@
 (ns tram.associations
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [declensia.core :as dc]
             [methodical.core :as m]
             [toucan2.core :as t2]
             [tram.utils.language :as lang]))
 
-(def ^:dynamic *relationships*
+(defonce ^:dynamic *relationships*
   (atom {}))
 
 (defn has-many! [model-with-many model-of-many & {:keys [through]}]
@@ -21,16 +22,20 @@
                                (update-in [owner :belongs-to] set)
                                (update-in [owner :belongs-to] conj ownee)))))
 
+(defn has-explicit-relationship? [model k]
+  (let [relation       (lang/modelize k)
+        model-relationships (get @*relationships* model)
+        related-models (set/union (into #{}
+                                        (keys (:has-many model-relationships)))
+                                  (:belongs-to model-relationships))]
+    (contains? related-models relation)))
+
 (m/defmethod t2/model-for-automagic-hydration [:default :default]
-  [model-to-hydrate hydration-id]
-  (when-not (or (contains? (get-in @*relationships*
-                                   [model-to-hydrate :has-many])
-                           hydration-id)
-                (contains? (get-in @*relationships*
-                                   [model-to-hydrate :belongs-to])
-                           hydration-id))
+  [model k]
+  (when-not (has-explicit-relationship? model
+                                        k)
     (keyword "model"
-             (dc/pluralize (name hydration-id)))))
+             (dc/pluralize (name k)))))
 
 (m/defmethod t2/simple-hydrate [:default :default]
   [model k instance]
