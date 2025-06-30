@@ -59,6 +59,9 @@
                  :migration-name "create-model-agents"
                  :template       :model}
                 (dissoc actual :attributes))
+      (e/expect {:name :id
+                 :type :primary-key}
+                (e/in (:attributes actual)))
       (e/expect {:name      :updated-at
                  :type      :timestamptz
                  :required? true

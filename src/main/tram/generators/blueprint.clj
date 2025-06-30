@@ -172,6 +172,10 @@
     :default   :fn/now
     :trigger   :update-updated-at}])
 
+(def id-field
+  {:name :id
+   :type :primary-key})
+
 (defn parse
   "Model name is expected to be plural."
   [base-name cli-args]
@@ -182,7 +186,7 @@
                    :timestamp      (time/timestamp)
                    :table          table
                    :migration-name (str base-name "-" (name table))
-                   :attributes     []}]
+                   :attributes     [id-field]}]
     (loop [blueprint blueprint
            args      (rest cli-args)]
       (if (empty? args)

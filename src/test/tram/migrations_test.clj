@@ -57,6 +57,11 @@
                                       :name    :is-cool
                                       :default "yes"}))
 
+  (e/expect [:id :serial :primary :key]
+            (sut/serialize-attribute {:type :primary-key
+                                      :name :id}))
+
+
   (e/expect [:team-id :integer [:references :teams :id]]
             (sut/serialize-attribute {:type :reference
                                       :name :team-id})))

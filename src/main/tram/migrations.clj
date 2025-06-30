@@ -13,6 +13,10 @@
 (m/defmulti serialize-attribute
   (fn [{:keys [name type]}] [name type]))
 
+(m/defmethod serialize-attribute [:id :primary-key]
+  [attribute]
+  [:id :serial :primary :key])
+
 (m/defmethod serialize-attribute :default
   [attr]
   (let [base [(keyword (:name attr)) (:type attr)]]
