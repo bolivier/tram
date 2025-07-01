@@ -1,5 +1,7 @@
 (ns tram.http.interceptors
-  (:require [clojure.walk :refer [prewalk]]
+  (:require [camel-snake-kebab.core :refer [->kebab-case]]
+            [clojure.string :as str]
+            [clojure.walk :refer [prewalk]]
             [reitit.core :as r]
             [tram.http.routing :as route]
             [tram.http.utils :as http.utils]
@@ -32,6 +34,39 @@
                          (if needs-full-page?
                            full-page-renderer
                            identity))))})
+
+(defn template->namespace [template]
+  (->kebab-case (str (name (:project/name (tram.core/get-tram-config)))
+                     ".views."
+                     (str/join "."
+                               (rest (str/split (namespace template) #"\.")))
+                     "-views")))
+
+(defn template->view-fn-name [template]
+  (->kebab-case (last (str/split (name template) #"\."))))
+
+(def render-template-interceptor
+  {:name  ::template-renderer
+   :leave (fn [ctx]
+            (def ctx
+              ctx)
+            (let [context             (get-in ctx [:response :context])
+                  template            (get-in ctx [:response :template])
+                  view-namespace      (template->namespace template)
+                  view-fn-name        (template->view-fn-name template)
+                  qualified-fn-symbol (symbol
+                                        (str view-namespace "/" view-fn-name))
+                  view-fn             (requiring-resolve qualified-fn-symbol)]
+              (if-not view-fn
+                (throw (ex-info (str "Searched for render function in "
+                                     namespace
+                                     "/"
+                                     view-fn-name
+                                     " but could not find it.")
+                                {:template     template
+                                 :view-fn-name view-fn-name
+                                 :view-ns      namespace}))
+                (assoc-in ctx [:response :body] (apply view-fn context)))))})
 
 (def expand-hiccup-interceptor
   "Walks your hiccup tree to find any customizations that need to be expanded.
