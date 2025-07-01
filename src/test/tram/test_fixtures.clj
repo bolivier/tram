@@ -1,0 +1,70 @@
+(ns tram.test-fixtures
+  (:require [reitit.core :as r]
+            [tram.testing.mocks :refer [with-stub]]))
+
+(def tram-config
+  {:database/development {:db {:dbname "tram_sample_development"
+                               :dbtype "postgresql"
+                               :host   "localhost"
+                               :port   5432
+                               :user   "brandon"}
+                          :migration-dir "migrations/"
+                          :migration-table-name "migrations"
+                          :store :database}
+   :database/prod        {:db {:dbname "tram_sample_production"
+                               :dbtype "postgresql"}
+                          :migration-dir "migrations/"
+                          :migration-table-name "migrations"
+                          :store :database}
+   :database/test        {:db {:dbname "tram_sample_test"
+                               :dbtype "postgresql"
+                               :host   "localhost"
+                               :port   5432
+                               :user   "brandon"}
+                          :migration-dir "migrations/"
+                          :migration-table-name "migrations"
+                          :store :database}
+   :project/name         "tram-sample"})
+
+(defmacro with-tram-config
+  [& body]
+  `(with-stub [tram.core/get-tram-config ~tram-config]
+     ~@body))
+
+(def sample-router
+  (r/router [""
+             ["/dashboard"
+              ["" {:name :route/dashboard}]
+              ["/users/:user-id" {:name :route/user}]]]))
+
+(def blueprint
+  {:model          :users
+   :template       :model
+   :timestamp      "20250701131252"
+   :table          :users
+   :migration-name "create-model-users"
+   :attributes     [{:name :id
+                     :type :primary-key}
+                    {:type      :text
+                     :required? true
+                     :name      :first-name}
+                    {:type    :text
+                     :unique? true
+                     :name    :last-name}
+                    {:type      :citext
+                     :unique?   true
+                     :required? true
+                     :NAME      :EMAIL}
+                    {:TYPE       :integer
+                     :name       :account-id
+                     :references :accounts
+                     :required?  true}
+                    {:name      :created-at
+                     :type      :timestamptz
+                     :required? true
+                     :default   :fn/now}
+                    {:name      :updated-at
+                     :type      :timestamptz
+                     :required? true
+                     :default   :fn/now
+                     :trigger   :update-updated-at}]})

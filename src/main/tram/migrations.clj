@@ -1,9 +1,16 @@
 (ns tram.migrations
+  "This migrations namespace is both the namespace for serializing and writing
+  blueprints into migration files as well as a convenience namesapce for tram
+  users who want access to migratus functions.
+
+  All public migratus functions are reexported."
   (:require [camel-snake-kebab.core :refer [->snake_case_string]]
             [clojure.string :as str]
             [honey.sql :as sql]
             [honey.sql.helpers :as hh]
             [methodical.core :as m]
+            [migratus.core]
+            [potemkin :refer [import-vars]]
             [tram.core :as tram])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
 
@@ -14,7 +21,7 @@
   (fn [{:keys [name type]}] [name type]))
 
 (m/defmethod serialize-attribute [:id :primary-key]
-  [attribute]
+  [_]
   [:id :serial :primary :key])
 
 (m/defmethod serialize-attribute :default
@@ -134,6 +141,34 @@
   (write-to-migration-down blueprint)
   (write-to-migration-file blueprint)
   nil)
+
+(import-vars
+  [migratus.core
+   select-migrations
+   pending-list
+   migrate-until-just-before
+   uncompleted-migrations
+   gather-migrations
+   rollback
+   down
+   create-squash
+   run
+   all-migrations
+   migrations-between
+   with-store
+   reset
+   init
+   create
+   migrate
+   rollback-until-just-after
+   squashing-list
+   destroy
+   completed-migrations
+   up
+   migration-name
+   completed-list
+   squash-between
+   require-plugin])
 
 (comment
   (def blueprint

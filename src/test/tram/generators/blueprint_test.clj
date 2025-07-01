@@ -72,21 +72,30 @@
 (comment
   ;; PRINCIPLE: strings are meant to be rendered as is.  Keywords are meant
   ;; to be passed around as data.
-  (def blueprints
-    {:model          :agent
+
+
+  (def blueprint
+    {:model          :agents
      :template       :model
-     :timestamp      "20250628191533"
+     :timestamp      "20250701130612"
      :table          :agents
      :migration-name "create-model-agents"
-     :attributes     [{:type      :text
+     :attributes     [{:name :id
+                       :type :primary-key}
+                      {:type      :text
                        :required? true
-                       :name      "first_name"}
+                       :name      :first-name}
                       {:type    :text
                        :unique? true
-                       :name    "last_name"}
-                      {:type      :integer
-                       :name      "user-id"
-                       :required? true}
+                       :name    :last-name}
+                      {:type      :citext
+                       :unique?   true
+                       :required? true
+                       :name      :email}
+                      {:type       :integer
+                       :name       :account-id
+                       :references :accounts
+                       :required?  true}
                       {:name      :created-at
                        :type      :timestamptz
                        :required? true
@@ -95,4 +104,4 @@
                        :type      :timestamptz
                        :required? true
                        :default   :fn/now
-                       :trigger   :updated-trigger}]}))
+                       :trigger   :update-updated-at}]}))

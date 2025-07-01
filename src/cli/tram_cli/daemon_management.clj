@@ -3,8 +3,10 @@
             [babashka.process :as p]
             [clojure.string :as str]))
 
-(def default-port 7888)
-(def daemon-pid-file "/tmp/tram-daemon.pid")
+(def default-port
+  7888)
+(def daemon-pid-file
+  "/tmp/tram-daemon.pid")
 
 (defn kill-daemon []
   (when (fs/exists? daemon-pid-file)
@@ -19,23 +21,24 @@
   (try
     (with-open [_ (java.net.Socket. "127.0.0.1" default-port)]
       true)
-    (catch Exception _ false)))
+    (catch Exception _
+      false)))
 
 (defn start-daemon []
   (when-not (or (accepting?)
-                 (fs/exists? daemon-pid-file))
-   (let [proc (p/process {:out "tram-daemon.log"
-                          :err "tram-daemon.log"}
-                         "clj" "-M:dev"
-                         "-m"  "tram.daemon")]
-     (when-let [pid (some-> proc
-                            :proc
-                            (.pid))]
-       (spit daemon-pid-file pid)))))
+                (fs/exists? daemon-pid-file))
+    (let [proc (p/process {:out "tram-daemon.log"
+                           :err "tram-daemon.log"}
+                          "clj" "-M:dev"
+                          "-m"  "tram.daemon")]
+      (when-let [pid (some-> proc
+                             :proc
+                             (.pid))]
+        (spit daemon-pid-file
+              pid)))))
 
 (defn is-dead? []
-  (and (not (accepting?))
-       (not (fs/exists? daemon-pid-file))))
+  (and (not (accepting?)) (not (fs/exists? daemon-pid-file))))
 
 (defn ensure-daemon-is-running! []
   (when-not (accepting?)
@@ -66,5 +69,4 @@
         (Thread/sleep 250)
         (recur (dec times)))))
   (start-daemon)
-  (ensure-daemon-is-running!)
-  )
+  (ensure-daemon-is-running!))

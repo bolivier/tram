@@ -8,23 +8,27 @@
   information in it and some functions that will create the migration. Users can
   then execute those functions repeatedly to modify the migration in a data
   driven way."
-  (:require [clojure.java.io :as io]
-            [camel-snake-kebab.core :refer [->snake_case]]
+  (:require [camel-snake-kebab.core :refer [->snake_case_string]]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [selmer.parser :as selmer]
             [selmer.util]
             [tram.core :as tram]
             [zprint.core :refer [zprint-file-str]]))
 
+(def runtime-defaults
+  {:root "runtimes"
+   :path "dev/runtimes/"})
+
 (defn get-runtime-filename [blueprint]
-  (let [file-prefix "src/dev/runtime/"
-        filename    (str "generate_" (->snake_case (:model blueprint)) ".clj")]
-    (str file-prefix filename)))
+  (let [filename
+        (str "generate_" (->snake_case_string (:model blueprint)) ".clj")]
+    (str (:path runtime-defaults) filename)))
 
 (defn get-runtime-ns [blueprint]
-  (let [ns-prefix "runtime."
-        filename  (str "generate_" (:model blueprint) ".clj")
-        namespace (str ns-prefix
+  (let [filename  (str "generate_" (name (:model blueprint)) ".clj")
+        namespace (str (:root runtime-defaults)
+                       "."
                        (-> filename
                            (str/replace ".clj" "")
                            (str/replace "_" "-")))]
