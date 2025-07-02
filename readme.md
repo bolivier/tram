@@ -2,24 +2,19 @@
 
 <img src="./resources/images/readme-logo.png" width="300" alt="A tramcar with the Clojure logo on it">
 
-> TRAM = Tools for Rapid App Modeling
-> 
->   or
-> 
->   TRAM = The Rails Alternative for Makers
-> 
->   or
-> 
->   TRAM = Tiny Rails-ish Application Machine
+> TRAM :: Tools for Rapid Application Modeling
 
 Tram is an opinionated Clojure web framework, inspired by Ruby on Rails, to help
 you quickly and joyfully build web applications. Tram provides default
-libraries, scaffolding that wires them together, and a CLI tool for managing the
+libraries, scaffolding that wires them together, and a CLI tool for managing 
 familiar tasks.
 
 Tram is for you if you've ever wanted to use Clojure but been overwhelmed by the
 amount of upfront learning required.  You shouldn't need to select 20 libraries
 and wire them together yourself just to write a Hello World application.
+
+> [!Note]
+> Tram is in early alpha and not ready for production use
 
 ## Development (Fix this)
 
