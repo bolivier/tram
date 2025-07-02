@@ -1,5 +1,6 @@
 (ns tram.test-fixtures
   (:require [reitit.core :as r]
+            [tram.http.router :refer [defroutes]]
             [tram.testing.mocks :refer [with-stub]]))
 
 (def tram-config
@@ -28,11 +29,18 @@
 
 (defmacro with-tram-config
   [& body]
-  `(with-stub [tram.core/get-tram-config ~tram-config]
+  `(with-redefs [tram.core/get-tram-config (constantly ~tram-config)]
      ~@body))
+
+(defn ok-good-handler [req]
+  {:status 200
+   :body   "good"})
 
 (def sample-router
   (r/router [""
+             ["/sign-in"
+              {:name :route/sign-in
+               :get  (fn [] nil)}]
              ["/dashboard"
               ["" {:name :route/dashboard}]
               ["/users/:user-id" {:name :route/user}]]]))

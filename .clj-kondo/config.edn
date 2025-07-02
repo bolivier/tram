@@ -1,1 +1,2 @@
-{:lint-as {tram.utils/with-same-output clojure.core/let}}
+{:lint-as {tram.utils/with-same-output clojure.core/let
+           tram.http.router/defroutes clojure.core/def}}

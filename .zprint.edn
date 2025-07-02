@@ -8,6 +8,7 @@
 
  :fn-map {"if" [:arg1-body {:list {:force-nl? true}}]
           "with-stub" :binding
+          "defroutes" "def"
           "with-tram-config" :flow
           "with-same-output" :binding
           "with-mock-tram-config" :binding
