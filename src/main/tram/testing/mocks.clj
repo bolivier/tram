@@ -22,3 +22,12 @@
                                  ~(some? return-fn)    (return-fn# ~args)
                                  :else                 nil))]
          ~@body))))
+
+(defmacro with-temp-ns
+  [ns-name & body]
+  `(do (create-ns '~ns-name)
+       (binding [*ns* (find-ns '~ns-name)]
+         (require '[clojure.core :refer :all])
+         ~@(map (fn [form]
+                  `(eval '~form))
+             body))))

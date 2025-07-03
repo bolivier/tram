@@ -32,3 +32,12 @@
                   (keyword original-ns#
                            (str result#))
                   (keyword (str result#))))))
+
+(defn evolve
+  "Evolves `coll` with the evolving functions in `evolutions`.
+
+  `coll` should be a map, and `evolutions` a map of keys to functions of one
+  argument that will be called on matching keys in `coll`. "
+  [evolutions coll]
+  (let [relevant-evolutions (select-keys evolutions (keys coll))]
+    (merge-with (fn [value f] (f value)) coll relevant-evolutions)))

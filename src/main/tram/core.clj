@@ -3,7 +3,11 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [malli.core :as m]
+            [potemkin :refer [import-vars]]
+            [tram.http.router :as router]
             [tram.utils.language :as lang]))
+
+(import-vars [tram.http.router tram-router defroutes])
 
 (def DatabaseConnectionSchema
   [:map
@@ -65,10 +69,13 @@
   {:dbtype "postgresql"
    :dbname "tram"})
 
-(defn get-migration-config [env]
-  (let [config (get-tram-config)
-        db-key (keyword "database" env)]
-    (get config db-key)))
+(defn get-migration-config
+  ([]
+   (get-migration-config (get-env)))
+  ([env]
+   (let [config (get-tram-config)
+         db-key (keyword "database" env)]
+     (get config db-key))))
 
 (defn get-database-config
   ([]

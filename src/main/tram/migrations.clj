@@ -142,33 +142,13 @@
   (write-to-migration-file blueprint)
   nil)
 
-(import-vars
-  [migratus.core
-   select-migrations
-   pending-list
-   migrate-until-just-before
-   uncompleted-migrations
-   gather-migrations
-   rollback
-   down
-   create-squash
-   run
-   all-migrations
-   migrations-between
-   with-store
-   reset
-   init
-   create
-   migrate
-   rollback-until-just-after
-   squashing-list
-   destroy
-   completed-migrations
-   up
-   migration-name
-   completed-list
-   squash-between
-   require-plugin])
+(defn init []
+  (migratus.core/init (tram/get-migration-config)))
+
+(defn migrate
+  "Do pending database migrations.  Runs for the db based on TRAM_ENV. "
+  []
+  (migratus.core/migrate (tram/get-migration-config)))
 
 (comment
   (def blueprint
