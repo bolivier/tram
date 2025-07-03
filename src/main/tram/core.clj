@@ -70,10 +70,13 @@
   {:dbtype "postgresql"
    :dbname "tram"})
 
-(defn get-migration-config [env]
-  (let [config (get-tram-config)
-        db-key (keyword "database" env)]
-    (get config db-key)))
+(defn get-migration-config
+  ([]
+   (get-migration-config (get-env)))
+  ([env]
+   (let [config (get-tram-config)
+         db-key (keyword "database" env)]
+     (get config db-key))))
 
 (defn get-database-config
   ([]
