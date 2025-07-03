@@ -38,8 +38,6 @@
           v
           (recur (rest interned-symbols)))))))
 
-
-
 (defn default-handler
   "Default handler for a template literal.
 
@@ -118,21 +116,6 @@
    (let [{:keys [muuntaja-instance authentication-interceptor]
           :or   {muuntaja-instance (make-muuntaja-instance)}}
          options]
-     (http/router routes
-                  {:data {:muuntaja     muuntaja-instance
-                          :coercion     rcm/coercion
-                          :interceptors [#_(exception-interceptor)
-                                         authentication-interceptor
-                                         inject-route-name
-                                         (muuntaja/format-interceptor
-                                           muuntaja-instance)
-                                         (multipart-interceptor)
-                                         expand-hiccup-interceptor
-                                         (as-page-interceptor
-                                           (:full-page-renderer options))
-                                         (coerce-request-interceptor)
-                                         (coerce-response-interceptor)
-                                         (rhip/parameters-interceptor)
-                                         render-template-interceptor]}}))))
+     (http/router routes options))))
 
 (import-vars [reitit.ring ring-handler])

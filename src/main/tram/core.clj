@@ -4,9 +4,8 @@
             [clojure.java.io :as io]
             [malli.core :as m]
             [potemkin :refer [import-vars]]
-            [tram.http.router :refer [defroutes tram-router]]
+            [tram.http.router :as router]
             [tram.utils.language :as lang]))
-
 
 (import-vars [tram.http.router tram-router defroutes])
 

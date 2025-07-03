@@ -1,5 +1,12 @@
 (ns tram.http.route-helpers)
 
+(defn expandable-route-ref?
+  "Takes a vector rout reference, like [::make :route/home] and returns if that
+  is something we can expand."
+  [v]
+  (and (vector? v)
+       (= ::make (first v))))
+
 (defn make-route [route-name]
   [::make route-name])
 

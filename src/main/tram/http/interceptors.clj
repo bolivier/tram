@@ -2,15 +2,26 @@
   (:require
     [clojure.string :as str]
     [clojure.walk :refer [prewalk]]
+    [potemkin :refer [import-vars]]
     [reitit.core :as r]
+    [reitit.http.coercion
+     :refer
+     [coerce-request-interceptor coerce-response-interceptor]]
+    [reitit.http.interceptors.exception :refer [exception-interceptor]]
+    [reitit.http.interceptors.multipart :refer [multipart-interceptor]]
+    [reitit.http.interceptors.muuntaja :as muuntaja]
+    [reitit.http.interceptors.parameters :as rhip]
+    [reitit.ring]
     [tram.http.lookup :refer [request->template request->template-symbol]]
+    [tram.http.route-helpers :refer [expandable-route-ref?]]
     [tram.http.routing :as route]
     [tram.http.utils :as http.utils]
+    [tram.http.views :refer [*current-user* *req* *res*]]
     [tram.utils :refer [map-vals]]))
 
 (def inject-route-name
   "Injects the name of the current route under the request key `:route-name`"
-  {::name inject-route-name
+  {:name  :inject-route-name
    :enter (fn [ctx]
             (let [router     (get-in ctx [:request :reitit.core/router])
                   path       (get-in ctx [:request :reitit.core/match :path])
@@ -73,8 +84,6 @@
   {:name ::template-renderer
    :leave
    (fn [ctx]
-     (def ctx
-       ctx)
      (if (or (some? (get-in ctx
                             [:response :body]))
              (str/starts-with? (get-in ctx
@@ -110,10 +119,12 @@ Expected to find template called `"
                    template-ns)
                  {:template    template
                   :expected-fn (request->template-symbol (:request ctx))})))
-           (assoc-in ctx
-             [:response :body]
-             (apply template
-               context))))))})
+           (binding [*current-user* (:current-user request)
+                     *req*          request
+                     *res*          response]
+             (assoc-in ctx
+               [:response :body]
+               (template context)))))))})
 
 (def expand-hiccup-interceptor
   "Walks your hiccup tree to find any customizations that need to be expanded.
@@ -151,7 +162,7 @@ Expected to find template called `"
 
                             ;; use ::route/make to make a route with the
                             ;; request
-                            (and (vector? node) (= ::route/make (first node)))
+                            (expandable-route-ref? node)
                             (let [[_ route-name route-params] node]
                               (route/make-path router route-name route-params))
 
@@ -166,11 +177,26 @@ Expected to find template called `"
            (update-in [:response :headers]
                       (fn [headers]
                         (map-vals (fn [header]
-                                    (if (and (vector? header)
-                                             (= ::route/make (first header)))
+                                    (if (expandable-route-ref? header)
                                       (let [[_ route-name route-params] header]
                                         (route/make-path (::r/router req)
                                                          route-name
                                                          route-params))
                                       header))
                                   headers))))))})
+
+
+(def coercion-interceptors
+  [(coerce-request-interceptor)
+   (coerce-response-interceptor)
+   (rhip/parameters-interceptor)])
+
+(def default-interceptors
+  [(exception-interceptor)
+   inject-route-name
+   (multipart-interceptor)
+   expand-hiccup-interceptor
+   coercion-interceptors
+   render-template-interceptor])
+
+(import-vars [muuntaja format-interceptor])
