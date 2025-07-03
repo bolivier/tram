@@ -75,10 +75,15 @@
                   needs-full-page? (and html? (not htmx?) (not resource?))]
               (update-in ctx
                          [:response :body]
-                         (if needs-full-page?
-                           (or full-page-renderer
-                               default-as-page-renderer)
-                           identity))))})
+                         (fn [body]
+                           (cond
+                             (nil? body) ""
+                             needs-full-page?
+                             (let [f (or full-page-renderer
+                                         default-as-page-renderer)]
+                               (f body))
+
+                             :else body)))))})
 
 (def render-template-interceptor
   {:name ::template-renderer
