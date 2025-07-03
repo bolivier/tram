@@ -17,11 +17,12 @@
               expand-hiccup-interceptor
               inject-route-name
               render-template-interceptor]]
+            [tram.http.lookup :refer [handlers-ns->views-ns]]
             [tram.utils :refer [evolve]]))
 
 
 (defn at-route-def?
-  "Am di looking at a route definition?
+  "Am I looking at a route definition?
 
   That is, a map that has a :name keyword in it."
   [node]
@@ -37,14 +38,40 @@
           v
           (recur (rest interned-symbols)))))))
 
+
+
+(defn default-handler
+  "Default handler for a template literal.
+
+  Note: `*ns*` bindings change between executions of the wrapper and the response fn.
+
+  Grabbing the ns from the wrapper function, immediately on invocation, seems to
+  be more correct than from the returned handler."
+  [template]
+  (let [view-ns      (handlers-ns->views-ns *ns*)
+        view-name    (name template)
+        view-symbol  (symbol (str view-ns "/" view-name))
+        view-handler (requiring-resolve view-symbol)]
+    (fn [_req]
+      {:status 200
+       :body   (view-handler {})})))
+
 (defn handler-evolver
-  "Evolve a handler.  Receives either a handler fn or a map with a handler key.
+  "Evolve a handler.  Receives one of
+  - handler fn
+  - map with a `:handler` key
+  - keyword to indicate the view fn,
+    eg :view/sign-up, which points to the corresponding views
+    ns and the sign-up function there.
 
   First convert the handler fn into a map like {:handler val}. Then find the var
   that handler fn is stored in, if any, and add that to the map under
   `:handler-var`."
   [val]
-  (let [handler (or (:handler val) val)]
+  (let [handler (if (keyword? val)
+                  (default-handler val)
+                  (or (:handler val)
+                      val))]
     {:handler     handler
      :handler-var (fn->var handler)}))
 
@@ -68,9 +95,7 @@
   [var-name routes]
   (let [evaluated-routes (prewalk (fn [n]
                                     (if-let [var (and (symbol? n) (resolve n))]
-                                      (if (fn? @var)
-                                        var
-                                        @var)
+                                      @var
                                       n))
                                   routes)]
     `(def ~var-name
@@ -81,6 +106,7 @@
                                :namespace (str *ns*)))
                      node))
                  evaluated-routes))))
+
 (defn tram-router
   "`reitit.http/router` with default options for tram.
 
@@ -95,14 +121,15 @@
      (http/router routes
                   {:data {:muuntaja     muuntaja-instance
                           :coercion     rcm/coercion
-                          :interceptors [(exception-interceptor)
+                          :interceptors [#_(exception-interceptor)
                                          authentication-interceptor
                                          inject-route-name
                                          (muuntaja/format-interceptor
                                            muuntaja-instance)
                                          (multipart-interceptor)
                                          expand-hiccup-interceptor
-                                         as-page-interceptor
+                                         (as-page-interceptor
+                                           (:full-page-renderer options))
                                          (coerce-request-interceptor)
                                          (coerce-response-interceptor)
                                          (rhip/parameters-interceptor)

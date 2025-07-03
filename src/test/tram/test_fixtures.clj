@@ -1,7 +1,5 @@
 (ns tram.test-fixtures
-  (:require [reitit.core :as r]
-            [tram.http.router :refer [defroutes]]
-            [tram.testing.mocks :refer [with-stub]]))
+  (:require [reitit.core :as r]))
 
 (def tram-config
   {:database/development {:db {:dbname "tram_sample_development"

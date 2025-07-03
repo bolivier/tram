@@ -3,7 +3,12 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [malli.core :as m]
+            [potemkin :refer [import-vars]]
+            [tram.http.router :refer [defroutes tram-router]]
             [tram.utils.language :as lang]))
+
+
+(import-vars [tram.http.router tram-router defroutes])
 
 (def DatabaseConnectionSchema
   [:map
