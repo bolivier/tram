@@ -1,0 +1,68 @@
+name: Playwright Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    services:
+      postgres:
+        image: postgres:16
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: liabilities_development
+        options: >-
+          --health-cmd="pg_isready"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./e2e
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+        working-directory: ./e2e
+
+      - name: "Install java"
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "23"
+
+      - name: Install Clojure
+        run: sudo bin/install-clojure.sh
+
+      - name: Build Jar
+        run: clojure -T:build uber
+
+      - name: Run Java Server
+        run: |
+          nohup java -jar target/sample_app.jar > server.log 2>&1 &
+          SERVER_PID=$!
+
+          timeout 60 bash -c 'until echo > /dev/tcp/localhost/1337; do sleep 1; done'
+
+      - name: Run Playwright tests
+        working-directory: ./e2e
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

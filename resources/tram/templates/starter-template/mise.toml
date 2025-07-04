@@ -1,0 +1,6 @@
+[env]
+PGDATABASE = 'sample_app_development'
+TRAM_ENV = 'development'
+
+[tools]
+postgres = '17'

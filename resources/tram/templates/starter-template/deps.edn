@@ -1,0 +1,73 @@
+{:paths ["src" "resources"]
+
+ :deps  {org.clojure/clojure  {:mvn/version "1.12.0"}
+         org.clojure/data.xml {:mvn/version "0.2.0-alpha6"}
+         meander/epsilon      {:mvn/version "0.0.650"}
+
+         bolivier/tram {:local/root "../tram"
+                        :deps/manifest :deps}
+
+         integrant/integrant {:mvn/version "0.8.0"}
+         integrant/repl      {:mvn/version "0.4.0"}
+
+         ;; html -- using my own version unti malli is upgraded upstream
+         io.github.bolivier/huff {:git/tag "malli-upgrade"
+                                  :git/sha "71f883c3f8eddecc7e3657f8459b158232d39473"}
+         enlive/enlive           {:mvn/version "1.1.6"}
+
+         ;; http
+         metosin/reitit    {:mvn/version "0.9.1"}
+         metosin/malli     {:mvn/version "0.18.0"}
+         http-kit/http-kit {:mvn/version "2.9.0-alpha6"}
+         clj-http/clj-http {:mvn/version "3.13.0"}
+
+         ;; auth
+         buddy/buddy                     {:mvn/version "2.0.0"}
+         buddy/buddy-core                {:mvn/version "1.11.418"}
+         buddy/buddy-auth                {:mvn/version "3.0.323"}
+         buddy/buddy-hashers             {:mvn/version "2.0.162"}
+         buddy/buddy-sign                {:mvn/version "3.5.346"}
+         crypto-password/crypto-password {:mvn/version "0.3.0"}
+
+         ;; Database (Postgresql)
+         org.postgresql/postgresql         {:mvn/version "42.7.5"}
+         com.github.seancorfield/next.jdbc {:mvn/version "1.3.955"}
+         io.github.camsaul/toucan2         {:mvn/version "1.0.564"}
+         methodical/methodical             {:mvn/version "1.0.127"}
+         com.github.seancorfield/honeysql  {:mvn/version "2.7.1310"}
+         migratus/migratus                 {:mvn/version "1.6.4"}
+         com.fzakaria/slf4j-timbre         {:mvn/version "0.4.1"}
+
+         ;; Logging
+         com.taoensso/telemere {:mvn/version "1.0.0"}
+
+         ;; utils
+         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
+         clojure.java-time/clojure.java-time {:mvn/version "1.3.0"}
+         cheshire/cheshire                   {:mvn/version "5.13.0"}
+         potemkin/potemkin                   {:mvn/version "0.4.6"}}
+
+   :aliases
+   {:dev
+    {:extra-paths ["dev"]
+     :extra-deps {io.github.nubank/morse {:git/tag "v2023.04.30.01" :git/sha "d99b09c"}
+                  babashka/process       {:mvn/version "0.5.21"}}}
+
+    :test {:extra-paths ["test"]
+           :main-opts   ["-m" "kaocha.runner"]
+           :extra-deps  {com.github.seancorfield/expectations {:mvn/version "2.2.214"}
+                         org.xerial/sqlite-jdbc               {:mvn/version "3.50.1.0"}
+                         midje/midje                          {:mvn/version "1.10.10"}
+                         pjstadig/humane-test-output          {:mvn/version "0.11.0"}
+                         lambdaisland/kaocha                  {:mvn/version "1.91.1392"}}
+           :jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                         "-Dio.netty.tryReflectionSetAccessible=true"]}
+
+    :watch {:exec-fn   kaocha.runner/exec-fn
+            :exec-args {:watch? true}}
+
+    ;; This alias is useful if you need to develop a new hook for a macro
+    :clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "LATEST"}}}
+
+    :build {:extra-deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}}
+            :ns-default build}}}

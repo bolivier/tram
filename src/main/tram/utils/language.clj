@@ -1,5 +1,5 @@
 (ns tram.utils.language
-  (:require [camel-snake-kebab.core :refer [->snake_case]]
+  (:require [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
             [clojure.string :as str]
             [declensia.core :as dc]
             [tram.utils :refer [with-same-output]]))
@@ -17,6 +17,9 @@
   "Returns `s` if `s` is a snake case variable."
   [s]
   (= (->snake_case s) s))
+
+(defn kebab-case? [s]
+  (= (->kebab-case s) s))
 
 (defn table-name->foreign-key-id [table-name]
   (with-same-output [table table-name]

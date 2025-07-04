@@ -1,7 +1,8 @@
-{:paths ["src/cli"]
+{:paths ["src/cli" "resources"]
 
  :deps {nrepl/bencode {:mvn/version "1.1.0"}
 
+        camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
         babashka/nrepl-client {:git/url "https://github.com/babashka/nrepl-client"
                                :sha "f183486b491b24dd4f8a7e87022ced475df39b11"}
 
