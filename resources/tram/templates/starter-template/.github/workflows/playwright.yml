@@ -14,7 +14,7 @@ jobs:
           - 5432:5432
         env:
           POSTGRES_USER: postgres
-          POSTGRES_DB: liabilities_development
+          POSTGRES_DB: sample_app_development
         options: >-
           --health-cmd="pg_isready"
           --health-interval=10s
