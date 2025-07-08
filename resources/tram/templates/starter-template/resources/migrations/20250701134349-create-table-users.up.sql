@@ -8,6 +8,6 @@ CREATE TABLE users (
 
 --;;
 
-CREATE TRIGGER "set_updated_at_on_:users" BEFORE
+CREATE TRIGGER "set_updated_at_on_users" BEFORE
 UPDATE
   ON users FOR EACH row EXECUTE FUNCTION update_updated_at_column()
