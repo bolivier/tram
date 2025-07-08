@@ -2,24 +2,11 @@
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
-            [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.string :as str]
-            [zprint.core :refer [zprint-file-str]]))
-
-(def tram-zprint-edn
-  (with-open [r (java.io.PushbackReader. (io/reader (io/file ".zprint.edn")))]
-    (edn/read r)))
-
-(defn format-code [source-string]
-  (zprint-file-str source-string ::model-template tram-zprint-edn))
+            [clojure.string :as str]))
 
 (def called-from-dir
   (io/file (System/getenv "TRAM_CLI_CALLED_FROM")))
-
-(defn replace-placeholder [file project-name]
-  (let [contents (slurp file)]
-    (str/replace contents "sample-app" project-name)))
 
 (defn ns->path [ns]
   (-> ns
@@ -33,7 +20,8 @@
 
 (defn render-new-project-template [project-name]
   (validate-project-name! project-name)
-  (let [project-root (io/file called-from-dir project-name)]
+  (let [project-root  (io/file called-from-dir project-name)
+        template-root (io/file "resources/tram/templates/starter-template")]
     (try
       (fs/create-dir project-root)
       (catch Exception _
@@ -42,43 +30,38 @@
                       " already exists.  Please remove it and try again."))
         (System/exit 1)))
     (println "Copying files")
-    (let [template-root (io/file "resources/tram/templates/starter-template")]
-      (doseq [src  (->> (file-seq template-root)
-                        (filter #(.isFile %)))
-              :let [relative
-                    (-> (.getPath src)
-                        (str/replace-first
-                          #".*?resources/tram/templates/starter-template/"
-                          "")
-                        (str/replace "sample_app" (ns->path project-name)))
-
-                    dest (io/file project-root relative)]]
-        (io/make-parents dest)
-        (spit dest
-              (-> src
-                  slurp
-                  (str/replace "sample_app" (->snake_case project-name))
-                  (str/replace "sample-app" project-name)))))
-    (System/exit 0)
+    (doseq [src  (->> (file-seq template-root)
+                      (filter #(.isFile %)))
+            :let [relative (->
+                             (.getPath src)
+                             (str/replace-first
+                               #".*?resources/tram/templates/starter-template/"
+                               "")
+                             (str/replace "sample_app" (ns->path project-name)))
+                  dest     (io/file project-root relative)]]
+      (io/make-parents dest)
+      (spit dest
+            (-> src
+                slurp
+                (str/replace "sample_app" (->snake_case project-name))
+                (str/replace "sample-app" project-name))))
+    (doseq [db-script ["bin/db-init" "bin/db-start"]]
+      (fs/copy (io/file template-root db-script)
+               (io/file project-root db-script)
+               {:copy-attributes  true
+                :replace-existing true})
+      (spit (io/file project-root db-script)
+            (-> (io/file project-root db-script)
+                slurp
+                (str/replace "sample_app" (->snake_case project-name))
+                (str/replace "sample-app" project-name))))
     (println "Initializing a git repo.")
-    (p/shell "git init")
-    (p/shell "git add -a")
-    (p/shell "git commit -m 'Initial commit")
+    (p/shell {:dir project-root} "git init")
+    (p/shell {:dir project-root} "git add .")
+    (p/shell {:dir project-root} "git commit -m 'Initial commit")
     (println "Installing development tools with mise.")
-    (p/shell "mise install")
-    (println
-      "Creating development and test databases (this will fail without a postgres installation)")
-    (with-open [r (java.io.PushbackReader. (io/reader (io/file "tram.edn")))]
-      (let [tram-config (edn/read r)]
-        (edn/read r)
-        (p/shell (str "createdb "
-                      (-> tram-config
-                          :database/development
-                          :db
-                          :dbname)))
-        (p/shell (str "createdb "
-                      (-> tram-config
-                          :database/test
-                          :db
-                          :dbname)))
-        (p/shell "tram db:migrate")))))
+    (p/shell {:dir project-root} "mise install")
+    (println "Creating development and test databases")
+    (p/shell {:dir project-root} "mise trust")
+    (p/shell {:dir project-root} "mise exec -- ./bin/db-init")
+    (p/shell {:dir project-root} "tram db:migrate")))

@@ -1,0 +1,3 @@
+#!/bin/bash
+mkdir -p .postgres/logs
+pg_ctl -D .postgres/data -l .postgres/logs/postgres.log start

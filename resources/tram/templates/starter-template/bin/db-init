@@ -1,0 +1,22 @@
+#!/bin/bash
+if [ ! -d ".postgres/data" ]; then
+    # I think these are unnecessary
+    export PGHOST=localhost
+    export PGPORT=5433
+    export PGUSER=$(whoami)
+
+    mkdir -p .postgres/data
+    mkdir -p .postgres/logs
+    mkdir -p .postgres/sockets
+
+    initdb -D .postgres/data
+    echo "unix_socket_directories = '$(pwd)/.postgres/sockets'" >> .postgres/data/postgresql.conf
+    pg_ctl -D .postgres/data -l .postgres/logs/postgres.log start
+
+    # Set environment for this script
+
+
+    createdb sample_app_development
+    createdb sample_app__test
+    createdb tram
+fi
