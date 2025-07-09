@@ -1,5 +1,5 @@
 (ns runtimes.generate-sessions
-  (:require [tram.migrations :refer [init migrate write-to-migration-files]]))
+  (:require [tram.migrations :refer [migrate write-to-migration-files]]))
 
 
 (def blueprint
@@ -17,10 +17,9 @@
                     {:type      :timestamptz
                      :required? true
                      :name      :expires-at}
-                    {:type       :reference
-                     :name       :user-id
-                     :references :users
-                     :required?  true}
+                    {:type      :reference
+                     :name      :user-id
+                     :required? true}
                     {:name      :created-at
                      :type      :timestamptz
                      :required? true

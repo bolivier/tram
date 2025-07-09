@@ -1,7 +1,7 @@
 CREATE TABLE sessions (
   id SERIAL PRIMARY KEY,
   expires_at TIMESTAMPTZ NOT NULL,
-  user_id INTEGER NOT NULL,
+  user_id INTEGER REFERENCES users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )

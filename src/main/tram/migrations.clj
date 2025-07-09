@@ -11,7 +11,8 @@
             [methodical.core :as m]
             [migratus.core]
             [potemkin :refer [import-vars]]
-            [tram.core :as tram])
+            [tram.core :as tram]
+            [tram.utils.language :as lang])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
 
 (defn format-sql [sql]
@@ -46,7 +47,7 @@
 (m/defmethod serialize-attribute [:default :reference]
   [attr]
   (conj (serialize-attribute (assoc attr :type :integer))
-        [:references :teams :id]))
+        [:references (lang/foreign-key-id->table-name (:name attr)) :id]))
 
 (defn serialize-blueprint [blueprint]
   (-> (hh/create-table (symbol (:table blueprint)))

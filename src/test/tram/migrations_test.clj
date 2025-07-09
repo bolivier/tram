@@ -63,9 +63,9 @@
                                       :name :id}))
 
 
-  (e/expect [:team-id :integer [:references :teams :id]]
+  (e/expect [:user-id :integer [:references :users :id]]
             (sut/serialize-attribute {:type :reference
-                                      :name :team-id})))
+                                      :name :user-id})))
 
 (e/defexpect getting-names
   (let [calls (atom [])]
