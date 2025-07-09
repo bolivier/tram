@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ ! -d ".postgres/data" ]; then
+    export PGUSER=$(whoami)
+
+    mkdir -p .postgres/data
+    mkdir -p .postgres/logs
+    mkdir -p .postgres/sockets
+
+    initdb -D .postgres/data
+    echo "unix_socket_directories = '$(pwd)/.postgres/sockets'" >> .postgres/data/postgresql.conf
+    pg_ctl -D .postgres/data -l .postgres/logs/postgres.log start
+
+    createdb sample_app_development || echo "Database sample_app_development might already exist"
+    createdb sample_app_test || echo "Database sample_app_test might already exist"
+    createdb tram || echo "Database tram might already exist"
+fi

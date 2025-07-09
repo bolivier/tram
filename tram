@@ -1,48 +1,16 @@
-#!/usr/bin/env bb
+#!/usr/bin/env bash
 
-(require '[babashka.fs :as fs])
-(require '[babashka.process :as p])
-(require '[tram-cli.nrepl-client :as client])
-(require '[zprint.core :refer [zprint-file-str]])
-(require '[clojure.string :as str])
-(require '[tram-cli.daemon-management
-           :refer
-           [start-daemon kill-daemon restart-daemon accepting?]])
+# Capture the directory where the script was called from
+ORIGINAL_DIR="$(pwd)"
 
-(defn -main [& args]
-  (let [cmd (first args)]
-    (case cmd
-      "daemon:start" (start-daemon)
-      "daemon:kill" (kill-daemon)
-      "daemon:restart" (restart-daemon)
-      "daemon:status" (if (accepting?)
-                        (println "Running")
-                        (println "Stopped"))
-      "new" (println "not yet implemented")
-      "test:watch"
-      (if (fs/exists? "bin/kaocha")
-        (do (println "Watching tests with bin/kaocha")
-            (p/shell {:continue true}
-                     "bin/kaocha --watch"))
-        (do
-          (println
-            "bin/kaocha not found, invoking clojure command `clojure -X:test:watch`")
-          (p/shell {:continue true}
-                   "clojure -X:test:watch")))
+# Get the directory where this script is located (following symlinks)
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 
-      "test"
-      (if (fs/exists? "bin/kaocha")
-        (do (println "Running tests with bin/kaocha")
-            (p/shell {:continue true}
-                     "bin/kaocha"))
-        (do
-          (println
-            "bin/kaocha not found, invoking clojure command `clojure -X:test`")
-          (p/shell {:continue true}
-                   "clojure -X:test")))
+# Change to the project directory
+cd "$SCRIPT_DIR"
 
-      (client/send {:op   :tram/op
-                    :cmd  cmd
-                    :args (rest args)}))))
+# Export the original directory so the Clojure code can access it
+export TRAM_CLI_CALLED_FROM="$ORIGINAL_DIR"
 
-(apply -main *command-line-args*)
+# Run the babashka command with all passed arguments
+bb -m tram-cli.entry "$@"

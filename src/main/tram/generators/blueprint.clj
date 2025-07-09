@@ -72,7 +72,7 @@
 
 (defn reference-attr->table-name [builder]
   (->> builder
-       str
+       (apply str)
        (re-find #"references\((.*)\)")
        second))
 
@@ -141,13 +141,12 @@
                    :default default)))
 
         (references? builder)
-        {:type       :integer
-         :name       (-> (reference-attr->table-name builder)
-                         lang/table-name->foreign-key-id
-                         keyword)
-         :references (-> (reference-attr->table-name builder)
-                         keyword)
-         :required?  true}
+        (merge attribute
+               {:type :reference
+                :name (-> builder
+                          reference-attr->table-name
+                          lang/table-name->foreign-key-id
+                          keyword)})
 
         :else
         (let [n (apply str

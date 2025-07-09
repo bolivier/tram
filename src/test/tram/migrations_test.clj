@@ -23,6 +23,7 @@
                      :default "yes"}
                     {:type    :timestamptz
                      :name    "signup_date"
+                     :trigger :update-updated-at
                      :default :fn/now}]})
 
 (e/defexpect serializing-attributes
@@ -62,9 +63,9 @@
                                       :name :id}))
 
 
-  (e/expect [:team-id :integer [:references :teams :id]]
+  (e/expect [:user-id :integer [:references :users :id]]
             (sut/serialize-attribute {:type :reference
-                                      :name :team-id})))
+                                      :name :user-id})))
 
 (e/defexpect getting-names
   (let [calls (atom [])]
@@ -75,16 +76,17 @@
       (sut/write-to-migration-file blueprint)
       (let [[filename contents] (first @calls)
             contents (-> contents
+                         (str/replace #"\n+" " ")
                          (str/replace #" +" " ")
-                         (str/replace #"\n" "")
-                         (str/replace #"\( " "("))]
+                         (str/replace #"\( ?" "(")
+                         (str/replace #" ?\)" ")"))]
         (e/expect (str "resources/migrations/"
                        (:timestamp blueprint)
                        "-create-table-users.up.sql")
                   filename
                   "spit was called with incorrect filename")
         (e/expect
-          "CREATE TABLE users (name TEXT NOT NULL, email CITEXT NOT NULL UNIQUE, cool TEXT DEFAULT 'yes', signup_date TIMESTAMPTZ DEFAULT NOW())"
+          "CREATE TABLE users (name TEXT NOT NULL, email CITEXT NOT NULL UNIQUE, cool TEXT DEFAULT 'yes', signup_date TIMESTAMPTZ DEFAULT NOW()) --;; CREATE TRIGGER set_updated_at_on_users BEFORE UPDATE ON users FOR EACH row EXECUTE FUNCTION update_updated_at_column()"
           contents
           "spit was called with incorrect contents"))))
 
@@ -102,7 +104,9 @@
                   "spit was called with incorrect filename")
         (e/expect "DROP TABLE users"
                   contents
-                  "spit was called with incorrect contents")))))
+                  "spit was called with incorrect contents"))))
+
+)
 
 
 

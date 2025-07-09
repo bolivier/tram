@@ -1,0 +1,4 @@
+-/.clj-kondo
+-/resources/test-projects
+
+!/src/dev/runtime

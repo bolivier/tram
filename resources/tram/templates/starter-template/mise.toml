@@ -1,0 +1,9 @@
+[env]
+PGDATABASE = 'sample_app_development'
+TRAM_ENV = 'development'
+PGDATA = ".postgres/data"
+PGHOST = "localhost"
+PGPORT = "5433"  # Use non-standard port to avoid conflicts
+
+[tools]
+postgres = '17'

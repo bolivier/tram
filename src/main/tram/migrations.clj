@@ -11,7 +11,8 @@
             [methodical.core :as m]
             [migratus.core]
             [potemkin :refer [import-vars]]
-            [tram.core :as tram])
+            [tram.core :as tram]
+            [tram.utils.language :as lang])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
 
 (defn format-sql [sql]
@@ -46,7 +47,7 @@
 (m/defmethod serialize-attribute [:default :reference]
   [attr]
   (conj (serialize-attribute (assoc attr :type :integer))
-        [:references :teams :id]))
+        [:references (lang/foreign-key-id->table-name (:name attr)) :id]))
 
 (defn serialize-blueprint [blueprint]
   (-> (hh/create-table (symbol (:table blueprint)))
@@ -70,10 +71,16 @@
   nil)
 (sql/register-clause! :for-each #'generic-formatter :execute-function)
 
-(sql/register-clause! :before-update #'generic-formatter :for-each)
+(sql/register-clause! :before-update
+                      (fn [clause x]
+                        (let [[sql & params] (if (or (vector? x)
+                                                     (ident? x))
+                                               (sql/format-expr x)
+                                               (sql/format-dsl x))]
+                          (into [(str "BEFORE UPDATE " sql)] params)))
+                      :for-each)
 
 (sql/register-clause! :create-trigger #'generic-formatter :before-update)
-
 
 (defmulti render-trigger
   (fn [attr _] (:trigger attr)))
@@ -125,7 +132,6 @@
   (partial generate-migration-filename :up))
 
 
-
 (defn write-to-migration-file [blueprint]
   (let [primary-migration (serialize-to-sql blueprint)
         triggers          (serialize-to-trigger-sqls blueprint)
@@ -149,6 +155,16 @@
   "Do pending database migrations.  Runs for the db based on TRAM_ENV. "
   []
   (migratus.core/migrate (tram/get-migration-config)))
+
+(defn create
+  "Create a new migration"
+  [name]
+  (migratus.core/create (tram/get-migration-config) name))
+
+(defn rollback
+  "Undo the last migration migration"
+  []
+  (migratus.core/rollback (tram/get-migration-config)))
 
 (comment
   (def blueprint
