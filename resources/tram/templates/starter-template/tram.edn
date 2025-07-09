@@ -1,25 +1,28 @@
-{:database/development {:db {:dbname "sample_app_development"
-                             :dbtype "postgresql"
-                             :host   "localhost"
-                             :port   5432
-                             :user   "brandon"}
+{:database/development {:db            {:dbname "sample_app_development"
+                                        :dbtype "postgresql"
+                                        :host   "localhost"
+                                        :port   5433
+                                        :user   "brandon"}
+                        :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
-                        :init-script "init.sql"
-                        :store :database}
- :database/prod        {:db {:dbname "sample_app_production"
-                             :dbtype "postgresql"}
-                        :init-script "init.sql"
+                        :store         :database}
+ :database/production  {:db            {:dbname "sample_app_production"
+                                        :dbtype "postgresql"
+                                        :host   "localhost"
+                                        :port   5433
+                                        :user   "brandon"}
+                        :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
-                        :store :database}
- :database/test        {:db {:dbname "sample_app_test"
-                             :dbtype "postgresql"
-                             :host   "localhost"
-                             :port   5432
-                             :user   "brandon"}
-                        :init-script "init.sql"
+                        :store         :database}
+ :database/test        {:db            {:dbname "sample_app_test"
+                                        :dbtype "postgresql"
+                                        :host   "localhost"
+                                        :port   5433
+                                        :user   "brandon"}
+                        :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
-                        :store :database}
+                        :store         :database}
  :project/name         :sample-app}
