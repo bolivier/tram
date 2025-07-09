@@ -17,7 +17,7 @@
                     {:type      :timestamptz
                      :required? true
                      :name      :expires-at}
-                    {:type       :integer
+                    {:type       :reference
                      :name       :user-id
                      :references :users
                      :required?  true}
@@ -34,6 +34,5 @@
 (comment
   ;; run this to re/write the migration file
   (write-to-migration-files blueprint)
-  (init)
   (migrate)
   nil)

@@ -20,11 +20,10 @@
            :default   :fn/now}
           (sut/parse-attribute "!created-at:timestamptz=fn/now"))
 
-  (expect {:name       :team-id
-           :type       :integer
-           :required?  true
-           :references :teams}
-          (sut/parse-attribute "references(teams)"))
+  (expect {:name      :team-id
+           :type      :reference
+           :required? true}
+          (sut/parse-attribute "!references(teams)"))
 
   (expect {:name    :is-good
            :type    :boolean
@@ -72,8 +71,6 @@
 (comment
   ;; PRINCIPLE: strings are meant to be rendered as is.  Keywords are meant
   ;; to be passed around as data.
-
-
   (def blueprint
     {:model          :agents
      :template       :model
@@ -92,10 +89,9 @@
                        :unique?   true
                        :required? true
                        :name      :email}
-                      {:type       :integer
-                       :name       :account-id
-                       :references :accounts
-                       :required?  true}
+                      {:type      :reference
+                       :name      :account-id
+                       :required? true}
                       {:name      :created-at
                        :type      :timestamptz
                        :required? true

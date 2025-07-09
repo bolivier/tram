@@ -76,16 +76,17 @@
       (sut/write-to-migration-file blueprint)
       (let [[filename contents] (first @calls)
             contents (-> contents
+                         (str/replace #"\n+" " ")
                          (str/replace #" +" " ")
-                         (str/replace #"\n" "")
-                         (str/replace #"\( " "("))]
+                         (str/replace #"\( ?" "(")
+                         (str/replace #" ?\)" ")"))]
         (e/expect (str "resources/migrations/"
                        (:timestamp blueprint)
                        "-create-table-users.up.sql")
                   filename
                   "spit was called with incorrect filename")
         (e/expect
-          "CREATE TABLE users (name TEXT NOT NULL, email CITEXT NOT NULL UNIQUE, cool TEXT DEFAULT 'yes', signup_date TIMESTAMPTZ DEFAULT NOW())--;;CREATE TRIGGER set_updated_at_on_users BEFORE UPDATE ON users FOR EACH row EXECUTE FUNCTION update_updated_at_column()"
+          "CREATE TABLE users (name TEXT NOT NULL, email CITEXT NOT NULL UNIQUE, cool TEXT DEFAULT 'yes', signup_date TIMESTAMPTZ DEFAULT NOW()) --;; CREATE TRIGGER set_updated_at_on_users BEFORE UPDATE ON users FOR EACH row EXECUTE FUNCTION update_updated_at_column()"
           contents
           "spit was called with incorrect contents"))))
 

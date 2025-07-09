@@ -72,7 +72,6 @@
 
 (sql/register-clause! :before-update
                       (fn [clause x]
-                        (prn clause)
                         (let [[sql & params] (if (or (vector? x)
                                                      (ident? x))
                                                (sql/format-expr x)
@@ -130,7 +129,6 @@
 (def generate-migration-up-filename
   "Generate the path, filename included, for an up migration."
   (partial generate-migration-filename :up))
-
 
 
 (defn write-to-migration-file [blueprint]
