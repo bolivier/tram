@@ -6,15 +6,19 @@
 
 (defn correct-password? [hashed-password guess]
   (boolean (when hashed-password
-             (verify-password guess hashed-password))))
+             (verify-password guess
+                              hashed-password))))
 
 (defn get-authenticated-user
   "Returns either the user correctly authenticated by `email` and `password` or
   `nil`."
   [email password-guess]
   (let [user-password (user/get-user-password email)]
-    (if (correct-password? user-password password-guess)
-      (t2/select-one :models/users :email email)
+    (if (correct-password? user-password
+                           password-guess)
+      (t2/select-one :models/users
+                     :email
+                     email)
       nil)))
 
 (defn register-new-account [{:keys [email password]}]
@@ -28,7 +32,8 @@
 (def cookie-options
   {:path      "/"
    :http-only true
-   :secure    true ; Set to false for development over HTTP
+   :secure    (= (System/getenv "ENV") "production") ; Set to false for
+                                                     ; development over HTTP
    :same-site :strict
    :max-age   (* 24 60 60)}) ; 24 hours in seconds
 
@@ -38,9 +43,12 @@
   (when cookie-header
     (into {}
           (comp (map str/trim)
-                (map #(str/split % #"=" 2))
+                (map #(str/split %
+                                 #"="
+                                 2))
                 (filter #(= 2 (count %))))
-          (str/split cookie-header #";"))))
+          (str/split cookie-header
+                     #";"))))
 
 (defn get-cookie-value
   "Extract cookie value from request"
@@ -65,7 +73,10 @@
                  (:same-site options) (conj (str "SameSite="
                                                  (name (:same-site options)))))]
      (if (seq attrs)
-       (str base "; " (str/join "; " attrs))
+       (str base
+            "; "
+            (str/join "; "
+                      attrs))
        base))))
 
 (defn set-session-cookie [response session-id]
@@ -85,5 +96,7 @@
                   {:keys [user-id]} (t2/select-one :models/sessions session-id)
                   user (t2/select-one :models/users user-id)]
               (if user
-                (assoc-in ctx [:request :current-user] user)
+                (assoc-in ctx
+                  [:request :current-user]
+                  user)
                 ctx)))})
