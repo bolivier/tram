@@ -58,7 +58,7 @@
     (println "Initializing a git repo.")
     (p/shell {:dir project-root} "git init")
     (p/shell {:dir project-root} "git add .")
-    (p/shell {:dir project-root} "git commit -m 'Initial commit")
+    (p/shell {:dir project-root} "git commit -m 'Initial commit'")
     (println "Installing development tools with mise.")
     (p/shell {:dir project-root} "mise install")
     (println "Creating development and test databases")
