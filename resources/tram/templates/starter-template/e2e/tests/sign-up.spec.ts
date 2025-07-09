@@ -32,7 +32,7 @@ test("User exists path", async ({ signUpPage }) => {
   await signUpPage.visit();
   await expect(signUpPage).toBeCurrentPage();
 
-  await signUpPage.submit("carl@sprinfieldnuclear.com", "password1234");
+  await signUpPage.submit("carl@springfieldnuclear.com", "password1234");
 
   await expect(signUpPage).toBeCurrentPage();
   await expect(signUpPage.error).toHaveText(
