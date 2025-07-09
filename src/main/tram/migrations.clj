@@ -157,6 +157,16 @@
   []
   (migratus.core/migrate (tram/get-migration-config)))
 
+(defn create
+  "Create a new migration"
+  [name]
+  (migratus.core/create (tram/get-migration-config) name))
+
+(defn rollback
+  "Undo the last migration migration"
+  []
+  (migratus.core/rollback (tram/get-migration-config)))
+
 (comment
   (def blueprint
     {:model          "user"
