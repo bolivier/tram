@@ -1,5 +1,5 @@
 {
-  "name": "e2e testing",
+  "name": "e2e-testing",
   "main": "index.js",
   "scripts": {
     "test": "playwright test",

@@ -56,8 +56,6 @@
     :test {:extra-paths ["test"]
            :main-opts   ["-m" "kaocha.runner"]
            :extra-deps  {com.github.seancorfield/expectations {:mvn/version "2.2.214"}
-                         org.xerial/sqlite-jdbc               {:mvn/version "3.50.1.0"}
-                         midje/midje                          {:mvn/version "1.10.10"}
                          pjstadig/humane-test-output          {:mvn/version "0.11.0"}
                          lambdaisland/kaocha                  {:mvn/version "1.91.1392"}}
            :jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"
