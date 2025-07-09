@@ -43,7 +43,7 @@ test("User exists path", async ({ signUpPage }) => {
 const sql = postgres({
   host: "localhost",
   database: "sample_app_development",
-  port: 5432,
+  port: 5433,
   fetch_types: false,
 });
 
