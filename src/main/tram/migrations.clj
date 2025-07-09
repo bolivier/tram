@@ -70,10 +70,17 @@
   nil)
 (sql/register-clause! :for-each #'generic-formatter :execute-function)
 
-(sql/register-clause! :before-update #'generic-formatter :for-each)
+(sql/register-clause! :before-update
+                      (fn [clause x]
+                        (prn clause)
+                        (let [[sql & params] (if (or (vector? x)
+                                                     (ident? x))
+                                               (sql/format-expr x)
+                                               (sql/format-dsl x))]
+                          (into [(str "BEFORE UPDATE " sql)] params)))
+                      :for-each)
 
 (sql/register-clause! :create-trigger #'generic-formatter :before-update)
-
 
 (defmulti render-trigger
   (fn [attr _] (:trigger attr)))

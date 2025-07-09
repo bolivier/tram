@@ -23,6 +23,7 @@
                      :default "yes"}
                     {:type    :timestamptz
                      :name    "signup_date"
+                     :trigger :update-updated-at
                      :default :fn/now}]})
 
 (e/defexpect serializing-attributes
@@ -84,7 +85,7 @@
                   filename
                   "spit was called with incorrect filename")
         (e/expect
-          "CREATE TABLE users (name TEXT NOT NULL, email CITEXT NOT NULL UNIQUE, cool TEXT DEFAULT 'yes', signup_date TIMESTAMPTZ DEFAULT NOW())"
+          "CREATE TABLE users (name TEXT NOT NULL, email CITEXT NOT NULL UNIQUE, cool TEXT DEFAULT 'yes', signup_date TIMESTAMPTZ DEFAULT NOW())--;;CREATE TRIGGER set_updated_at_on_users BEFORE UPDATE ON users FOR EACH row EXECUTE FUNCTION update_updated_at_column()"
           contents
           "spit was called with incorrect contents"))))
 
@@ -102,7 +103,9 @@
                   "spit was called with incorrect filename")
         (e/expect "DROP TABLE users"
                   contents
-                  "spit was called with incorrect contents")))))
+                  "spit was called with incorrect contents"))))
+
+)
 
 
 
