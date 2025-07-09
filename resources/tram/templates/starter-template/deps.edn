@@ -4,8 +4,8 @@
          org.clojure/data.xml {:mvn/version "0.2.0-alpha6"}
          meander/epsilon      {:mvn/version "0.0.650"}
 
-         bolivier/tram {:local/root "../tram"
-                        :deps/manifest :deps}
+         bolivier/tram {:git/sha "695cc815f802ddf9c7c0364d951cea824fdee549"
+                        :git/url "https://github.com/bolivier/tram"}
 
          integrant/integrant {:mvn/version "0.8.0"}
          integrant/repl      {:mvn/version "0.4.0"}
