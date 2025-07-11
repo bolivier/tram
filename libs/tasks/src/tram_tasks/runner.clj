@@ -1,4 +1,5 @@
 (ns tram-tasks.runner
+  "A lot of this code is heavily inspired by Biff.  Thanks to @jacobobryant"
   (:require [babashka.process :as p]
             [clojure.string :as str]
             [methodical.core :as m]
@@ -62,14 +63,11 @@
        "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]))
   (wait-for-nrepl "localhost" 8777)
   (with-open [conn (nrepl/connect :port 8777)] ; adjust port
-    (let [client (nrepl/client conn 1000)
-          response
-          (nrepl/message
-            client
-            {:op   "eval"
-             :code "(ns user) (require '[integrant.repl :as ir]) (ir/reset)"})]
-      (doseq [resp response]
-        (println resp)))))
+    (let [client (nrepl/client conn 1000)]
+      (nrepl/message
+        client
+        {:op   "eval"
+         :code "(ns user) (require '[integrant.repl :as ir]) (ir/reset)"}))))
 
 (defn normalize-args [args]
   (mapv normalize-key args))

@@ -28,3 +28,15 @@ clojure -Sdeps \{\:deps\ \{nrepl/nrepl\ \{\:mvn/version\ \"1.3.1\"\}\ cider/cide
 ```
 
 After that is running, connect to it from your editor, and execute `(tram.daemon/-main)`, and you should be good to eval and live code.
+
+## Prior Art Acknowledgements
+
+Big thanks to these projects for inspiration and some code. I try to annotate
+any code that is either directly or indirectly lifted from another project in
+the ns docstring. If you think I've left anything out, please either email me or
+file an issue and I'll happily add an attribution.
+
+Biff, Kit, and Luminus are all fully fledged Clojure web frameworks that are
+fantastic, but didn't quite scratch my itch. Check them out if you think Tram
+might not be for you (or if you think it is).
+
