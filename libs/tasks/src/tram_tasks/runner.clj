@@ -1,13 +1,17 @@
 (ns tram-tasks.runner
   "A lot of this code is heavily inspired by Biff.  Thanks to @jacobobryant"
   (:require [babashka.process :as p]
+            [camel-snake-kebab.core :refer [->kebab-case ->snake_case] :as csk]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [methodical.core :as m]
             [migratus.core :as migratus]
             [nrepl.cmdline]
             [nrepl.core :as nrepl]
             [taoensso.telemere :as t]
-            [tram.migrations :as tm]))
+            [tram.core :as tram]
+            [tram.migrations :as tm]
+            [zprint.core :refer [zprint-file-str]]))
 
 (m/defmulti run-task
   identity)
@@ -20,10 +24,39 @@
 (defn normalize-key [k]
   (get {"generate"  :generate
         "g"         :generate
+        ;; things you can generate
         "migration" :migration
+        "component" :component
+        "comp"      :component
+        ;; dev command
         "dev"       :dev}
        k
        k))
+
+(m/defmethod run-task [:generate :component :default]
+  [[_ _ component-name]]
+  (let [project-name         (:project/name (tram/get-tram-config))
+        project-name-snake   (csk/->snake_case_string project-name)
+        project-name-kebab   (csk/->kebab-case-string project-name)
+        component-name-snake (csk/->snake_case_string component-name)
+        component-name-kebab (csk/->kebab-case-string component-name)
+        filename             (str "src/"
+                                  project-name-snake
+                                  "/components/"
+                                  component-name-snake
+                                  ".clj")
+        file-contents        (str (list 'ns
+                                        (symbol (str project-name-kebab
+                                                     ".components."
+                                                     component-name-kebab)))
+                                  "\n\n"
+                                  (list 'defn
+                                        (symbol component-name-kebab)
+                                        []
+                                        nil))
+        file-contents        (tram/format-source file-contents)]
+    (io/make-parents filename)
+    (spit filename file-contents)))
 
 (m/defmethod run-task :default
   [task]

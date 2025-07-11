@@ -113,9 +113,6 @@
   ([routes]
    (tram-router routes {}))
   ([routes options]
-   (let [{:keys [muuntaja-instance authentication-interceptor]
-          :or   {muuntaja-instance (make-muuntaja-instance)}}
-         options]
-     (http/router routes options))))
+   (http/router routes options)))
 
 (import-vars [reitit.ring ring-handler])
