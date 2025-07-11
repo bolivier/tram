@@ -197,7 +197,7 @@ Expected to find template called `"
    (rhip/parameters-interceptor)])
 
 (def default-interceptors
-  [(exception-interceptor)
+  [#_(exception-interceptor)
    inject-route-name
    (multipart-interceptor)
    expand-hiccup-interceptor
