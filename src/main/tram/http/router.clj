@@ -1,25 +1,10 @@
 (ns tram.http.router
   (:require [clojure.walk :refer [prewalk]]
             [potemkin :refer [import-vars]]
-            [reitit.coercion.malli :as rcm]
             [reitit.http :as http]
-            [reitit.http.coercion
-             :refer
-             [coerce-request-interceptor coerce-response-interceptor]]
-            [reitit.http.interceptors.multipart :refer [multipart-interceptor]]
-            [reitit.http.interceptors.muuntaja :as muuntaja]
-            [reitit.http.interceptors.parameters :as rhip]
             [reitit.ring]
-            [tram.http.format :refer [make-muuntaja-instance]]
-            [tram.http.interceptors
-             :refer
-             [as-page-interceptor
-              expand-hiccup-interceptor
-              inject-route-name
-              render-template-interceptor]]
             [tram.http.lookup :refer [handlers-ns->views-ns]]
             [tram.utils :refer [evolve]]))
-
 
 (defn at-route-def?
   "Am I looking at a route definition?
@@ -76,6 +61,11 @@
         {:status 200
          :body   (view-handler {})}))))
 
+(defn already-evolved?
+  "Has this handler like thing already been evolved into a final state?"
+  [handler-like]
+  (and (:handler handler-like) (:handler-var handler-like)))
+
 (defn handler-evolver
   "Evolve a handler.  Receives one of
   - handler fn
@@ -87,13 +77,15 @@
   First convert the handler fn into a map like {:handler val}. Then find the var
   that handler fn is stored in, if any, and add that to the map under
   `:handler-var`."
-  [val]
-  (let [handler (if (keyword? val)
-                  (default-handler val)
-                  (or (:handler val)
-                      val))]
-    {:handler     handler
-     :handler-var (fn->var handler)}))
+  [handler-like]
+  (if (already-evolved? handler-like)
+    handler-like
+    (let [handler (if (keyword? handler-like)
+                    (default-handler handler-like)
+                    (or (:handler handler-like)
+                        handler-like))]
+      {:handler     handler
+       :handler-var (fn->var handler)})))
 
 (def http-verb-evolutions
   {:get    handler-evolver
