@@ -4,11 +4,16 @@
             [clojure.java.io :as io]
             [malli.core :as m]
             [potemkin :refer [import-vars]]
+            [tram.db]
+            [tram.http.interceptors :as interceptors]
             [tram.http.router :as router]
             [tram.utils.language :as lang]
             [zprint.core :refer [zprint-file-str]]))
 
 (import-vars [tram.http.router tram-router defroutes])
+
+(def with-layout
+  interceptors/layout-interceptor)
 
 (def DatabaseConnectionSchema
   [:map

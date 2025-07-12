@@ -122,8 +122,11 @@
        ~(prewalk (fn [node]
                    (if (at-route-def? node)
                      (evolve http-verb-evolutions
-                             (assoc node
-                               :namespace (str *ns*)))
+                             (update node
+                                     :namespace
+                                     (fn [v]
+                                       (or v
+                                           (str *ns*)))))
                      node))
                  evaluated-routes))))
 

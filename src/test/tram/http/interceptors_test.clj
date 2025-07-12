@@ -14,3 +14,6 @@
                            :response {:body [:a {:href :route/dashboard}]}})
                 :response
                 :body)))
+
+(e/defexpect layout-interceptor
+  (e/expect 1 1))

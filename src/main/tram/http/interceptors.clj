@@ -124,12 +124,14 @@ Expected to find template called `"
                    template-ns)
                  {:template    template
                   :expected-fn (request->template-symbol (:request ctx))})))
-           (binding [*current-user* (:current-user request)
-                     *req*          request
-                     *res*          response]
-             (assoc-in ctx
-               [:response :body]
-               (template context)))))))})
+           (let [layout-fn (apply comp
+                             (:layouts ctx))]
+             (binding [*current-user* (:current-user request)
+                       *req*          request
+                       *res*          response]
+               (assoc-in ctx
+                 [:response :body]
+                 (layout-fn (template context)))))))))})
 
 (def expand-hiccup-interceptor
   "Walks your hiccup tree to find any customizations that need to be expanded.
@@ -205,3 +207,10 @@ Expected to find template called `"
    render-template-interceptor])
 
 (import-vars [muuntaja format-interceptor])
+
+(defn layout-interceptor [layout-fn]
+  {:name  ::layout-interceptor
+   :enter (fn [ctx]
+            (update ctx
+                    :layouts
+                    (fn [layouts] (conj (or layouts []) layout-fn))))})
