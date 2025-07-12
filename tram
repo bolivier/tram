@@ -12,5 +12,5 @@ cd "$SCRIPT_DIR"
 # Export the original directory so the Clojure code can access it
 export TRAM_CLI_CALLED_FROM="$ORIGINAL_DIR"
 
-# Run the babashka command with all passed arguments
-bb -m tram-cli.entry "$@"
+# Run the clojure command with all passed arguments
+clojure -M:libs/tasks -m tram-tasks.runner "$@"
