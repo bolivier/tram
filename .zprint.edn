@@ -1,41 +1,34 @@
-{:extend {:indent 0} ;; for extend-protocol et al.  Prevents indentation
+{:extend      {:indent 0} ;; for extend-protocol et al.  Prevents
+                          ;; indentation
  ;; there.
-
- :pair-fn {:hang? false}
- :binding {:force-nl? true}
-
+ :pair-fn     {:hang? false}
+ :binding     {:force-nl? true}
  :fn-force-nl #{:arg1-body :arg2}
-
- :fn-map {"if" [:arg1-body {:list {:force-nl? true}}]
-          "with-stub" :binding
-          "defroutes" "def"
-          "with-tram-config" :flow
-          "with-same-output" :binding
-          "with-mock-tram-config" :binding
-          "with-temp-ns" :arg1
-
-          "when-not" [:arg1-body {:list {:force-nl? true}}]
-          "when" [:arg1-body {:list {:force-nl? true}}]
-          "do"   [:noarg1-body {:list {:force-nl? true}}]
-          "with-connection" :binding
-          "cond" [:pair-fn {:pair {:hang? false
-                                   :force-nl? true
-                                   :nl-separator? true}}
-
-                  #_{:pair-fn {:hang? true
-                               :nl-separator? true}}]
-          "=" [:hang {:list {:force-nl? false}}]
-          "try"   :flow-body}
- :map    {:comma?    false ;; no commas in maps
-          :force-nl? true} ;; newlines required in maps
- :style  [:justified       ;; justify pairs
-          :rod-no-ma-nl    ;; function formattin
-          :sort-require    ;; sorting
-          :hiccup          ;; improved hiccup vector formatting
-          :extend-nl       ;; require newlines in extend et al
-
-          :map-nl     ;; require newlines in maps
-          :pair-nl    ;; require newlines between pairs
-          :binding-nl ;; require newlines in bindings
-          :all-hang   ;; hang where possible
-          ]}
+ :fn-map      {"="               [:hang {:list {:force-nl? false}}]
+               "cond"            [:pair-fn {:pair {:hang?         false
+                                                   :force-nl?     true
+                                                   :nl-separator? true}}]
+               "defroutes"       "def"
+               "do"              [:noarg1-body {:list {:force-nl? true}}]
+               "if"              [:arg1-body {:list {:force-nl? true}}]
+               "try"             :flow-body
+               "when"            [:arg1-body {:list {:force-nl? true}}]
+               "when-not"        [:arg1-body {:list {:force-nl? true}}]
+               "with-connection" :binding
+               "with-mock-tram-config" :binding
+               "with-same-output" :binding
+               "with-stub"       :binding
+               "with-temp-ns"    :arg1
+               "with-tram-config" :flow}
+ :map         {:comma?    false ;; no commas in maps
+               :force-nl? true} ;; newlines required in maps
+ :style       [:justified       ;; justify pairs
+               :rod-no-ma-nl    ;; function formattin
+               :sort-require    ;; sorting
+               :hiccup          ;; improved hiccup vector formatting
+               :extend-nl       ;; require newlines in extend et al
+               :map-nl     ;; require newlines in maps
+               :pair-nl    ;; require newlines between pairs
+               :binding-nl ;; require newlines in bindings
+               :all-hang   ;; hang where possible
+              ]}

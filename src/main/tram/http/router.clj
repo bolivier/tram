@@ -1,25 +1,10 @@
 (ns tram.http.router
   (:require [clojure.walk :refer [prewalk]]
             [potemkin :refer [import-vars]]
-            [reitit.coercion.malli :as rcm]
             [reitit.http :as http]
-            [reitit.http.coercion
-             :refer
-             [coerce-request-interceptor coerce-response-interceptor]]
-            [reitit.http.interceptors.multipart :refer [multipart-interceptor]]
-            [reitit.http.interceptors.muuntaja :as muuntaja]
-            [reitit.http.interceptors.parameters :as rhip]
             [reitit.ring]
-            [tram.http.format :refer [make-muuntaja-instance]]
-            [tram.http.interceptors
-             :refer
-             [as-page-interceptor
-              expand-hiccup-interceptor
-              inject-route-name
-              render-template-interceptor]]
             [tram.http.lookup :refer [handlers-ns->views-ns]]
             [tram.utils :refer [evolve]]))
-
 
 (defn at-route-def?
   "Am I looking at a route definition?
@@ -50,9 +35,36 @@
         view-name    (name template)
         view-symbol  (symbol (str view-ns "/" view-name))
         view-handler (requiring-resolve view-symbol)]
-    (fn [_req]
-      {:status 200
-       :body   (view-handler {})})))
+    ;; TODO move this to custom error interceptor for other kinds of errors
+    (if-not view-handler
+      (fn [_req]
+        {:status 500
+         :body   [:div
+                  [:div {:style {:background  "#C00"
+                                 :font-weight "bold"
+                                 :padding     "1rem 2rem"
+                                 :font-size   "2rem"
+                                 :width       "100%"
+                                 :color       "white"}}
+                   [:h1 "Missing View function"]]
+                  [:p {:style {:padding "1rem 2rem"}}
+                   "Expected to find view function at "
+                   [:code (str view-symbol)]
+                   " but function does not exist."]
+                  [:p {:style {:padding "1rem 2rem"}}
+                   "Create function "
+                   [:code (str view-name)]
+                   " in namespace "
+                   [:code (str view-ns)]
+                   " to remove this error."]]})
+      (fn [_req]
+        {:status 200
+         :body   (view-handler {})}))))
+
+(defn already-evolved?
+  "Has this handler like thing already been evolved into a final state?"
+  [handler-like]
+  (and (:handler handler-like) (:handler-var handler-like)))
 
 (defn handler-evolver
   "Evolve a handler.  Receives one of
@@ -65,13 +77,15 @@
   First convert the handler fn into a map like {:handler val}. Then find the var
   that handler fn is stored in, if any, and add that to the map under
   `:handler-var`."
-  [val]
-  (let [handler (if (keyword? val)
-                  (default-handler val)
-                  (or (:handler val)
-                      val))]
-    {:handler     handler
-     :handler-var (fn->var handler)}))
+  [handler-like]
+  (if (already-evolved? handler-like)
+    handler-like
+    (let [handler (if (keyword? handler-like)
+                    (default-handler handler-like)
+                    (or (:handler handler-like)
+                        handler-like))]
+      {:handler     handler
+       :handler-var (fn->var handler)})))
 
 (def http-verb-evolutions
   {:get    handler-evolver
@@ -100,8 +114,11 @@
        ~(prewalk (fn [node]
                    (if (at-route-def? node)
                      (evolve http-verb-evolutions
-                             (assoc node
-                               :namespace (str *ns*)))
+                             (update node
+                                     :namespace
+                                     (fn [v]
+                                       (or v
+                                           (str *ns*)))))
                      node))
                  evaluated-routes))))
 
@@ -113,9 +130,6 @@
   ([routes]
    (tram-router routes {}))
   ([routes options]
-   (let [{:keys [muuntaja-instance authentication-interceptor]
-          :or   {muuntaja-instance (make-muuntaja-instance)}}
-         options]
-     (http/router routes options))))
+   (http/router routes options)))
 
 (import-vars [reitit.ring ring-handler])

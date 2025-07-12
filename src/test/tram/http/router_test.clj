@@ -8,7 +8,12 @@
 
 (e/defexpect defroutes
   (let [sign-in-route*   (second routes)
-        dashboard-route* (nth routes 2)]
+        dashboard-route* (nth routes 2)
+        with-ns-route*   (nth routes 3)]
+    (e/expect ["/with-ns"
+               {:name      :route/with-ns
+                :namespace "foobar"}]
+              with-ns-route*)
     (e/expect ["/sign-in"
                {:name      :route/sign-in
                 :get       {:handler     sign-in-handler

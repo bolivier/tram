@@ -12,5 +12,5 @@
 
 (fixtures/with-tram-config
   (e/defexpect template
-    (e/expect "tram/templates/model.template.clj"
+    (e/expect "tram/templates/model.clj.template"
               (sut/get-template fixtures/blueprint))))

@@ -21,7 +21,10 @@
    ["/sign-in"
     {:name :route/sign-in
      :get  sign-in-handler}]
-   dashboard-route])
+   dashboard-route
+   ["/with-ns"
+    {:name      :route/with-ns
+     :namespace "foobar"}]])
 
 (def router
   (tram-router routes))

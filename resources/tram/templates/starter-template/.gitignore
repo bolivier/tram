@@ -21,3 +21,4 @@ pom.xml.asc
 /.clj-kondo/.lock
 resources/public/index.css
 /src/dev/runtime/
+/.postgres

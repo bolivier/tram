@@ -11,6 +11,7 @@
             [methodical.core :as m]
             [migratus.core]
             [potemkin :refer [import-vars]]
+            [taoensso.telemere :as t]
             [tram.core :as tram]
             [tram.utils.language :as lang])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
@@ -154,7 +155,12 @@
 (defn migrate
   "Do pending database migrations.  Runs for the db based on TRAM_ENV. "
   []
-  (migratus.core/migrate (tram/get-migration-config)))
+  (let [migration-config (tram/get-migration-config)]
+    (t/event! :db/migration
+              {:level :info
+               :id    :db/migrating
+               :data  {:config migration-config}})
+    (migratus.core/migrate migration-config)))
 
 (defn create
   "Create a new migration"
