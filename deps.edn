@@ -70,4 +70,6 @@
           :exec-args {:watch? true}}
 
   ;; This alias is useful if you need to develop a new hook for a macro
-  :clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "LATEST"}}}}}
+  :clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "LATEST"}}}
+
+  :libs/tasks {:extra-deps {libs/tasks {:local/root "libs/tasks"}}}}}
