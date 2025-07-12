@@ -1,3 +1,4 @@
-{:lint-as {tram.utils/with-same-output clojure.core/let
-           tram.http.routing/defroutes clojure.core/def
-           tram.core/defroutes clojure.core/def}}
+{:config-paths ["../resources/clj-kondo.exports/bolivier/tram"]
+ :lint-as      {tram.core/defroutes         clojure.core/def
+                tram.http.routing/defroutes clojure.core/def
+                tram.utils/with-same-output clojure.core/let}}
