@@ -35,7 +35,7 @@
     namespace))
 
 (defn get-template [_blueprint]
-  "tram/templates/model.template.clj")
+  "tram/templates/model.clj.template")
 
 (defn format-code [clj-source-string]
   (zprint-file-str clj-source-string ::model-template (tram/get-zprint-config)))
