@@ -154,7 +154,11 @@ Expected to find template called `"
        (when-not router
          (throw (ex-info "Cannot expand hiccup without router in request."
                          {:source ::expand-hiccup-interceptor})))
-       (-> ctx
+       (binding [*current-user* (:current-user req)
+                 *req*          (:request ctx)
+                 *res*          (:response ctx)]
+         (->
+           ctx
            (update-in
              [:response :body]
              (fn [body]
@@ -190,7 +194,7 @@ Expected to find template called `"
                                                          route-name
                                                          route-params))
                                       header))
-                                  headers))))))})
+                                  headers)))))))})
 
 
 (def coercion-interceptors
