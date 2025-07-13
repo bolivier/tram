@@ -1,23 +1,22 @@
 (ns tram.http.interceptors
-  (:require
-    [clojure.string :as str]
-    [clojure.walk :refer [prewalk]]
-    [potemkin :refer [import-vars]]
-    [reitit.core :as r]
-    [reitit.http.coercion
-     :refer
-     [coerce-request-interceptor coerce-response-interceptor]]
-    [reitit.http.interceptors.exception :refer [exception-interceptor]]
-    [reitit.http.interceptors.multipart :refer [multipart-interceptor]]
-    [reitit.http.interceptors.muuntaja :as muuntaja]
-    [reitit.http.interceptors.parameters :as rhip]
-    [reitit.ring]
-    [tram.http.lookup :refer [request->template request->template-symbol]]
-    [tram.http.route-helpers :refer [expandable-route-ref?]]
-    [tram.http.routing :as route]
-    [tram.http.utils :as http.utils]
-    [tram.http.views :refer [*current-user* *req* *res*]]
-    [tram.utils :refer [map-vals]]))
+  (:require [clojure.string :as str]
+            [clojure.walk :refer [prewalk]]
+            [potemkin :refer [import-vars]]
+            [reitit.core :as r]
+            [reitit.http.coercion
+             :refer
+             [coerce-request-interceptor coerce-response-interceptor]]
+            [reitit.http.interceptors.exception :refer [exception-interceptor]]
+            [reitit.http.interceptors.multipart :refer [multipart-interceptor]]
+            [reitit.http.interceptors.muuntaja :as muuntaja]
+            [reitit.http.interceptors.parameters :as rhip]
+            [reitit.ring]
+            [tram.http.route-helpers :refer [expandable-route-ref?]]
+            [tram.http.routing :as route]
+            [tram.http.utils :as http.utils]
+            [tram.http.views :refer [*current-user* *req* *res*]]
+            [tram.rendering.template-renderer :as renderer]
+            [tram.utils :refer [map-vals]]))
 
 (def inject-route-name
   "Injects the name of the current route under the request key `:route-name`"
@@ -86,52 +85,19 @@
                              :else body)))))})
 
 (def render-template-interceptor
-  {:name ::template-renderer
-   :leave
-   (fn [ctx]
-     (if (or (some? (get-in ctx
-                            [:response :body]))
-             (str/starts-with? (get-in ctx
-                                       [:request :uri])
-                               "/assets")
-             (<= 300
-                 (get-in ctx
-                         [:response :status])
-                 399))
-       ctx
-       (let [{:keys [request response]} ctx
-             context  (:context response)
-             template (or (:template response)
-                          (request->template request))]
-         (if-not template
-           (let [route-name      (:tram/route-name request)
-                 url             (:uri request)
-                 template-symbol (request->template-symbol request)
-                 template-name   (name template-symbol)
-                 template-ns     (namespace template-symbol)]
-             (throw
-               (ex-info
-                 (str
-                   "Route "
-                   route-name
-                   "("
-                   url
-                   ") does not have a valid template.
-
-Expected to find template called `"
-                   template-name
-                   "` at: "
-                   template-ns)
-                 {:template    template
-                  :expected-fn (request->template-symbol (:request ctx))})))
-           (let [layout-fn (apply comp
-                             (:layouts ctx))]
-             (binding [*current-user* (:current-user request)
-                       *req*          request
-                       *res*          response]
-               (assoc-in ctx
-                 [:response :body]
-                 (layout-fn (template context)))))))))})
+  {:name  ::template-renderer
+   :leave (fn [ctx]
+            (if (or (some? (get-in ctx
+                                   [:response :body]))
+                    (str/starts-with? (get-in ctx
+                                              [:request :uri])
+                                      "/assets")
+                    (<= 300
+                        (get-in ctx
+                                [:response :status])
+                        399))
+              ctx
+              (renderer/render ctx)))})
 
 (def expand-hiccup-interceptor
   "Walks your hiccup tree to find any customizations that need to be expanded.

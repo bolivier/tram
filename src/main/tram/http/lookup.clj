@@ -52,6 +52,14 @@
                      "/"
                      function-name))))))
 
+(defn keyword->template
+  "`template-kw` should be a keyword like `:view/my-view` where `my-view` is a
+  view function that exists in the view namespace corresponding to the handler
+  namespace where this is called."
+  [template-kw]
+  (requiring-resolve (symbol (str (handlers-ns->views-ns *ns*))
+                             (name template-kw))))
+
 (defn request->template [request]
   (-> request
       request->template-symbol
