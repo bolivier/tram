@@ -1,46 +1,117 @@
 (ns tram.rendering.template-renderer
-  "Rendering html templates from the ring response."
-  (:require
-    [clojure.string :as str]
-    [tram.http.lookup :refer [request->template request->template-symbol]]
-    [tram.http.views :refer [*current-user* *req* *res*]]))
+  "Render html templates from the ring response."
+  (:require [clojure.string :as str]
+            [reitit.core :as r]
+            [tram.http.views :refer [*current-user* *req* *res*]]))
 
-(defn render [ctx]
+(defprotocol ITemplate
+  "Protocol for something that can be used as a render template.
+
+  Only the get-view-fn function is necessary to make this code work, but error
+  reporting is much simpler if there is a way to grab the ns and the name also."
+  (get-view-fn [this ctx]
+    "Get the view fn for this template")
+  (get-name [this ctx]
+    "Get the name of the template")
+  (get-namespace [this ctx]
+    "Get the namespace for the template"))
+
+(extend-protocol ITemplate
+  clojure.lang.Keyword
+  (get-name [this _] (name this))
+  (get-namespace [this ctx]
+    (str/replace (:namespace (:data (:reitit.core/match (:request ctx))))
+                 #"handler"
+                 "view"))
+  (get-view-fn [this ctx]
+    (let [namespace-str (get-namespace this ctx)]
+      (requiring-resolve (symbol namespace-str (get-name this ctx)))))
+
+  clojure.lang.Fn
+  (get-view-fn [this _] this)
+  (get-namespace [this _]
+    ;; kindof cheating, but this is mostly for debugging
+    (str this))
+  (get-name [this _]
+    ;; kindof cheating, but this is mostly for debugging
+    (str this))
+
+  clojure.lang.Var
+  (get-name [this _] (:name (:meta this)))
+  (get-namespace [this _] (:namespace (:meta this)))
+  (get-view-fn [this _] this)
+
+  nil
+  (get-name [_ _] "<nil>")
+  (get-namespace [_ ctx]
+    (let [request   (:request ctx)
+          router    (::r/router request)
+          uri       (:uri request)
+          match     (r/match-by-path router uri)
+          caller-ns (:namespace (:data match))]
+      (when caller-ns
+        (let [template-ns (str/join "."
+                                    (map (fn [segment]
+                                           (cond
+                                             (= segment "handlers") "views"
+                                             (str/ends-with? segment
+                                                             "-handlers")
+                                             (str/replace segment
+                                                          #"-handlers$"
+                                                          "-views")
+
+                                             :else segment))
+                                      (str/split (str caller-ns)
+                                                 #"\.")))]
+          template-ns))))
+  (get-view-fn [_ ctx]
+    (let [request   (:request ctx)
+          router    (::r/router request)
+          uri       (:uri request)
+          method    (:request-method request)
+          match     (r/match-by-path router uri)
+          caller-ns (:namespace (:data match))
+          insp      (fn [x] (prn x) x)]
+      (when caller-ns
+        (let [function-name (-> (::r/router request)
+                                (r/match-by-path uri)
+                                :data
+                                method
+                                :handler-var
+                                meta
+                                :name
+                                str
+                                (str/replace #"-handler$"
+                                             ""))
+              template-ns   (get-namespace nil
+                                           ctx)]
+          (when function-name
+            (symbol (str template-ns
+                         "/"
+                         function-name))))))))
+
+(defn render
+  "Renders a template."
+  [ctx]
   (let [{:keys [request response]} ctx
-        context  (:context response)
-        template (or (:template response) (request->template request))]
-    (if-not template
-      (let [url           (:uri request)
-            template-symbol (request->template-symbol request)
-            template-name (name template-symbol)
-            template-ns   (namespace template-symbol)]
-        (throw
-          (ex-info
-            (str
-              "Route ("
-              url
-              ") does not have a valid template.
+        {:keys [context template]} response
+        view-fn-sym (get-view-fn template ctx)]
+    (if-not view-fn-sym
+      (throw
+        (ex-info
+          (str
+            "Route ("
+            (:uri request)
+            ") does not have a valid template.
 
 Expected to find template called `"
-              template-name
-              "` at: "
-              template-ns)
-            {:template    template
-             :expected-fn (request->template-symbol (:request ctx))})))
-      (let [layout-fn (apply comp (:layouts ctx))]
+            (get-name template ctx)
+            "` at: "
+            (get-namespace template ctx))
+          {}))
+      (let [layout-fn (apply comp (:layouts ctx))
+            view-fn   (requiring-resolve view-fn-sym)]
         (binding [*current-user* (:current-user request)
                   *req*          request
                   *res*          response]
-          (assoc-in ctx
-            [:response :body]
-            (let [template (if (keyword? template)
-                             (let [namespace-ns (str/replace
-                                                  (:namespace
-                                                    (:data (:reitit.core/match
-                                                             request)))
-                                                  #"handler"
-                                                  "view")]
-                               (requiring-resolve (symbol namespace-ns
-                                                          (name template))))
-                             template)]
-              (layout-fn (template context)))))))))
+          (assoc-in ctx [:response :body] (layout-fn (view-fn context))))))))
