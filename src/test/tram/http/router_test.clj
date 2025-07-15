@@ -37,9 +37,7 @@
                  :post      {:handler     ok-good-handler
                              :handler-var #'ok-good-handler}}
                 (e/in user-fragment))
-      (when (e/expect fn?
-                      (:handler (:get user-fragment)))
-        (e/expect {:status 200
-                   :body   "show user page"}
-                  (apply (:handler (:get user-fragment))
-                    [{}]))))))
+      (e/expecting "default view renders the value in the template key")
+      (e/expect {:status   200
+                 :template :views/show-user}
+                (e/in ((:handler (:get user-fragment)) nil))))))

@@ -70,8 +70,7 @@
           uri       (:uri request)
           method    (:request-method request)
           match     (r/match-by-path router uri)
-          caller-ns (:namespace (:data match))
-          insp      (fn [x] (prn x) x)]
+          caller-ns (:namespace (:data match))]
       (when caller-ns
         (let [function-name (-> (::r/router request)
                                 (r/match-by-path uri)
@@ -86,17 +85,17 @@
               template-ns   (get-namespace nil
                                            ctx)]
           (when function-name
-            (symbol (str template-ns
-                         "/"
-                         function-name))))))))
+            (requiring-resolve (symbol (str template-ns
+                                            "/"
+                                            function-name)))))))))
 
 (defn render
   "Renders a template."
   [ctx]
   (let [{:keys [request response]} ctx
         {:keys [context template]} response
-        view-fn-sym (get-view-fn template ctx)]
-    (if-not view-fn-sym
+        view-fn (get-view-fn template ctx)]
+    (if-not view-fn
       (throw
         (ex-info
           (str
@@ -109,8 +108,7 @@ Expected to find template called `"
             "` at: "
             (get-namespace template ctx))
           {}))
-      (let [layout-fn (apply comp (:layouts ctx))
-            view-fn   (requiring-resolve view-fn-sym)]
+      (let [layout-fn (apply comp (:layouts ctx))]
         (binding [*current-user* (:current-user request)
                   *req*          request
                   *res*          response]

@@ -16,7 +16,7 @@
      :put    ok-good-handler
      :delete ok-good-handler}]])
 
-(defroutes routes
+(def route-data
   [""
    ["/sign-in"
     {:name :route/sign-in
@@ -25,6 +25,9 @@
    ["/with-ns"
     {:name      :route/with-ns
      :namespace "foobar"}]])
+
+(defroutes routes
+  route-data)
 
 (def router
   (tram-router routes))

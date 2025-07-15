@@ -1,37 +1,31 @@
 (ns tram.rendering.template-renderer-test
-  (:require [expectations.clojure.test :as e]
-            [tram.rendering.template-renderer :as sut]))
-
-(ns sample-app.handlers.authentication-handlers
-  (:require [reitit.core]
-            [reitit.http :refer [router]]
-            [tram.core]))
-
-(defn sign-in [req]
-  {:status 200})
-
-(tram.core/defroutes routes
-  ["/sign-in"
-   {:name :route/sign-in
-    :get  sign-in}])
-
-(def sample-router
-  (router routes))
-
-(ns sample-app.views.authentication-views)
-
-(defn sign-in [ctx]
-  "hello")
-
-(ns tram.rendering.template-renderer-test
   (:require
-    [sample-app.handlers.authentication-handlers :refer [sample-router sign-in]]
-    [sample-app.views.authentication-views]))
+    [expectations.clojure.test :as e]
+    [sample-app.handlers.authentication-handlers :refer [routes sample-router]]
+    [sample-app.views.authentication-views :as views]
+    [tram.rendering.template-renderer :as sut]))
 
 (e/defexpect renderer
-  (let [request {:uri "/sign-in"
-                 :request-method :get
-                 :reitit.core/router sample-router}
-        ctx     (sut/render {:request  request
-                             :response (sign-in request)})]
-    (e/expect "hello" (:body (:response ctx)))))
+  (e/expecting "nil template rendering"
+               (let [request {:uri "/sign-in"
+                              :request-method :get
+                              :reitit.core/router sample-router}
+                     ctx     (sut/render {:request  request
+                                          :response {}})]
+                 (e/expect (views/sign-in nil) (:body (:response ctx)))))
+  (e/expecting
+    "keyword template rendering"
+    (let [match   (-> sample-router
+                      (reitit.core/match-by-name :route/forgot-password))
+          handler (-> sample-router
+                      (reitit.core/match-by-name :route/forgot-password)
+                      :data
+                      :get
+                      :handler)
+          request {:uri "/forgot-password"
+                   :request-method :get
+                   :reitit.core/match match
+                   :reitit.core/router sample-router}
+          ctx     (sut/render {:request  request
+                               :response (handler request)})]
+      (e/expect (views/forgot-password nil) (:body (:response ctx))))))
