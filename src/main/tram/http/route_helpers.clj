@@ -54,5 +54,6 @@
    (hx-redirect {} route-name))
   ([resp route-name]
    (-> resp
-       (assoc :status 200)
+       (assoc :status 301)
+       (assoc :body "")
        (assoc-in [:headers "hx-redirect"] (make-route route-name)))))
