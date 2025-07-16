@@ -41,3 +41,9 @@
   [evolutions coll]
   (let [relevant-evolutions (select-keys evolutions (keys coll))]
     (merge-with (fn [value f] (f value)) coll relevant-evolutions)))
+
+(defn first-where [pred coll]
+  (some (fn [elm]
+          (when (pred elm)
+            elm))
+        coll))

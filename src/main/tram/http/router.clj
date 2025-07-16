@@ -24,42 +24,13 @@
           (recur (rest interned-symbols)))))))
 
 (defn default-handler
-  "Default handler for a template literal.
+  "Default handler behavior for non-fn is to set the value to be the template.
 
-  Note: `*ns*` bindings change between executions of the wrapper and the response fn.
-
-  Grabbing the ns from the wrapper function, immediately on invocation, seems to
-  be more correct than from the returned handler."
+  Any valid template is acceptable."
   [template]
-  (let [view-ns      (handlers-ns->views-ns *ns*)
-        view-name    (name template)
-        view-symbol  (symbol (str view-ns "/" view-name))
-        view-handler (requiring-resolve view-symbol)]
-    ;; TODO move this to custom error interceptor for other kinds of errors
-    (if-not view-handler
-      (fn [_req]
-        {:status 500
-         :body   [:div
-                  [:div {:style {:background  "#C00"
-                                 :font-weight "bold"
-                                 :padding     "1rem 2rem"
-                                 :font-size   "2rem"
-                                 :width       "100%"
-                                 :color       "white"}}
-                   [:h1 "Missing View function"]]
-                  [:p {:style {:padding "1rem 2rem"}}
-                   "Expected to find view function at "
-                   [:code (str view-symbol)]
-                   " but function does not exist."]
-                  [:p {:style {:padding "1rem 2rem"}}
-                   "Create function "
-                   [:code (str view-name)]
-                   " in namespace "
-                   [:code (str view-ns)]
-                   " to remove this error."]]})
-      (fn [_req]
-        {:status 200
-         :body   (view-handler {})}))))
+  (fn [_]
+    {:status   200
+     :template template}))
 
 (defn already-evolved?
   "Has this handler like thing already been evolved into a final state?"
