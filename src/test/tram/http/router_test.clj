@@ -41,4 +41,4 @@
       (e/expecting "default view renders the value in the template key")
       (e/expect {:status   200
                  :template :views/show-user}
-                (e/in ((:handler (:get user-fragment)) nil))))))
+                (e/in ((:handler (:get user-fragment)) nil)))))
