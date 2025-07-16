@@ -2,6 +2,7 @@
   "Render html templates from the ring response."
   (:require [clojure.string :as str]
             [reitit.core :as r]
+            [tram.http.lookup :as lookup]
             [tram.http.views :refer [*current-user* *req* *res*]]))
 
 (defprotocol ITemplate
@@ -44,25 +45,13 @@
   nil
   (get-name [_ _] "<nil>")
   (get-namespace [_ ctx]
-    (let [request   (:request ctx)
-          router    (::r/router request)
-          uri       (:uri request)
-          match     (r/match-by-path router uri)
-          caller-ns (:namespace (:data match))]
-      (when caller-ns
-        (let [template-ns (str/join "."
-                                    (map (fn [segment]
-                                           (cond
-                                             (= segment "handlers") "views"
-                                             (str/ends-with? segment
-                                                             "-handlers")
-                                             (str/replace segment
-                                                          #"-handlers$"
-                                                          "-views")
-
-                                             :else segment))
-                                      (str/split (str caller-ns)
-                                                 #"\.")))]
+    (let [request    (:request ctx)
+          router     (::r/router request)
+          uri        (:uri request)
+          match      (r/match-by-path router uri)
+          handler-ns (:namespace (:data match))]
+      (when handler-ns
+        (let [template-ns (lookup/handlers-ns->views-ns handler-ns)]
           template-ns))))
   (get-view-fn [_ ctx]
     (let [request   (:request ctx)

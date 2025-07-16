@@ -3,7 +3,9 @@
             [reitit.core :as r]))
 
 (defn handlers-ns->views-ns
-  "Given the handler namespace, convert it to the matching view namespace."
+  "Given the handler namespace, convert it to the matching view namespace.
+
+  Works on strings or namespaces."
   [handler-ns]
   (let [view-ns-symbol
         (symbol (str/join "."
