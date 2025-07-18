@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+pg_ctl -D .postgres/data stop

@@ -49,8 +49,7 @@
     (redirect :route/dashboard)
     {:status 200}))
 
-(defroutes
-  routes
+(defroutes routes
   [["/sign-up"
     {:name :route/sign-up
      :get  :view/sign-up

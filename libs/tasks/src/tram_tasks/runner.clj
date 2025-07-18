@@ -9,12 +9,15 @@
             [nrepl.cmdline]
             [nrepl.core :as nrepl]
             [taoensso.telemere :as t]
+            [tram-cli.generator.new :refer [render-new-project-template]]
             [tram.core :as tram]
             [tram.migrations :as tm]
             [zprint.core :refer [zprint-file-str]]))
 
 (m/defmulti run-task
   identity)
+
+
 
 (m/defmethod run-task [:db :migrate]
   [_]
@@ -41,6 +44,10 @@
                                                    :variadic true
                                                    :desc
                                                    "Field definitions"}]}}}
+   :new      {:desc "Create a new template for a tram project"
+              :args [{:name     :project-name
+                      :required true
+                      :desc     "Name of the project to create"}]}
    :dev      {:aliases []
               :desc    "Start development environment"
               :args    []}
@@ -90,6 +97,11 @@
 
 (def ^:dynamic *current-parsed-command*
   nil)
+
+(m/defmethod run-task [:new]
+  [args]
+  (render-new-project-template (:project-name (:args
+                                                *current-parsed-command*))))
 
 (m/defmethod run-task [:generate :component]
   [_]
