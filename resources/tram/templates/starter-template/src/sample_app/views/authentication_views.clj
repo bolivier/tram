@@ -11,7 +11,7 @@
     [:h1 {:class "text-2xl"}
      "Create an Account"]
     [:div#error]
-    [:form {:hx-post   [::route/make :route/sign-up]
+    [:form {:hx-post   (make-route :route/sign-up)
             :hx-target "#error"
             :class     "space-y-4"}
      [:div {:class "flex flex-col space-y-1"}

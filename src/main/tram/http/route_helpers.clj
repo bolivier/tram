@@ -47,14 +47,13 @@
   ([resp]
    (assoc resp :status 404)))
 
-;; BUG cannot accept route params
 (defn hx-redirect
   "Returns a resp for a htmx redirect. These use a 200 status, but have a htmx
   header to indicate a redirect."
-  ([route-name]
-   (hx-redirect {} route-name))
-  ([resp route-name]
+  ([route]
+   (hx-redirect {} route))
+  ([resp route]
    (-> resp
        (assoc :status 301)
        (assoc :body "")
-       (assoc-in [:headers "hx-redirect"] (make-route route-name)))))
+       (assoc-in [:headers "hx-redirect"] route))))

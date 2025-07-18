@@ -13,4 +13,5 @@ cd "$SCRIPT_DIR"
 export TRAM_CLI_CALLED_FROM="$ORIGINAL_DIR"
 
 # Run the clojure command with all passed arguments
-clojure -M:libs/tasks -m tram-tasks.runner "$@"
+bb -m tram-cli.entry "$@"
+# clojure -M:libs/tasks -m tram-tasks.runner "$@"
