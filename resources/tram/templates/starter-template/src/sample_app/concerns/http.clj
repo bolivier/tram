@@ -2,7 +2,7 @@
 
 (defn as-full-page
   ([body]
-   (as-full-page "Sample kapp" body))
+   (as-full-page "Sample Tram App" body))
   ([title body]
    [:html
     [:head
