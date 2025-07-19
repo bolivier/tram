@@ -33,7 +33,7 @@
             "bin/kaocha not found, invoking clojure command `clojure -X:test`")
           (p/shell "clojure -X:test")))
 
-      "db:migrate" (println "Migrating database")
+      "db:migrate" (p/shell "clojure -M:tram db:migrate")
       (println "Unknown command" cmd)
       #_(client/send {:op   :tram/op
                       :cmd  cmd

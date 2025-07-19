@@ -4,13 +4,13 @@
                                                           "v2023.04.30.01"}
                              org.clojure/tools.namespace {:mvn/version "1.4.4"}
                              vvvvalvalval/scope-capture  {:mvn/version "0.3.3"}}
-               :extra-paths ["src/dev"]}
+               :extra-paths ["dev"]}
   :test       {:extra-deps  {com.github.seancorfield/expectations {:mvn/version
                                                                    "2.2.214"}
                              lambdaisland/kaocha        {:mvn/version
                                                          "1.91.1392"}
                              vvvvalvalval/scope-capture {:mvn/version "0.3.3"}}
-               :extra-paths ["src/test" "src/test-project"]
+               :extra-paths ["test"]
                :jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"
                              "-Dio.netty.tryReflectionSetAccessible=true"]
                :main-opts   ["-m" "kaocha.runner"]}
@@ -67,4 +67,4 @@
                                 :git/sha
                                 "fc3b72da03002d464d69639a4e8e2b2b003339a6"}}
 
- :paths ["src/main" "resources" "src/cli"]}
+ :paths ["src" "resources"]}
