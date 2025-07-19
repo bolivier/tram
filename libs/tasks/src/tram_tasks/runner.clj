@@ -9,15 +9,12 @@
             [nrepl.cmdline]
             [nrepl.core :as nrepl]
             [taoensso.telemere :as t]
-            [tram-cli.generator.new :refer [render-new-project-template]]
             [tram.core :as tram]
             [tram.migrations :as tm]
             [zprint.core :refer [zprint-file-str]]))
 
 (m/defmulti run-task
   identity)
-
-
 
 (m/defmethod run-task [:db :migrate]
   [_]
