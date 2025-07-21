@@ -92,11 +92,16 @@
 (def authentication-interceptor
   {:name  ::authentication
    :enter (fn [ctx]
-            (let [{:keys [session-id]} (get-cookie-value (:request ctx))
-                  {:keys [user-id]} (t2/select-one :models/sessions session-id)
-                  user (t2/select-one :models/users user-id)]
-              (if user
-                (assoc-in ctx
-                  [:request :current-user]
-                  user)
+            (try
+              (let [{:keys [session-id]} (get-cookie-value (:request ctx))
+                    {:keys [user-id]} (t2/select-one :models/sessions
+                                                     session-id)
+                    user (t2/select-one :models/users user-id)]
+                (if user
+                  (assoc-in ctx
+                    [:request :current-user]
+                    user)
+                  ctx))
+              (catch Exception _
+                ;; Could not find user, do not assoc
                 ctx)))})
