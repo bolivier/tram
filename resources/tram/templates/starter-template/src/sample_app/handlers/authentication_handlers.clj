@@ -43,8 +43,6 @@
                             (redirect :route/sign-in))))
 
 (defn sign-in [req]
-  (def req
-    req)
   (if (some? (:current-user req))
     (redirect :route/dashboard)
     {:status 200}))
