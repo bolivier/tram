@@ -1,18 +1,37 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-if [ ! -d ".postgres/data" ]; then
-    export PGUSER=$(whoami)
+# Config
+CONTAINER_NAME="tram-postgres-sample-app"
+DB_USER="tram"
+DB_NAME1="sample_app_development"
+DB_NAME2="sample_app_test"
+HOST_USER="${USER}"
 
-    mkdir -p .postgres/data
-    mkdir -p .postgres/logs
-    mkdir -p .postgres/sockets
+# Execute SQL in the Postgres container
+function exec_psql() {
+  docker exec -i "$CONTAINER_NAME" psql -U "$HOST_USER" -d tram -v ON_ERROR_STOP=1 "$@"
+}
 
-    initdb -D .postgres/data
-    echo "unix_socket_directories = '$(pwd)/.postgres/sockets'" >> .postgres/data/postgresql.conf
-    pg_ctl -D .postgres/data -l .postgres/logs/postgres.log start
+echo "Creating databases '$DB_NAME1' and '$DB_NAME2'..."
+exec_psql <<SQL
+CREATE DATABASE $DB_NAME1;
+CREATE DATABASE $DB_NAME2;
+SQL
 
-    createdb sample_app_development || echo "Database sample_app_development might already exist"
-    createdb sample_app_test || echo "Database sample_app_test might already exist"
-    createdb tram || echo "Database tram might already exist"
-fi
+echo "Creating user '$HOST_USER' and user-owned database '$HOST_USER'..."
+exec_psql <<SQL
+DO \$\$
+BEGIN
+  IF NOT EXISTS (
+    SELECT FROM pg_catalog.pg_roles WHERE rolname = '$HOST_USER'
+  ) THEN
+    CREATE ROLE $HOST_USER LOGIN;
+  END IF;
+END
+\$\$;
+
+CREATE DATABASE $HOST_USER OWNER $HOST_USER;
+SQL
+
+echo "✅ Done."
