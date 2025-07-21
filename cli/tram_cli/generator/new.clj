@@ -49,7 +49,7 @@
                   slurp
                   (str/replace "sample_app" (->snake_case project-name))
                   (str/replace "sample-app" project-name))))
-      (doseq [db-script ["bin/db-init" "bin/db-start"]]
+      (doseq [db-script ["bin/db-init"]]
         (fs/copy (io/file template-root db-script)
                  (io/file project-root db-script)
                  {:copy-attributes  true
@@ -63,12 +63,11 @@
       (p/shell "git init")
       (p/shell "git add .")
       (p/shell "git commit -m 'Initial commit'")
-      (println "Installing development tools with mise.")
-      (p/shell "mise install")
       (p/shell "mise trust")
-      (println "Creating development and test databases")
       (println "Next Steps: ")
-      (println
-        "  To initialize your database, run:  $ mise exec -- ./bin/db-init")
+      (println "  To initialize your database:")
+      (println "    $ docker-compose up")
+      (println "    $ bin/db-init")
+      (println "")
       (println "  To migrate your new database, run:  $ tram db:migrate")
       (println "  Start your server with $ tram dev"))))
