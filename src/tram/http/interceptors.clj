@@ -84,20 +84,25 @@
 
                              :else body)))))})
 
+;; TODO make this more robust and decomplect concepts
 (def render-template-interceptor
   {:name  ::template-renderer
    :leave (fn [ctx]
-            (if (or (some? (get-in ctx
-                                   [:response :body]))
-                    (str/starts-with? (get-in ctx
-                                              [:request :uri])
-                                      "/assets")
-                    (<= 300
-                        (get-in ctx
-                                [:response :status])
-                        399))
+            (cond
+              (or (some? (get-in ctx [:response :body]))
+                  (str/starts-with? (get-in ctx [:request :uri]) "/assets")
+                  (<= 300 (get-in ctx [:response :status]) 399))
               ctx
-              (renderer/render ctx)))})
+
+              (re-find #"application/json"
+                       (get-in ctx [:request :headers "accept"]))
+              (update ctx
+                      :response
+                      (fn [res]
+                        (assoc res
+                          :body (:data res))))
+
+              :else (renderer/render ctx)))})
 
 (def expand-hiccup-interceptor
   "Walks your hiccup tree to find any customizations that need to be expanded.
