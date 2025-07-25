@@ -11,12 +11,15 @@
 
 (tram.core/defroutes routes
   [["/sign-in"
-    {:name :route/sign-in
-     :get  sign-in}]
+    {:get  sign-in
+     :name :route/sign-in}]
    ["/forgot-password"
-    {:name :route/forgot-password
-     :get  :view/forgot-password
-     :post forgot}]])
+    {:get  :view/forgot-password
+     :name :route/forgot-password
+     :post forgot}]
+   ["/healthcheck"
+    {:get  (fn [req] {:status 200})
+     :name :route/healthcheck}]])
 
 (def test-router
   (router routes))

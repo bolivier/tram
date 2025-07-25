@@ -76,11 +76,14 @@
   route data, and to add the var reference of the handler itself to the handler
   data."
   [var-name routes]
-  (let [evaluated-routes (prewalk (fn [n]
-                                    (if-let [var (and (symbol? n) (resolve n))]
-                                      @var
-                                      n))
-                                  routes)]
+  (let [evaluated-routes
+        (prewalk (fn [n]
+                   ;; This is NOT guaranteed to be at the location I
+                   ;; expect.
+                   (if-let [var (and (symbol? n) (not= 'fn n) (resolve n))]
+                     @var
+                     n))
+                 routes)]
     `(def ~var-name
        ~(prewalk (fn [node]
                    (if (at-route-def? node)
