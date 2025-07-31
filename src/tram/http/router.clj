@@ -51,12 +51,14 @@
   [handler-like]
   (if (already-evolved? handler-like)
     handler-like
-    (let [handler (if (keyword? handler-like)
+    (let [handler-map (if (map? handler-like) handler-like {})
+          handler (if (keyword? handler-like)
                     (default-handler handler-like)
                     (or (:handler handler-like)
                         handler-like))]
-      {:handler     handler
-       :handler-var (fn->var handler)})))
+      (assoc handler-map
+             :handler     handler
+             :handler-var (fn->var handler)))))
 
 (def http-verb-evolutions
   {:get    handler-evolver
