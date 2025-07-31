@@ -1,16 +1,41 @@
 (ns tram.http.router
+  "Routing has a somewhat complected structure to make it easy to use, and so here
+  are some terms to keep things consistent.
+
+  - view: function that returns hiccup and takes locals.
+  - handler: function that takes a request and returns a response.
+  - handler-spec: map with a :handler key and possibly more metadata.
+  - handler-entry: value for a method key.  Either a handler-spec, a handler, or a keyword for a view.
+  - method: one of #{:get :post :put :patch :delete :options}.
+  - route: map of behavior tied to a single url.  Routes are named by a :name key.
+
+  In the following exampled:
+
+  [\"foo\" {:name :route/foo
+            :get get-foo
+            :post {:handler create-foo
+                   :parameters {:body FooParams}}]
+
+  :get and :post are methods.
+  get-foo and create-foo are handlers.
+
+  {:handler create-foo
+   :parameters {:body FooParams}}
+  and
+  get-foo
+
+  are handler-entries.
+
+  The second element of the vector is a route.  Note that it has a name."
   (:require [clojure.walk :refer [prewalk]]
+            [methodical.core :as m]
             [potemkin :refer [import-vars]]
             [reitit.http :as http]
             [reitit.ring]
             [tram.http.lookup :refer [handlers-ns->views-ns]]
             [tram.utils :refer [evolve]]))
 
-(defn at-route-def?
-  "Am I looking at a route definition?
-
-  That is, a map that has a :name keyword in it."
-  [node]
+(defn route? [node]
   (and (map node) (:name node)))
 
 (defn fn->var [f]
@@ -32,10 +57,46 @@
     {:status   200
      :template template}))
 
-(defn already-evolved?
-  "Has this handler like thing already been evolved into a final state?"
-  [handler-like]
-  (and (:handler handler-like) (:handler-var handler-like)))
+(defn handler-spec? [handler-entry]
+  (and (map? handler-entry)
+       (:handler handler-entry)
+       (:handler-var handler-entry)))
+
+(m/defmulti ->handler-spec
+  (fn [handler-entry]
+    (cond
+      (keyword? handler-entry) :view-keyword
+      (map? handler-entry)     :handler-spec
+      (fn? handler-entry)      :handler)))
+
+(m/defmethod ->handler-spec :default
+  [handler-entry]
+  (throw (ex-info "Tried to coerce invalid handler-entry."
+                  {:handler-entry handler-entry})))
+
+(m/defmethod ->handler-spec :view-keyword
+  [handler-entry]
+  {:handler     (default-handler handler-entry)
+   :handler-var (fn->var handler-entry)})
+
+(m/defmethod ->handler-spec :handler-spec
+  [handler-entry]
+  (let [handler (:handler handler-entry)]
+    (when-not (:handler handler-entry)
+      (throw (ex-info "Tried to coerce handler-spec without a :handler keyword."
+                      {:handler-spec handler-entry})))
+    (assoc handler-entry :handler-var (fn->var handler))))
+
+(m/defmethod ->handler-spec :handler
+  [handler-entry]
+  (let [handler-var (fn->var handler-entry)]
+    (when-not handler-var
+      (throw
+        (ex-info
+          "Tried to coerce handler-spec fn without a corresponding handler-var."
+          {:handler-spec handler-entry})))
+    {:handler     handler-entry
+     :handler-var handler-var}))
 
 (defn handler-evolver
   "Evolve a handler.  Receives one of
@@ -48,17 +109,19 @@
   First convert the handler fn into a map like {:handler val}. Then find the var
   that handler fn is stored in, if any, and add that to the map under
   `:handler-var`."
-  [handler-like]
-  (if (already-evolved? handler-like)
-    handler-like
-    (let [handler-map (if (map? handler-like) handler-like {})
-          handler (if (keyword? handler-like)
-                    (default-handler handler-like)
-                    (or (:handler handler-like)
-                        handler-like))]
-      (assoc handler-map
-             :handler     handler
-             :handler-var (fn->var handler)))))
+  [handler-entry]
+  (if (handler-spec? handler-entry)
+    handler-entry
+    (let [handler-spec (if (map? handler-entry)
+                         handler-entry
+                         {})
+          handler      (if (keyword? handler-entry)
+                         (default-handler handler-entry)
+                         (or (:handler handler-entry)
+                             handler-entry))]
+      (assoc handler-spec
+        :handler     handler
+        :handler-var (fn->var handler)))))
 
 (def http-verb-evolutions
   {:get    handler-evolver
@@ -88,7 +151,7 @@
                  routes)]
     `(def ~var-name
        ~(prewalk (fn [node]
-                   (if (at-route-def? node)
+                   (if (route? node)
                      (evolve http-verb-evolutions
                              (update node
                                      :namespace
