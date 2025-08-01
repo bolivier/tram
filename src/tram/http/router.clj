@@ -28,12 +28,33 @@
 
   The second element of the vector is a route.  Note that it has a name."
   (:require [clojure.walk :refer [prewalk]]
+            [clojure.zip :as zip]
+            [malli.core :as malli]
             [methodical.core :as m]
             [potemkin :refer [import-vars]]
             [reitit.http :as http]
-            [reitit.ring]
-            [tram.http.lookup :refer [handlers-ns->views-ns]]
-            [tram.utils :refer [evolve]]))
+            [reitit.ring]))
+
+
+(def HandlerSpecSchema
+  [:map [:handler fn?] [:handler-var [:fn var?]]])
+
+(def RouteSchema
+  [:map
+   [:name [:qualified-keyword {:namespace :route}]]
+   [:get {:optional true}
+    HandlerSpecSchema]
+   [:post {:optional true}
+    HandlerSpecSchema]
+   [:put {:optional true}
+    HandlerSpecSchema]
+   [:patch {:optional true}
+    HandlerSpecSchema]
+   [:delete {:optional true}
+    HandlerSpecSchema]])
+
+(def HandlEntrySchema
+  [:enum [fn? var? [:qualified-keyword {:namespace :view}]]])
 
 (defn route? [node]
   (and (map node) (:name node)))
@@ -57,22 +78,19 @@
     {:status   200
      :template template}))
 
-(defn handler-spec? [handler-entry]
-  (and (map? handler-entry)
-       (:handler handler-entry)
-       (:handler-var handler-entry)))
 
 (m/defmulti ->handler-spec
   (fn [handler-entry]
     (cond
       (keyword? handler-entry) :view-keyword
       (map? handler-entry)     :handler-spec
-      (fn? handler-entry)      :handler)))
+      (fn? handler-entry)      :handler
+      (var? handler-entry)     :var
+      (list? handler-entry)    :list)))
 
 (m/defmethod ->handler-spec :default
   [handler-entry]
-  (throw (ex-info "Tried to coerce invalid handler-entry."
-                  {:handler-entry handler-entry})))
+  (throw (ex-info "Unexpected handler entry." {:handler-entry handler-entry})))
 
 (m/defmethod ->handler-spec :view-keyword
   [handler-entry]
@@ -87,48 +105,59 @@
                       {:handler-spec handler-entry})))
     (assoc handler-entry :handler-var (fn->var handler))))
 
+(m/defmethod ->handler-spec :list
+  [handler-entry]
+  {:handler handler-entry})
+
+(m/defmethod ->handler-spec :var
+  [handler-entry]
+  {:handler     @handler-entry
+   :handler-var handler-entry})
+
 (m/defmethod ->handler-spec :handler
   [handler-entry]
   (let [handler-var (fn->var handler-entry)]
-    (when-not handler-var
-      (throw
-        (ex-info
-          "Tried to coerce handler-spec fn without a corresponding handler-var."
-          {:handler-spec handler-entry})))
     {:handler     handler-entry
      :handler-var handler-var}))
 
-(defn handler-evolver
-  "Evolve a handler.  Receives one of
-  - handler fn
-  - map with a `:handler` key
-  - keyword to indicate the view fn,
-    eg :view/sign-up, which points to the corresponding views
-    ns and the sign-up function there.
 
-  First convert the handler fn into a map like {:handler val}. Then find the var
-  that handler fn is stored in, if any, and add that to the map under
-  `:handler-var`."
-  [handler-entry]
-  (if (handler-spec? handler-entry)
-    handler-entry
-    (let [handler-spec (if (map? handler-entry)
-                         handler-entry
-                         {})
-          handler      (if (keyword? handler-entry)
-                         (default-handler handler-entry)
-                         (or (:handler handler-entry)
-                             handler-entry))]
-      (assoc handler-spec
-        :handler     handler
-        :handler-var (fn->var handler)))))
+(def verbs
+  #{:get :put :patch :post :delete})
 
-(def http-verb-evolutions
-  {:get    handler-evolver
-   :patch  handler-evolver
-   :put    handler-evolver
-   :delete handler-evolver
-   :post   handler-evolver})
+(def verb?
+  "Convenience fn to make validating easier."
+  verbs)
+
+(defn coerce-route-entries-to-specs [route]
+  (reduce-kv (fn [route k v]
+               (assoc route
+                 k (if (verb? k)
+                     (->handler-spec v)
+                     v)))
+             {}
+             ;; This makes sure that namespace can be overridden by a user.
+             (update route :namespace (fn [v] (or v (str *ns*))))))
+
+(defn map-routes
+  "Walk a routing tree and apply `f` to the route maps."
+  [f routes]
+  (loop [zipper (zip/vector-zip routes)]
+    (if (zip/end? zipper)
+      (-> zipper
+          zip/root)
+      (recur (zip/next (if (route? (zip/node zipper))
+                         (zip/edit zipper
+                                   f)
+                         zipper))))))
+
+(defn replace-symbols-with-vars
+  "Walks the tree and updates symbols to their corresponding vars."
+  [tree]
+  (prewalk (fn [n]
+             ;; This resolves any symbols (mostly for function names)
+             ;; into vars.
+             (get (ns-map *ns*) n n))
+           tree))
 
 (defmacro defroutes
   "Define routes in Tram.
@@ -141,25 +170,9 @@
   route data, and to add the var reference of the handler itself to the handler
   data."
   [var-name routes]
-  (let [evaluated-routes
-        (prewalk (fn [n]
-                   ;; This resolves any symbols (mostly for function names)
-                   ;; into vars.
-                   (if-let [var (and (symbol? n) (not= 'fn n) (resolve n))]
-                     @var
-                     n))
-                 routes)]
+  (let [evaluated-routes (replace-symbols-with-vars routes)]
     `(def ~var-name
-       ~(prewalk (fn [node]
-                   (if (route? node)
-                     (evolve http-verb-evolutions
-                             (update node
-                                     :namespace
-                                     (fn [v]
-                                       (or v
-                                           (str *ns*)))))
-                     node))
-                 evaluated-routes))))
+       ~(map-routes coerce-route-entries-to-specs evaluated-routes))))
 
 (defn tram-router
   "`reitit.http/router` with default options for tram.

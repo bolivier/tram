@@ -1,10 +1,8 @@
 (ns tram.http.router-test
-  (:require
-    [expectations.clojure.test :as e]
-    [test-app.handlers.authentication-handlers :refer [routes sign-in] :as auth]
-    [test-app.views.authentication-views]
-    [tram.http.router]
-    [tram.test-fixtures :refer [ok-good-handler]]))
+  (:require [expectations.clojure.test :as e]
+            [test-app.handlers.authentication-handlers :refer [routes] :as auth]
+            [test-app.views.authentication-views]
+            [tram.http.router :as sut]))
 
 (e/defexpect defroutes
   (let [sign-in-route-data (-> auth/routes
@@ -14,31 +12,42 @@
                :get       {:handler     auth/sign-in
                            :handler-var #'auth/sign-in}
                :namespace "test-app.handlers.authentication-handlers"}
-              (e/in sign-in-route-data)))
-  #_(e/expect ["/with-ns"
-               {:name      :route/with-ns
-                :namespace "foobar"}]
-              with-ns-route*)
+              (e/in sign-in-route-data))))
 
-  ;; These are kind of hard to read because of how these tests work
+(e/defexpect expand-handler-entries
+  ;; trivial case
+  (e/expect [] (sut/map-routes identity []))
+  (let [[[_ sign-in-route] [_ forgot-password-route] [_ healthcheck-route]]
+        (sut/map-routes sut/coerce-route-entries-to-specs routes)]
+    ;; sign-in route
+    (e/expect fn? (get-in sign-in-route [:get :handler]))
+    (e/expect :route/sign-in (get-in sign-in-route [:name]))
+    (e/expect "test-app.handlers.authentication-handlers"
+              (get-in sign-in-route [:namespace]))
+    ;; forgot password route
+    (let [{:keys [name namespace]} forgot-password-route
+          get-spec  (:get forgot-password-route)
+          post-spec (:post forgot-password-route)]
+      (e/expect :route/forgot-password name)
+      (e/expect "test-app.handlers.authentication-handlers" namespace)
+      (e/expect (e/more-> fn? :handler) get-spec)
+      (e/expect (e/more-> fn? :handler) post-spec))
+    ;; healthcheck
+    (let [{:keys [name namespace]} healthcheck-route
+          get-spec  (:get forgot-password-route)
+          post-spec (:post forgot-password-route)]
+      (e/expect :route/healthcheck name)
+      (e/expect "test-app.handlers.authentication-handlers" namespace)
+      (e/expect (e/more-> fn? :handler) get-spec)
+      (e/expect (e/more-> fn? :handler) post-spec))))
 
-  #_(let [[_ dashboard-fragment [_ user-fragment]] dashboard-route*]
-      (e/expect [""
-                 {:name      :route/dashboard
-                  :namespace "test-app.handlers.authentication-handlers"}]
-                dashboard-fragment)
-      (e/expect {:namespace "test-app.handlers.authentication-handlers"
-                 :name      :route/user
-                 :patch     {:handler     ok-good-handler
-                             :handler-var #'ok-good-handler}
-                 :put       {:handler     ok-good-handler
-                             :handler-var #'ok-good-handler}
-                 :delete    {:handler     ok-good-handler
-                             :handler-var #'ok-good-handler}
-                 :post      {:handler     ok-good-handler
-                             :handler-var #'ok-good-handler}}
-                (e/in user-fragment))
-      (e/expecting "default view renders the value in the template key")
-      (e/expect {:status   200
-                 :template :views/show-user}
-                (e/in ((:handler (:get user-fragment)) nil)))))
+(defn foo [])
+
+(e/defexpect ->handler-spec
+  (let [spec (sut/->handler-spec #'foo)]
+    (e/expect #'foo (:handler-var spec))
+    (e/expect (= foo (:handler spec))))
+
+  (let [spec (sut/->handler-spec (fn [req] {:status 200}))]
+    (e/expect nil (:handler-var spec))
+    (e/expect fn? (:handler spec))))
