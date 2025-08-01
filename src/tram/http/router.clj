@@ -143,8 +143,8 @@
   [var-name routes]
   (let [evaluated-routes
         (prewalk (fn [n]
-                   ;; This is NOT guaranteed to be at the location I
-                   ;; expect.
+                   ;; This resolves any symbols (mostly for function names)
+                   ;; into vars.
                    (if-let [var (and (symbol? n) (not= 'fn n) (resolve n))]
                      @var
                      n))
