@@ -14,7 +14,7 @@
             [zprint.core :refer [zprint-file-str]]))
 
 (m/defmulti run-task
-  identity)
+  :dispatch-key)
 
 (m/defmethod run-task [:db :migrate]
   [_]
@@ -95,42 +95,10 @@
 (def ^:dynamic *current-parsed-command*
   nil)
 
-(m/defmethod run-task [:new]
-  [args]
-  (render-new-project-template (:project-name (:args
-                                                *current-parsed-command*))))
-
-(m/defmethod run-task [:generate :component]
-  [_]
-  (let [component-name       (get-in *current-parsed-command*
-                                     [:args :component-name])
-        project-name         (:project/name (tram/get-tram-config))
-        project-name-snake   (csk/->snake_case_string project-name)
-        project-name-kebab   (csk/->kebab-case-string project-name)
-        component-name-snake (csk/->snake_case_string component-name)
-        component-name-kebab (csk/->kebab-case-string component-name)
-        filename             (str "src/"
-                                  project-name-snake
-                                  "/components/"
-                                  component-name-snake
-                                  ".clj")
-        file-contents        (str (list 'ns
-                                        (symbol (str project-name-kebab
-                                                     ".components."
-                                                     component-name-kebab)))
-                                  "\n\n"
-                                  (list 'defn
-                                        (symbol component-name-kebab)
-                                        []
-                                        nil))
-        file-contents        (tram/format-source file-contents)]
-    (io/make-parents filename)
-    (spit filename file-contents)))
-
 (m/defmethod run-task [:generate :migration]
-  [_]
-  (let [migration-name (get-in *current-parsed-command* [:args :migration-name])
-        fields         (get-in *current-parsed-command* [:args :fields])]
+  [cmd]
+  (let [migration-name (get-in cmd [:args :migration-name])
+        fields         (get-in cmd [:args :fields])]
     (println "doing migration" migration-name "with fields" fields)))
 
 (defn generate-help
@@ -218,14 +186,14 @@
 (defn parse-command [args]
   (when (empty? args)
     (throw (ex-info "No command provided"
-                    {:type :missing-command})))
+                    {::type :missing-command})))
   (let [command-str (first args)
         rest-args   (rest args)
         command     (find-command-by-alias command-specs command-str)]
     (when-not command
       (throw (ex-info (str "Unknown command: "
                            command-str)
-                      {:type    :unknown-command
+                      {::type   :unknown-command
                        :command command-str})))
     (let [cmd-spec (get command-specs command)]
       (if (:subcommands cmd-spec)
@@ -233,8 +201,9 @@
                   (throw (ex-info (str "Command "
                                        command-str
                                        " requires a subcommand")
-                                  {:type    :missing-subcommand
-                                   :command command})))
+                                  {::type      :missing-subcommand
+                                   :command    command
+                                   :subcommand nil})))
             (let [subcmd-str  (first rest-args)
                   subcmd-args (rest rest-args)
                   subcommand  (find-command-by-alias (:subcommands cmd-spec)
@@ -242,7 +211,7 @@
               (when-not subcommand
                 (throw (ex-info (str "Unknown subcommand: "
                                      subcmd-str)
-                                {:type       :unknown-subcommand
+                                {::type      :unknown-subcommand
                                  :command    command
                                  :subcommand subcmd-str})))
               (let [subcmd-spec (get-in cmd-spec
@@ -251,7 +220,7 @@
                                             subcmd-args)]
                 (when (:error parsed-args)
                   (throw (ex-info (:error parsed-args)
-                                  {:type       :arg-parse-error
+                                  {::type      :arg-parse-error
                                    :command    command
                                    :subcommand subcommand})))
                 {:command      command
@@ -262,7 +231,7 @@
                                       rest-args)]
           (when (:error parsed-args)
             (throw (ex-info (:error parsed-args)
-                            {:type    :arg-parse-error
+                            {::type   :arg-parse-error
                              :command command})))
           {:command      command
            :args         parsed-args
@@ -278,35 +247,18 @@
 
 (defn -main [& args]
   (try
-    (if (empty? args)
-      (run-task [:help])
-      (let [parsed (parse-command args)]
-        (binding [*current-parsed-command* parsed]
-          (run-task (:dispatch-key parsed)))))
+    (run-task (parse-command args))
     (catch Exception e
-      (let [data (ex-data e)]
-        (case (:type data)
-          :missing-command    (do (println "Error: No command provided")
-                                  (run-task [:help]))
-          :unknown-command    (do (println "Error:"
-                                           (.getMessage e))
-                                  (run-task [:help]))
-          :missing-subcommand (do (println "Error:"
-                                           (.getMessage e))
-                                  (println)
-                                  (println (generate-subcommand-help (:command
-                                                                       data))))
-          :unknown-subcommand (do (println "Error:"
-                                           (.getMessage e))
-                                  (println)
-                                  (println (generate-subcommand-help (:command
-                                                                       data))))
-          :arg-parse-error    (do (println "Error:"
-                                           (.getMessage e))
-                                  (when (:subcommand data)
-                                        (println)
-                                        (println (generate-subcommand-help
-                                                   (:command data)))))
-          (do (println "Unexpected error:"
-                       (.getMessage e))
-              (run-task [:help])))))))
+      (let [data (ex-data e)
+            expected-error? (contains? data ::type)
+            msg  (if expected-error?
+                   (str "Error: "
+                        (.getMessage e))
+                   (str "Unexpected error: "
+                        (.getMessage e)))]
+        (println msg)
+        (if (contains? data
+                       :subcommand)
+          (do (println)
+              (println (generate-subcommand-help (:command data))))
+          (run-task [:help]))))))

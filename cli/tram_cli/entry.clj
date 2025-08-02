@@ -2,14 +2,12 @@
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.string :as str]
-            [tram-cli.daemon-management
-             :refer
-             [accepting? kill-daemon restart-daemon start-daemon]]
-            [tram-cli.generator.new :refer [render-new-project-template]]
-            [tram-cli.nrepl-client :as client]
-            [zprint.core :refer [zprint-file-str]]))
+            [tram-cli.generator.new :refer [render-new-project-template]]))
 
-(alter-var-root #'p/*defaults* #(assoc % :continue true))
+(alter-var-root #'p/*defaults*
+                #(assoc %
+                   :continue true
+                   :dir      (System/getenv "TRAM_CLI_CALLED_FROM")))
 
 (defn -main [& args]
   (let [cmd (first args)]
@@ -33,8 +31,4 @@
             "bin/kaocha not found, invoking clojure command `clojure -X:test`")
           (p/shell "clojure -X:test")))
 
-      "db:migrate" (p/shell "clojure -M:tram db:migrate")
-      (println "Unknown command" cmd)
-      #_(client/send {:op   :tram/op
-                      :cmd  cmd
-                      :args (rest args)}))))
+      (p/shell (str "clojure -M:tram " (str/join " " args))))))
