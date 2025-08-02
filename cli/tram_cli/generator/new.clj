@@ -21,7 +21,7 @@
 (defn render-new-project-template [project-name]
   (validate-project-name! project-name)
   (let [project-root  (io/file called-from-dir project-name)
-        template-root (io/file "resources/tram/templates/starter-template")]
+        template-root (io/file "starter-template")]
     (binding [p/*defaults* (assoc p/*defaults*
                              :dir      project-root
                              :continue true)]
@@ -38,7 +38,7 @@
               :let [relative
                     (-> (.getPath src)
                         (str/replace-first
-                          #".*?resources/tram/templates/starter-template/"
+                          #".*starter-template/"
                           "")
                         (str/replace "sample_app" (ns->path project-name)))
 
