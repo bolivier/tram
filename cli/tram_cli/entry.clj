@@ -2,6 +2,7 @@
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.string :as str]
+            [hickory.core :as hc]
             [tram-cli.generator.new :refer [render-new-project-template]]))
 
 (def user-project-dir
@@ -12,6 +13,18 @@
                    :continue false
                    :dir      user-project-dir))
 
+(defn convert-to-hiccup [args]
+  (let [html (or (second args)
+                 (str/trim (:out (p/shell {:out :string} "wl-paste"))))]
+    (try
+      (-> html
+          hc/parse-fragment
+          first
+          hc/as-hiccup
+          prn)
+      (catch Exception _
+        (println "Could not convert into html: ")
+        (prn html)))))
 
 (defn -main [& args]
   (let [cmd (first args)]
@@ -35,6 +48,9 @@
             "bin/kaocha not found, invoking clojure command `clojure -X:test`")
           (p/shell "clojure -X:test")))
 
+      ;; These are both acceptable names
+      "hiccup" (convert-to-hiccup args)
+      "html" (convert-to-hiccup args)
       "dev"
       (do
         ;; TODO make this configurable.

@@ -38,6 +38,7 @@
   metosin/malli {:mvn/version "0.18.0"}
   http-kit/http-kit {:mvn/version "2.9.0-alpha6"}
   clj-http/clj-http {:mvn/version "3.13.0"}
+  org.clj-commons/hickory {:mvn/version "0.7.7"}
   ;; auth
   buddy/buddy {:mvn/version "2.0.0"}
   buddy/buddy-core {:mvn/version "1.11.418"}
