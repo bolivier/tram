@@ -6,8 +6,6 @@
             [clojure.string :as str]
             [methodical.core :as m]
             [migratus.core :as migratus]
-            [nrepl.cmdline]
-            [nrepl.core :as nrepl]
             [taoensso.telemere :as t]
             [tram.core :as tram]
             [tram.migrations :as tm]
@@ -45,9 +43,6 @@
               :args [{:name     :project-name
                       :required true
                       :desc     "Name of the project to create"}]}
-   :dev      {:aliases []
-              :desc    "Start development environment"
-              :args    []}
    :db       {:aliases     []
               :desc        "Database operations"
               :subcommands {:migrate {:aliases []
@@ -144,44 +139,8 @@
   (println (generate-help)))
 
 
-(defn wait-for-nrepl
-  "Waits for an nREPL server to be ready at the given host and port."
-  [host port]
-  (let [timeout-count 50
-        interval-ms   100]
-    (loop [timeout-count timeout-count]
-      (if (zero? timeout-count)
-        false
-        (let [success? (try
-                         (with-open [_sock (java.net.Socket. host
-                                                             port)]
-                           true)
-                         (catch Exception _
-                           false))]
-          (if success?
-            true
-            (do (Thread/sleep interval-ms)
-                (recur (dec timeout-count)))))))))
 
 
-;; TODO configure this to run the integrant initialize server slash start
-;; project stuff
-(m/defmethod run-task [:dev]
-  [_]
-  (spit ".nrepl-port" 8777)
-  (future
-    (apply nrepl.cmdline/-main
-      ["--port"
-       8777
-       "--middleware"
-       "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]))
-  (wait-for-nrepl "localhost" 8777)
-  (with-open [conn (nrepl/connect :port 8777)] ; adjust port
-    (let [client (nrepl/client conn 1000)]
-      (nrepl/message
-        client
-        {:op   "eval"
-         :code "(ns user) (require '[integrant.repl :as ir]) (ir/reset)"}))))
 
 (defn parse-command [args]
   (when (empty? args)
