@@ -237,14 +237,6 @@
            :args         parsed-args
            :dispatch-key [command]})))))
 
-(defn normalize-args [args]
-  (try
-    (let [parsed (parse-command args)]
-      (:dispatch-key parsed))
-    (catch Exception e
-      (println "Error:" (.getMessage e))
-      [:help])))
-
 (defn -main [& args]
   (try
     (run-task (parse-command args))
