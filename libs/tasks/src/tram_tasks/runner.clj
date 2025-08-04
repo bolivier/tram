@@ -1,15 +1,8 @@
 (ns tram-tasks.runner
   "A lot of this code is heavily inspired by Biff.  Thanks to @jacobobryant"
-  (:require [babashka.process :as p]
-            [camel-snake-kebab.core :refer [->kebab-case ->snake_case] :as csk]
-            [clojure.java.io :as io]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [methodical.core :as m]
-            [migratus.core :as migratus]
-            [taoensso.telemere :as t]
-            [tram.core :as tram]
-            [tram.migrations :as tm]
-            [zprint.core :refer [zprint-file-str]]))
+            [tram.migrations :as tm]))
 
 (m/defmulti run-task
   :dispatch-key)
