@@ -18,7 +18,8 @@
      :name :route/forgot-password
      :post forgot}]
    ["/healthcheck"
-    {:get  (fn [req] {:status 200})
+    {:post (constantly {:status 200})
+     :get  (fn [_] {:status 200})
      :name :route/healthcheck}]])
 
 (def test-router

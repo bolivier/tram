@@ -120,7 +120,6 @@
     {:handler     handler-entry
      :handler-var handler-var}))
 
-
 (def verbs
   #{:get :put :patch :post :delete})
 
@@ -156,7 +155,10 @@
   (prewalk (fn [n]
              ;; This resolves any symbols (mostly for function names)
              ;; into vars.
-             (get (ns-map *ns*) n n))
+             (if-let [n-var
+                      (and (symbol? n) (not= 'fn n) (get (ns-map *ns*) n))]
+               (var-get n-var)
+               n))
            tree))
 
 (defmacro defroutes
