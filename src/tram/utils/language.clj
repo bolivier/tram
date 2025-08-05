@@ -2,7 +2,7 @@
   (:require [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
             [clojure.string :as str]
             [declensia.core :as dc]
-            [tram.utils :refer [with-same-output]]))
+            [tram.utils.core :refer [with-same-output]]))
 
 (defn lower-case?
   "Returns `s` if `s` consists of no capital letters [A-Z].

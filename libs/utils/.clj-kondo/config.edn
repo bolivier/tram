@@ -1,0 +1,5 @@
+{;; TODO figure out how to reexport these from here if necessary
+ #_#_:config-paths ["../resources/clj-kondo.exports/bolivier/tram"]
+ :lint-as      {tram.core/defroutes         clojure.core/def
+                tram.http.routing/defroutes clojure.core/def
+                tram.utils/with-same-output clojure.core/let}}
