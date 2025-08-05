@@ -133,6 +133,11 @@
   (partial generate-migration-filename :up))
 
 
+(defn validate! [blueprint]
+  (when-not (:table blueprint)
+    (throw (ex-info ":table key is required in blueprint"
+                    {}))))
+
 (defn write-to-migration-file [blueprint]
   (let [primary-migration (serialize-to-sql blueprint)
         triggers          (serialize-to-trigger-sqls blueprint)
@@ -145,6 +150,7 @@
     (spit (generate-migration-down-filename blueprint) sql-string)))
 
 (defn write-to-migration-files [blueprint]
+  (validate! blueprint)
   (write-to-migration-down blueprint)
   (write-to-migration-file blueprint)
   nil)

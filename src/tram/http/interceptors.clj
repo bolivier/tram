@@ -5,7 +5,9 @@
             [reitit.core :as r]
             [reitit.http.coercion
              :refer
-             [coerce-request-interceptor coerce-response-interceptor]]
+             [coerce-exceptions-interceptor
+              coerce-request-interceptor
+              coerce-response-interceptor]]
             [reitit.http.interceptors.exception :refer [exception-interceptor]]
             [reitit.http.interceptors.multipart :refer [multipart-interceptor]]
             [reitit.http.interceptors.muuntaja :as muuntaja]
@@ -88,6 +90,7 @@
 (def render-template-interceptor
   {:name  ::template-renderer
    :leave (fn [ctx]
+            (prn "rendering template interceptor")
             (cond
               (or (some? (get-in ctx [:response :body]))
                   (str/starts-with? (get-in ctx [:request :uri]) "/assets")
@@ -171,6 +174,7 @@
 (def coercion-interceptors
   [(coerce-request-interceptor)
    (coerce-response-interceptor)
+   (coerce-exceptions-interceptor)
    (rhip/parameters-interceptor)])
 
 (def default-interceptors

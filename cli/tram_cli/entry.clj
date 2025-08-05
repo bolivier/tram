@@ -3,10 +3,12 @@
             [babashka.process :as p]
             [clojure.string :as str]
             [hickory.core :as hc]
+            [clojure.java.io :as io]
+            [tram-cli.generate :refer [do-generate]]
             [tram-cli.generator.new :refer [render-new-project-template]]))
 
 (def user-project-dir
-  (System/getenv "TRAM_CLI_CALLED_FROM"))
+  (io/file (System/getenv "TRAM_CLI_CALLED_FROM")))
 
 (alter-var-root #'p/*defaults*
                 #(assoc %
@@ -27,9 +29,11 @@
         (prn html)))))
 
 (defn -main [& args]
-  (let [cmd (first args)]
+  (let [cmd (first (mapcat #(str/split % #" ") args))]
     (case cmd
       "new" (render-new-project-template (first (rest args)))
+      "g" (do-generate (rest args))
+      "generate" (do-generate (rest args))
       "test:watch"
       (if (fs/exists? "bin/kaocha")
         (do (println "Watching tests with bin/kaocha")
@@ -53,7 +57,6 @@
       "html" (convert-to-hiccup args)
       "dev"
       (do
-        ;; TODO make this configurable.
         (println "Starting development environment...")
         (spit (str (System/getenv "TRAM_CLI_CALLED_FROM")
                    "/.nrepl-port")
