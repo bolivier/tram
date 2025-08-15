@@ -1,5 +1,7 @@
 (ns tram.http.interceptors
-  (:require [clojure.string :as str]
+  (:require [camel-snake-kebab.core :as csk]
+            [camel-snake-kebab.extras :refer [transform-keys]]
+            [clojure.string :as str]
             [clojure.walk :refer [prewalk]]
             [potemkin :refer [import-vars]]
             [reitit.core :as r]
@@ -170,6 +172,26 @@
                                       header))
                                   headers)))))))})
 
+(def format-json-body-interceptors
+  {:name  ::inject-content-type-interceptors
+   :enter (fn [ctx]
+            (let [ct (get-in ctx [:request :muuntaja/request :format])]
+              (cond
+                (= "application/json" ct)
+                (update-in ctx
+                           [:request :body-params]
+                           (partial transform-keys csk/->kebab-case-keyword))
+
+                :else ctx)))
+   :leave (fn [ctx]
+            (let [ac (get-in ctx [:request :headers "accept"])]
+              (cond
+                (= "application/json" ac)
+                (update-in ctx
+                           [:response :body]
+                           (partial transform-keys csk/->camelCaseString))
+
+                :else ctx)))})
 
 (def coercion-interceptors
   [(coerce-request-interceptor)
@@ -182,6 +204,7 @@
    inject-route-name
    (multipart-interceptor)
    expand-hiccup-interceptor
+   format-json-body-interceptors
    coercion-interceptors
    render-template-interceptor])
 
