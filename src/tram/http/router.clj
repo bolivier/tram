@@ -29,7 +29,6 @@
   The second element of the vector is a route.  Note that it has a name."
   (:require [clojure.walk :refer [prewalk]]
             [clojure.zip :as zip]
-            [malli.core :as malli]
             [methodical.core :as m]
             [potemkin :refer [import-vars]]
             [reitit.http :as http]

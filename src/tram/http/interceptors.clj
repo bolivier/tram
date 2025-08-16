@@ -200,14 +200,14 @@
    (rhip/parameters-interceptor)])
 
 (def default-interceptors
-  [#_(exception-interceptor)
-   inject-route-name
+  [inject-route-name
    (multipart-interceptor)
    expand-hiccup-interceptor
    format-json-body-interceptors
    coercion-interceptors
    render-template-interceptor])
 
+(import-vars [reitit.http.interceptors.exception exception-interceptor])
 (import-vars [muuntaja format-interceptor])
 
 (defn layout-interceptor [layout-fn]

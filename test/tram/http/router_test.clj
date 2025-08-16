@@ -1,13 +1,19 @@
 (ns tram.http.router-test
-  (:require [expectations.clojure.test :as e]
+  (:require [clojure.zip :as zip]
+            [expectations.clojure.test :as e]
             [test-app.handlers.authentication-handlers :refer [routes] :as auth]
             [test-app.views.authentication-views]
             [tram.http.router :as sut]))
 
+(defn get-spec-from-routes [routes route-uri]
+  (loop [routes (zip/vector-zip routes)]
+    (cond
+      (zip/end? routes) nil
+      (= route-uri (zip/node routes)) (zip/node (zip/next routes))
+      :else (recur (zip/next routes)))))
+
 (e/defexpect defroutes
-  (let [sign-in-route-data (-> auth/routes
-                               first
-                               second)]
+  (let [sign-in-route-data (get-spec-from-routes routes "/sign-in")]
     (e/expect {:name      :route/sign-in
                :get       {:handler     auth/sign-in
                            :handler-var #'auth/sign-in}
@@ -17,8 +23,9 @@
 (e/defexpect expand-handler-entries
   ;; trivial case
   (e/expect [] (sut/map-routes identity []))
-  (let [[[_ sign-in-route] [_ forgot-password-route] [_ healthcheck-route]]
-        (sut/map-routes sut/coerce-route-entries-to-specs routes)]
+  (let [sign-in-route         (get-spec-from-routes routes "/sign-in")
+        forgot-password-route (get-spec-from-routes routes "/forgot-password")
+        healthcheck-route     (get-spec-from-routes routes "/healthcheck")]
     ;; sign-in route
     (e/expect fn? (get-in sign-in-route [:get :handler]))
     (e/expect :route/sign-in (get-in sign-in-route [:name]))
