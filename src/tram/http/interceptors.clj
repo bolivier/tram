@@ -92,7 +92,6 @@
 (def render-template-interceptor
   {:name  ::template-renderer
    :leave (fn [ctx]
-            (prn "rendering template interceptor")
             (cond
               (or (some? (get-in ctx [:response :body]))
                   (str/starts-with? (get-in ctx [:request :uri]) "/assets")

@@ -2,7 +2,7 @@
   (:require [clojure.zip :as zip]
             [expectations.clojure.test :as e]
             [test-app.handlers.authentication-handlers :refer [routes] :as auth]
-            [test-app.views.authentication-views]
+            [test-app.views.authentication-views :as views]
             [tram.http.router :as sut]))
 
 (defn get-spec-from-routes [routes route-uri]
@@ -18,7 +18,12 @@
                :get       {:handler     auth/sign-in
                            :handler-var #'auth/sign-in}
                :namespace "test-app.handlers.authentication-handlers"}
-              (e/in sign-in-route-data))))
+              (e/in sign-in-route-data)))
+
+  (let [global-route-data (get-spec-from-routes routes "")]
+    (e/expect some? (:interceptors global-route-data))
+    (e/expect {:layouts [#'test-app.views.authentication-views/layout]}
+              ((:enter (first (:interceptors global-route-data))) {}))))
 
 (e/defexpect expand-handler-entries
   ;; trivial case

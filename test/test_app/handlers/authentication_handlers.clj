@@ -1,6 +1,7 @@
 (ns test-app.handlers.authentication-handlers
   (:require [reitit.core]
             [reitit.http :refer [router]]
+            [test-app.views.authentication-views :as view]
             [tram.core]))
 
 (defn sign-in [req]
@@ -10,7 +11,9 @@
   {:status 200})
 
 (tram.core/defroutes routes
-  [["/sign-in"
+  [""
+   {:layout view/layout}
+   ["/sign-in"
     {:get  sign-in
      :name :route/sign-in}]
    ["/forgot-password"
