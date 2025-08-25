@@ -17,9 +17,11 @@
     {:get  sign-in
      :name :route/sign-in}]
    ["/forgot-password"
-    {:get  :view/forgot-password
-     :name :route/forgot-password
-     :post forgot}]
+    {:get          :view/forgot-password
+     :interceptors [{:name  :identity
+                     :enter identity}]
+     :name         :route/forgot-password
+     :post         forgot}]
    ["/healthcheck"
     {:post (constantly {:status 200})
      :get  (fn [_] {:status 200})

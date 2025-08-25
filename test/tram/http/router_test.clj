@@ -1,11 +1,17 @@
 (ns tram.http.router-test
-  (:require [clojure.zip :as zip]
+  (:require [clojure.test :as t :refer [deftest is]]
+            [clojure.zip :as zip]
             [expectations.clojure.test :as e]
             [test-app.handlers.authentication-handlers :refer [routes] :as auth]
             [test-app.views.authentication-views :as views]
             [tram.http.router :as sut]))
 
-(defn get-spec-from-routes [routes route-uri]
+(defn get-spec-from-routes
+  "Takes the routes to search, and a route uri to search for. Finds the uri and
+  returns the handler spec, which is the next value.
+
+  Note, the route uri is a naive string comparison, so it will not work on nested/split routes"
+  [routes route-uri]
   (loop [routes (zip/vector-zip routes)]
     (cond
       (zip/end? routes) nil
@@ -21,9 +27,16 @@
               (e/in sign-in-route-data)))
 
   (let [global-route-data (get-spec-from-routes routes "")]
-    (e/expect some? (:interceptors global-route-data))
-    (e/expect {:layouts [#'test-app.views.authentication-views/layout]}
-              ((:enter (first (:interceptors global-route-data))) {}))))
+    (t/is (match? {:interceptors
+                   [{:name  :tram.http.interceptors/layout-interceptor
+                     :enter fn?}]}
+                  global-route-data)
+          "Router did not add layout-interceptor to :interceptors key.")
+    (let [enter-fn (:enter (first (:interceptors global-route-data)))
+          context-after-interceptor (enter-fn {})]
+      (t/is (match? {:layouts [#'test-app.views.authentication-views/layout]}
+                    context-after-interceptor)
+            "Calling layout interceptor did not add to layouts key in ctx."))))
 
 (e/defexpect expand-handler-entries
   ;; trivial case
@@ -32,26 +45,25 @@
         forgot-password-route (get-spec-from-routes routes "/forgot-password")
         healthcheck-route     (get-spec-from-routes routes "/healthcheck")]
     ;; sign-in route
-    (e/expect fn? (get-in sign-in-route [:get :handler]))
-    (e/expect :route/sign-in (get-in sign-in-route [:name]))
-    (e/expect "test-app.handlers.authentication-handlers"
-              (get-in sign-in-route [:namespace]))
+    (t/is (match? {:get       {:handler     fn?
+                               :handler-var var?}
+                   :name      :route/sign-in
+                   :namespace "test-app.handlers.authentication-handlers"}
+                  sign-in-route))
     ;; forgot password route
-    (let [{:keys [name namespace]} forgot-password-route
-          get-spec  (:get forgot-password-route)
-          post-spec (:post forgot-password-route)]
-      (e/expect :route/forgot-password name)
-      (e/expect "test-app.handlers.authentication-handlers" namespace)
-      (e/expect (e/more-> fn? :handler) get-spec)
-      (e/expect (e/more-> fn? :handler) post-spec))
+    (t/is (match? {:get          {:handler fn?}
+                   :post         {:handler fn?}
+                   :name         :route/forgot-password
+                   :interceptors [{:name  :identity
+                                   :enter identity}]
+                   :namespace    "test-app.handlers.authentication-handlers"}
+                  forgot-password-route))
     ;; healthcheck
-    (let [{:keys [name namespace]} healthcheck-route
-          get-spec  (:get forgot-password-route)
-          post-spec (:post forgot-password-route)]
-      (e/expect :route/healthcheck name)
-      (e/expect "test-app.handlers.authentication-handlers" namespace)
-      (e/expect (e/more-> fn? :handler) get-spec)
-      (e/expect (e/more-> fn? :handler) post-spec))))
+    (t/is (match? {:get       {:handler fn?}
+                   :post      {:handler fn?}
+                   :name      :route/healthcheck
+                   :namespace "test-app.handlers.authentication-handlers"}
+                  healthcheck-route))))
 
 (defn foo [])
 
@@ -63,3 +75,10 @@
   (let [spec (sut/->handler-spec (fn [req] {:status 200}))]
     (e/expect nil (:handler-var spec))
     (e/expect fn? (:handler spec))))
+
+(deftest coerce-route-entries-to-specs-test
+  (is (match?
+       {:interceptors [{:name :tram.http.interceptors/layout-interceptor
+                        :enter fn?}]
+        :layout views/layout}
+       (sut/coerce-route-entries-to-specs {:layout views/layout}))))

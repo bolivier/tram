@@ -9,6 +9,7 @@
                                                                    "2.2.214"}
                              lambdaisland/kaocha        {:mvn/version
                                                          "1.91.1392"}
+                             nubank/matcher-combinators {:mvn/version "3.9.2"}
                              vvvvalvalval/scope-capture {:mvn/version "0.3.3"}}
                :extra-paths ["test"]
                :jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"

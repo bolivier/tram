@@ -39,9 +39,19 @@
 (def HandlerSpecSchema
   [:map [:handler fn?] [:handler-var [:fn var?]]])
 
+(def Interceptor [:map
+                  [:name :keyword]
+                  [:enter {:optional true} :fn]
+                  [:leave {:optional true} :fn]])
+
 (def RouteSchema
   [:map
    [:name [:qualified-keyword {:namespace :route}]]
+   [:layout [:or
+             fn?
+             [:fn :var?]
+             [:qualified-keyword {:namespace :view}]]]
+   [:interceptors [:vector Interceptor]]
    [:get {:optional true}
     HandlerSpecSchema]
    [:post {:optional true}
@@ -57,7 +67,8 @@
   [:enum [fn? var? [:qualified-keyword {:namespace :view}]]])
 
 (defn route? [node]
-  ;; TODO this feels like a hack
+  ;; TODO this feels like a hack.
+  ;; Need a real concept for what this is.
   (and (map node) (or (:name node) (:layout node))))
 
 (defn fn->var [f]
@@ -136,12 +147,18 @@
                       (fn [interceptors]
                         (conj (or interceptors [])
                               (let [v (get route k)]
-                                (if (keyword? v)
+                                (cond
+                                  (keyword? v)
                                   (layout-interceptor
                                     (requiring-resolve
                                       (symbol (str (handlers-ns->views-ns *ns*))
                                               (name v))))
-                                  (layout-interceptor (resolve v)))))))
+
+                                  (symbol? v)
+                                  (layout-interceptor (resolve v))
+
+                                  :else
+                                  (layout-interceptor v))))))
 
               (verb? k) (update route k ->handler-spec)
               :else route))
