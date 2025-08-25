@@ -1,9 +1,9 @@
 (ns tram-cli.entry
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [hickory.core :as hc]
-            [clojure.java.io :as io]
             [tram-cli.generate :refer [do-generate]]
             [tram-cli.generator.new :refer [render-new-project-template]]))
 
@@ -12,7 +12,7 @@
 
 (alter-var-root #'p/*defaults*
                 #(assoc %
-                   :continue false
+                   :continue true
                    :dir      user-project-dir))
 
 (defn convert-to-hiccup [args]
@@ -35,7 +35,8 @@
       "g" (do-generate (rest args))
       "generate" (do-generate (rest args))
       "test:watch"
-      (if (fs/exists? "bin/kaocha")
+      (if (fs/exists? (io/file user-project-dir
+                               "bin/kaocha"))
         (do (println "Watching tests with bin/kaocha")
             (p/shell "bin/kaocha --watch"))
         (do
@@ -44,13 +45,15 @@
           (p/shell "clojure -X:test:watch")))
 
       "test"
-      (if (fs/exists? "bin/kaocha")
+      (if (fs/exists? (io/file user-project-dir
+                               "bin/kaocha"))
         (do (println "Running tests with bin/kaocha")
             (p/shell "bin/kaocha"))
         (do
           (println
-            "bin/kaocha not found, invoking clojure command `clojure -X:test`")
-          (p/shell "clojure -X:test")))
+            "bin/kaocha not found, invoking clojure command `clojure -M:test`")
+          (p/shell {:continue true}
+                   "clojure -M:test")))
 
       ;; These are both acceptable names
       "hiccup" (convert-to-hiccup args)
@@ -65,7 +68,8 @@
           [nrepl-future
            (future
              (p/shell
-               "clojure -Sdeps '{:deps {nrepl/nrepl {:mvn/version \"1.3.1\"} cider/cider-nrepl {:mvn/version \"0.55.7\"} refactor-nrepl/refactor-nrepl {:mvn/version \"3.10.0\"}} :aliases {:cider/nrepl {:main-opts [\"-m\" \"nrepl.cmdline\" \"--middleware\" \"[refactor-nrepl.middleware/wrap-refactor,cider.nrepl/cider-middleware]\"]}}}' -M:dev:test:cider/nrepl"))
+              ;; TODO: parameterize these versions and probably even the whole command.
+              "clojure -Sdeps '{:deps {nrepl/nrepl {:mvn/version \"1.3.1\"} cider/cider-nrepl {:mvn/version \"0.55.7\"} refactor-nrepl/refactor-nrepl {:mvn/version \"3.10.0\"}} :aliases {:cider/nrepl {:main-opts [\"-m\" \"nrepl.cmdline\" \"--middleware\" \"[refactor-nrepl.middleware/wrap-refactor,cider.nrepl/cider-middleware]\"]}}}' -M:dev:test:cider/nrepl"))
 
            tailwind-future (when (fs/exists? (str user-project-dir
                                                   "/resources/tailwindcss"))
