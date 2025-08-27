@@ -32,15 +32,26 @@
             [methodical.core :as m]
             [potemkin :refer [import-vars]]
             [reitit.http :as http]
-            [reitit.ring]))
-
+            [reitit.ring]
+            [tram.http.interceptors :refer [layout-interceptor]]
+            [tram.http.lookup :refer [handlers-ns->views-ns]]))
 
 (def HandlerSpecSchema
   [:map [:handler fn?] [:handler-var [:fn var?]]])
 
+(def Interceptor [:map
+                  [:name :keyword]
+                  [:enter {:optional true} :fn]
+                  [:leave {:optional true} :fn]])
+
 (def RouteSchema
   [:map
    [:name [:qualified-keyword {:namespace :route}]]
+   [:layout [:or
+             fn?
+             [:fn :var?]
+             [:qualified-keyword {:namespace :view}]]]
+   [:interceptors [:vector Interceptor]]
    [:get {:optional true}
     HandlerSpecSchema]
    [:post {:optional true}
@@ -56,7 +67,9 @@
   [:enum [fn? var? [:qualified-keyword {:namespace :view}]]])
 
 (defn route? [node]
-  (and (map node) (:name node)))
+  ;; TODO this feels like a hack.
+  ;; Need a real concept for what this is.
+  (and (map node) (or (:name node) (:layout node))))
 
 (defn fn->var [f]
   (loop [interned-symbols (ns-map *ns*)]
@@ -76,7 +89,6 @@
   (fn [_]
     {:status   200
      :template template}))
-
 
 (m/defmulti ->handler-spec
   (fn [handler-entry]
@@ -127,14 +139,32 @@
   verbs)
 
 (defn coerce-route-entries-to-specs [route]
-  (reduce-kv (fn [route k v]
-               (assoc route
-                 k (if (verb? k)
-                     (->handler-spec v)
-                     v)))
-             {}
-             ;; This makes sure that namespace can be overridden by a user.
-             (update route :namespace (fn [v] (or v (str *ns*))))))
+  (reduce (fn [route k]
+            (cond
+              (= :layout k)
+              (update route
+                      :interceptors
+                      (fn [interceptors]
+                        (conj (or interceptors [])
+                              (let [v (get route k)]
+                                (cond
+                                  (keyword? v)
+                                  (layout-interceptor
+                                    (requiring-resolve
+                                      (symbol (str (handlers-ns->views-ns *ns*))
+                                              (name v))))
+
+                                  (symbol? v)
+                                  (layout-interceptor (resolve v))
+
+                                  :else
+                                  (layout-interceptor v))))))
+
+              (verb? k) (update route k ->handler-spec)
+              :else route))
+    ;; This makes sure that namespace can be overridden by a user.
+    (update route :namespace (fn [v] (or v (str *ns*))))
+    (filter route (conj verbs :layout))))
 
 (defn map-routes
   "Walk a routing tree and apply `f` to the route maps."

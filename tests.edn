@@ -1,3 +1,5 @@
-#kaocha/v1 {:tests [{:id          :unit
-                     :test-paths  ["test"]
-                     :ns-patterns [".*"]}]}
+#kaocha/v1 {:tests   [{:id          :unit
+                       :test-paths  ["test"]
+                       :ns-patterns [".*"]}]
+            :plugins [:kaocha.plugin/hooks]
+            :kaocha.hooks/pre-test [tram.kaocha-hooks/load-matcher-combinators]}
