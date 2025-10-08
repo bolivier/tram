@@ -3,6 +3,7 @@
             [camel-snake-kebab.extras :refer [transform-keys]]
             [clojure.string :as str]
             [clojure.walk :refer [prewalk]]
+            [methodical.core :as m]
             [potemkin :refer [import-vars]]
             [reitit.core :as r]
             [reitit.http.coercion
@@ -108,6 +109,32 @@
 
               :else (renderer/render ctx)))})
 
+(defn hiccup-component-expander [req node]
+  (if (and (vector? node)
+           (fn? (first node)))
+    (let [f    (first node)
+          args (rest node)]
+      (apply f
+        args))
+    node))
+
+(defn route-name-expander [req node]
+  (let [router (:reitit.core/router req)]
+    (cond
+      (expandable-route-ref? node)
+      (let [[_ route-name route-params] node]
+        (route/make-path router route-name route-params))
+
+      (and (keyword? node) (= "route" (namespace node)))
+      (route/make-path router node nil)
+
+      :else node)))
+
+(def expanders
+  "List of functions that take a req and a node and return an expanded node, for
+  whatever expanded means."
+  [hiccup-component-expander route-name-expander])
+
 (def expand-hiccup-interceptor
   "Walks your hiccup tree to find any customizations that need to be expanded.
 
@@ -121,55 +148,23 @@
   This expands hiccup vectors where the first element is a function.
 
   TODO: Update this to be extensible."
-  {:name ::expand-hiccup-interceptor
-   :leave
-   (fn [ctx]
-     (let [req    (:request ctx)
-           router (::r/router req)]
-       (when-not router
-         (throw (ex-info "Cannot expand hiccup without router in request."
+  {:name  ::expand-hiccup-interceptor
+   :leave (fn [ctx]
+            (let [req      (:request ctx)
+                  router   (::r/router req)
+                  expander (reduce comp (map #(partial % req) expanders))]
+              (when-not router
+                (throw (ex-info
+                         "Cannot expand hiccup without router in request."
                          {:source ::expand-hiccup-interceptor})))
-       (binding [*current-user* (:current-user req)
-                 *req*          (:request ctx)
-                 *res*          (:response ctx)]
-         (->
-           ctx
-           (update-in
-             [:response :body]
-             (fn [body]
-               (prewalk (fn [node]
-                          (cond
-                            ;; expand function components into fully
-                            ;; realized hiccup
-                            (and (vector? node) (fn? (first node)))
-                            (let [f    (first node)
-                                  args (rest node)]
-                              (apply f args))
-
-                            ;; use ::route/make to make a route with the
-                            ;; request
-                            (expandable-route-ref? node)
-                            (let [[_ route-name route-params] node]
-                              (route/make-path router route-name route-params))
-
-                            ;; expand keys like `:route/name` into their
-                            ;; looked up route name
-                            (and (keyword? node) (= "route" (namespace node)))
-                            (let [router (:reitit.core/router req)]
-                              (:path (reitit.core/match-by-name router node)))
-
-                            :else node))
-                        body)))
-           (update-in [:response :headers]
-                      (fn [headers]
-                        (map-vals (fn [header]
-                                    (if (expandable-route-ref? header)
-                                      (let [[_ route-name route-params] header]
-                                        (route/make-path (::r/router req)
-                                                         route-name
-                                                         route-params))
-                                      header))
-                                  headers)))))))})
+              (binding [*current-user* (:current-user req)
+                        *req*          (:request ctx)
+                        *res*          (:response ctx)]
+                (-> ctx
+                    (update-in [:response :body]
+                               (fn [body] (prewalk expander body)))
+                    (update-in [:response :headers]
+                               (fn [headers] (map-vals expander headers)))))))})
 
 (def format-json-body-interceptors
   {:name  ::inject-content-type-interceptors

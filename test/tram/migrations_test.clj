@@ -3,7 +3,8 @@
             [expectations.clojure.test :as e]
             [tram.core :as tram]
             [tram.migrations :as sut]
-            [tram.test-fixtures :refer [tram-config]]))
+            [tram.test-fixtures :refer [tram-config]]
+            [tram.testing.mocks :refer [*calls* with-stub with-tram-config]]))
 
 (def blueprint
   {:model          "user"
@@ -62,7 +63,6 @@
             (sut/serialize-attribute {:type :primary-key
                                       :name :id}))
 
-
   (e/expect [:user-id :integer [:references :users :id]]
             (sut/serialize-attribute {:type :reference
                                       :name :user-id})))
@@ -104,41 +104,4 @@
                   "spit was called with incorrect filename")
         (e/expect "DROP TABLE users"
                   contents
-                  "spit was called with incorrect contents"))))
-
-)
-
-
-
-
-(comment
-  (do (require '[tram.generators.model :refer [base-name]])
-      (require '[tram.generators.blueprint :refer [parse]])
-      (def blueprint
-           {:model          "user"
-            :template       "model"
-            :timestamp      "20250628192301"
-            :table          "users"
-            :migration-name "create-table-users"
-            :attributes     [{:type      :text
-                              :required? true
-                              :name      "name"}
-                             {:type      :citext
-                              :unique?   true
-                              :required? true
-                              :name      "email"}
-                             {:type    :text
-                              :name    "cool"
-                              :default "yes"}
-                             {:type    :timestamptz
-                              :name    "signup_date"
-                              :default :fn/now}
-                             {:name      :created-at
-                              :type      :timestamptz
-                              :required? true
-                              :default   :fn/now}
-                             {:name      :updated-at
-                              :type      :timestamptz
-                              :required? true
-                              :default   :fn/now
-                              :trigger   :updated-trigger}]})))
+                  "spit was called with incorrect contents")))))

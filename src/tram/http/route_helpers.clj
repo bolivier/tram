@@ -55,5 +55,4 @@
   ([resp route]
    (-> resp
        (assoc :status 301)
-       (assoc :body "")
-       (assoc-in [:headers "hx-redirect"] route))))
+       (assoc-in [:headers "hx-redirect"] (make-route route)))))

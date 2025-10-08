@@ -82,7 +82,7 @@
   "Renders a template."
   [ctx]
   (let [{:keys [request response]} ctx
-        {:keys [context template]} response
+        {:keys [locals template]} response
         view-fn (get-view-fn template ctx)]
     (if-not view-fn
       (throw
@@ -101,4 +101,4 @@ Expected to find template called `"
         (binding [*current-user* (:current-user request)
                   *req*          request
                   *res*          response]
-          (assoc-in ctx [:response :body] (layout-fn (view-fn context))))))))
+          (assoc-in ctx [:response :body] (layout-fn (view-fn locals))))))))

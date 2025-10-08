@@ -54,7 +54,6 @@
   (-> (hh/create-table (symbol (:table blueprint)))
       (hh/with-columns (mapv serialize-attribute (:attributes blueprint)))))
 
-
 (sql/register-fn! :on
                   (fn on-formatter [f args]
                     [(str "ON " (->snake_case_string (first args)))]))
@@ -132,7 +131,6 @@
   "Generate the path, filename included, for an up migration."
   (partial generate-migration-filename :up))
 
-
 (defn validate! [blueprint]
   (when-not (:table blueprint)
     (throw (ex-info ":table key is required in blueprint"
@@ -173,9 +171,7 @@
   [name]
   (migratus.core/create (tram/get-migration-config) name))
 
-(defn rollback
-  "Undo the last migration migration"
-  []
+(defn rollback []
   (migratus.core/rollback (tram/get-migration-config)))
 
 (comment

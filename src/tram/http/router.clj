@@ -27,7 +27,8 @@
   are handler-entries.
 
   The second element of the vector is a route.  Note that it has a name."
-  (:require [clojure.walk :refer [prewalk]]
+  (:require [clojure.set :as set]
+            [clojure.walk :refer [prewalk]]
             [clojure.zip :as zip]
             [methodical.core :as m]
             [potemkin :refer [import-vars]]
@@ -39,18 +40,18 @@
 (def HandlerSpecSchema
   [:map [:handler fn?] [:handler-var [:fn var?]]])
 
-(def Interceptor [:map
-                  [:name :keyword]
-                  [:enter {:optional true} :fn]
-                  [:leave {:optional true} :fn]])
+(def Interceptor
+  [:map
+   [:name :keyword]
+   [:enter {:optional true}
+    :fn]
+   [:leave {:optional true}
+    :fn]])
 
 (def RouteSchema
   [:map
    [:name [:qualified-keyword {:namespace :route}]]
-   [:layout [:or
-             fn?
-             [:fn :var?]
-             [:qualified-keyword {:namespace :view}]]]
+   [:layout [:or fn? [:fn :var?] [:qualified-keyword {:namespace :view}]]]
    [:interceptors [:vector Interceptor]]
    [:get {:optional true}
     HandlerSpecSchema]
@@ -66,10 +67,21 @@
 (def HandlEntrySchema
   [:enum [fn? var? [:qualified-keyword {:namespace :view}]]])
 
+(def verbs
+  #{:get :put :patch :post :delete})
+
+(defn has-verb? [node]
+  (set/intersection verbs (into #{} (keys node))))
+
 (defn route? [node]
-  ;; TODO this feels like a hack.
-  ;; Need a real concept for what this is.
-  (and (map node) (or (:name node) (:layout node))))
+  ;; TODO this feels like a hack. Need a real concept for what this is.
+  (cond
+    (and (map? node) (not (:name node)) (not (:layout node)) (has-verb? node))
+    (throw (ex-info "broke"
+                    {:issue "Route is missing name key"
+                     :node  node}))
+
+    :else (and (map? node) (or (:name node) (:layout node)))))
 
 (defn fn->var [f]
   (loop [interned-symbols (ns-map *ns*)]
@@ -131,8 +143,7 @@
     {:handler     handler-entry
      :handler-var handler-var}))
 
-(def verbs
-  #{:get :put :patch :post :delete})
+
 
 (def verb?
   "Convenience fn to make validating easier."
@@ -154,11 +165,8 @@
                                       (symbol (str (handlers-ns->views-ns *ns*))
                                               (name v))))
 
-                                  (symbol? v)
-                                  (layout-interceptor (resolve v))
-
-                                  :else
-                                  (layout-interceptor v))))))
+                                  (symbol? v) (layout-interceptor (resolve v))
+                                  :else (layout-interceptor v))))))
 
               (verb? k) (update route k ->handler-spec)
               :else route))
