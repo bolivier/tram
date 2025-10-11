@@ -1,12 +1,17 @@
-#kaocha/v1 {:tests   [{:id          :unit
-                       :test-paths  ["test/main"]
-                       :ns-patterns [".*"]}
+ #kaocha/v1 {:tests   [{:id          :unit
+                        :test-paths  ["test/main"]
+                        :ns-patterns [".*"]}
 
-                      ;; I'm unsure if these should be run fully separate or
-                      ;; not. Since they need to work in jvm Clojure, I'm
-                      ;; inclined to say that they should be run here and there.
-                      {:id          :bb-compatible
-                       :test-paths  ["test/bb_compatible"]
-                       :ns-patterns [".*"]}]
-            :plugins [:kaocha.plugin/hooks]
-            :kaocha.hooks/pre-test [tram.kaocha-hooks/load-matcher-combinators]}
+                       ;; I'm unsure if these should be run fully separate or
+                       ;; not. Since they need to work in jvm Clojure, I'm
+                       ;; inclined to say that they should be run here and there.
+                       {:id          :bb-compatible
+                        :test-paths  ["test/bb_compatible"]
+                        :ns-patterns [".*"]}
+                       {:id          :cli
+                        :test-paths  ["test/bb_only/tram_cli"]
+                        :ns-patterns [".*"]}]
+
+             :plugins [:kaocha.plugin/hooks]
+             :default-test-paths ["test/tram"]
+             :kaocha.hooks/pre-test [kaocha-utils.kaocha-hooks/load-matcher-combinators]}
