@@ -169,27 +169,28 @@
 
 (defn parse
   "Parse a blueprint from the cli args"
-  [base-name cli-args]
-  (let [blueprint {:template       :dev-runtime
-                   :table          nil
+  [migration-name cli-args]
+  (let [table     (second (re-find #"create(?:-table)?-([^ ]+)" migration-name))
+        blueprint {:migration-name migration-name
                    :timestamp      (let [fmt (doto (SimpleDateFormat.
                                                      "yyyyMMddHHmmss")
                                                (.setTimeZone
                                                  (TimeZone/getTimeZone "UTC")))]
                                      (.format fmt (Date.)))
-                   :migration-name base-name
-                   :attributes     [id-field]}]
+                   :actions        [{:type       :create-table
+                                     :table      table
+                                     :attributes [id-field]}]}]
     (loop [blueprint blueprint
            args      (rest cli-args)]
       (if (empty? args)
-        (update blueprint
-                :attributes
-                into
-                default-attributes)
-        (recur (update blueprint
-                       :attributes
-                       conj
-                       (parse-attribute (first args)))
+        (update-in blueprint
+                   [:actions 0 :attributes]
+                   into
+                   default-attributes)
+        (recur (update-in blueprint
+                          [:actions 0 :attributes]
+                          conj
+                          (parse-attribute (first args)))
                (rest args))))))
 
 (def runtime-defaults
@@ -214,12 +215,8 @@
                            (str/replace "_" "-")))]
     namespace))
 
-(defn get-template [blueprint]
-  (str "tram/templates/"
-       (-> blueprint
-           :template
-           ->snake_case_string)
-       ".clj.template"))
+(defn get-template [_]
+  (str "tram/templates/model" ".clj.template"))
 
 (defn format-code [clj-source-string]
   (zprint-file-str clj-source-string ::model-template (get-zprint-config)))
