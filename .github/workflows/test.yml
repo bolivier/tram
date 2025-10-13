@@ -2,9 +2,9 @@ name: Unit Tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -16,8 +16,8 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '23'
+          distribution: "zulu"
+          java-version: "23"
 
       - name: Cache Clojure dependencies
         uses: actions/cache@v4
@@ -37,3 +37,12 @@ jobs:
 
       - name: Run tests
         run: clojure -M:test
+
+      - name: Install babashka
+        run: |
+          curl -sLO https://raw.githubusercontent.com/babashka/babashka/master/install
+          chmod +x install
+          ./install
+
+      - name: Run bb tests
+        run: bin/test-bb
