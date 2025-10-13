@@ -3,8 +3,7 @@
             [expectations.clojure.test :as e]
             [tram.core :as tram]
             [tram.migrations :as sut]
-            [tram.test-fixtures :refer [tram-config]]
-            [tram.testing.mocks :refer [*calls* with-stub with-tram-config]]))
+            [tram.test-fixtures :refer [tram-config]]))
 
 (def blueprint
   {:model          "user"

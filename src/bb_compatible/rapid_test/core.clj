@@ -1,38 +1,25 @@
-(ns tram.testing.mocks)
-
-(def ^:dynamic *calls*
-  (atom nil))
-
-(def tram-config
-  {:database/development {:db {:dbname "tram_sample_development"
-                               :dbtype "postgresql"
-                               :host   "localhost"
-                               :port   5432
-                               :user   "brandon"}
-                          :migration-dir "migrations/"
-                          :migration-table-name "migrations"
-                          :store :database}
-   :database/prod        {:db {:dbname "tram_sample_production"
-                               :dbtype "postgresql"}
-                          :migration-dir "migrations/"
-                          :migration-table-name "migrations"
-                          :store :database}
-   :database/test        {:db {:dbname "tram_sample_test"
-                               :dbtype "postgresql"
-                               :host   "localhost"
-                               :port   5432
-                               :user   "brandon"}
-                          :migration-dir "migrations/"
-                          :migration-table-name "migrations"
-                          :store :database}
-   :project/name         "tram-sample"})
-
-(defmacro with-tram-config
-  [& body]
-  `(with-redefs [tram.core/get-tram-config (constantly ~tram-config)]
-     ~@body))
+(ns rapid-test.core)
 
 (defmacro with-stub
+  "Stubs a function in `body`. Without config, the stubbed fn will return `nil`.
+  There are configuration options to change that.
+
+  Each function is in a binding vector, where the bound symbol is the calls that
+  are sent to the fn.
+
+  An example:
+
+  (with-stub [db-calls my-db-fn
+              fetch-calls {:fn      my-fetch-fn
+                           :returns {:status 200}}]
+    (my-test-fn))
+
+
+  If you want to use options, you must pass a map where the key `:fn` is the
+  function to stub.
+
+  - `:returns` will make fn return the value you set.
+  - `:impl` will replace the implementation of the fn with the one provided."
   [bindings & body]
   (let [stubs (partition 2 bindings)
 
@@ -78,12 +65,3 @@
     `(let [~@let-bindings]
        (with-redefs [~@redef-pairs]
          ~@body))))
-
-(defmacro with-temp-ns
-  [ns-name & body]
-  `(do (create-ns '~ns-name)
-       (binding [*ns* (find-ns '~ns-name)]
-         (require '[clojure.core :refer :all])
-         ~@(map (fn [form]
-                  `(eval '~form))
-                body))))

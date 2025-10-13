@@ -1,8 +1,10 @@
-(ns tram.testing.mocks-test
-  (:require [tram.testing.mocks :as sut]
+(ns rapid-test.core-test
+  (:require [rapid-test.core :as sut]
             [clojure.test :as t :refer [deftest is testing]]
             [matcher-combinators.test]
             [matcher-combinators.matchers :as m]))
+
+
 
 (def called-for-real? (atom false))
 (defn fake-fn [& _]

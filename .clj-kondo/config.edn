@@ -2,4 +2,4 @@
  :lint-as      {tram.core/defroutes         clojure.core/def
                 tram.http.routing/defroutes clojure.core/def
                 tram.utils/with-same-output clojure.core/let
-                tram.testing.mocks/with-stub clojure.core/let}}
+                rapid-test.core/with-stub clojure.core/let}}
