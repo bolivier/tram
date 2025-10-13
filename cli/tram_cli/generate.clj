@@ -167,11 +167,6 @@
     :default   :fn/now
     :trigger   :update-updated-at}])
 
-(comment
-  (def base-name
-    name)
-  (def cli-args
-    args))
 (defn parse
   "Parse a blueprint from the cli args"
   [base-name cli-args]
@@ -196,8 +191,6 @@
                        conj
                        (parse-attribute (first args)))
                (rest args))))))
-
-
 
 (def runtime-defaults
   {:root "runtimes"

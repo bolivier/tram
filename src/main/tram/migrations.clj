@@ -16,6 +16,36 @@
             [tram.utils.language :as lang])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
 
+(def BlueprintSchema
+  [:vector]
+  {:model          "user"
+   :template       "model"
+   :timestamp      "20250628192301"
+   :table          "users"
+   :migration-name "create-table-users"
+   :attributes     [{:type      :text
+                     :required? true
+                     :name      "name"}
+                    {:type      :citext
+                     :unique?   true
+                     :required? true
+                     :name      "email"}
+                    {:type    :text
+                     :name    "cool"
+                     :default "yes"}
+                    {:type    :timestamptz
+                     :name    "signup_date"
+                     :default :fn/now}
+                    {:name      :created-at
+                     :type      :timestamptz
+                     :required? true
+                     :default   :fn/now}
+                    {:name      :updated-at
+                     :type      :timestamptz
+                     :required? true
+                     :default   :fn/now
+                     :trigger   :update-updated-at}]})
+
 (defn format-sql [sql]
   (SqlFormatter/format sql))
 

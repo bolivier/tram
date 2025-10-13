@@ -42,7 +42,7 @@ tram help               print this menu
     (render-new-project-template new-project-name)))
 
 (defn do-generate-here [{:keys [args]}]
-  (apply do-generate args))
+  (do-generate args))
 
 (defn do-test [{:keys [opts]}]
   (let [watch     (:watch opts)

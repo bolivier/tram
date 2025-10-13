@@ -24,10 +24,10 @@
          :body body)
        resp))))
 
-(defn redirect
+(defn full-redirect
   "Returns a resp for a 303 redirect."
   ([route-name]
-   (redirect {} route-name))
+   (full-redirect {} route-name))
   ([resp route-name]
    (-> resp
        (assoc :status 303)
@@ -47,11 +47,11 @@
   ([resp]
    (assoc resp :status 404)))
 
-(defn hx-redirect
+(defn redirect
   "Returns a resp for a htmx redirect. These use a 200 status, but have a htmx
   header to indicate a redirect."
   ([route]
-   (hx-redirect {} route))
+   (redirect {} route))
   ([resp route]
    (-> resp
        (assoc :status 301)

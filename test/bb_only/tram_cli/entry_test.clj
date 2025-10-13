@@ -40,8 +40,8 @@
   (rt/with-stub [calls tram-cli.generate/do-generate]
     (sut/-main "generate" "migration")
     (sut/-main "g" "migration-shorthand")
-    (is (match? ["migration"] (:args (first @calls))))
-    (is (match? ["migration-shorthand"] (:args (second @calls))))))
+    (is (match? [["migration"]] (:args (first @calls))))
+    (is (match? [["migration-shorthand"]] (:args (second @calls))))))
 
 (deftest testing-cmd
   (testing "kaocha version"
@@ -49,8 +49,8 @@
                    calls babashka.process/shell]
       (sut/-main "test")
       (sut/-main "test" "--watch")
-      (is (= [["bin/kaocha" nil]] (:args (first @calls))))
-      (is (= [["bin/kaocha" "--watch"]] (:args (second @calls))))))
+      (is (= [["bin/kaocha"]] (:args (first @calls))))
+      (is (= [["bin/kaocha --watch"]] (:args (second @calls))))))
   (testing "plain clj invocation"
     (rt/with-stub [_ println
                    _ {:fn      babashka.fs/exists?
@@ -58,8 +58,8 @@
                    calls babashka.process/shell]
       (sut/-main "test")
       (sut/-main "test" "--watch")
-      (is (= ["clojure -X:test"] (:args (first @calls))))
-      (is (= ["clojure -X:test:watch"] (:args (second @calls)))))))
+      (is (= [["clojure -X:test"]] (:args (first @calls))))
+      (is (= [["clojure -X:test:watch"]] (:args (second @calls)))))))
 
 (deftest testing-html-convert
   (let [sample-html
