@@ -164,7 +164,8 @@
     (spit (generate-migration-up-filename blueprint) sql-string)))
 
 (defn write-to-migration-down [blueprint]
-  (let [sql-string (map #(serialize-to-down-sql %) (:actions blueprint))
+  (let [sql-string (map #(serialize-to-down-sql %)
+                     (reverse (:actions blueprint)))
         sql-string (str/join "\n\n--;;\n\n" sql-string)]
     (spit (generate-migration-down-filename blueprint) sql-string)))
 
