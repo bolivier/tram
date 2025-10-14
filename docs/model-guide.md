@@ -80,3 +80,17 @@ By convention
 
 ### Different primary key name
 ### Different table name
+
+## Notes
+
+### JSONB columns
+JSONB columsn need to be explicitly serialized to a PGObject before being saved.  That can be done in the models with this code 
+
+```
+(toucan2.core/deftransforms :models/user
+    {:metadata {:in tram.db/clj->jsonb}})
+```
+
+There is no need to handle the `:out` case. That works out of the box. This is
+because of how these values are sent to honeysql. I would like to remove the
+requirement to do this in the future.
