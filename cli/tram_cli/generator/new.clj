@@ -35,14 +35,11 @@
       (println "Copying files")
       (doseq [src  (->> (file-seq template-root)
                         (filter #(.isFile %)))
-              :let [relative
-                    (-> (.getPath src)
-                        (str/replace-first
-                          #".*starter-template/"
-                          "")
-                        (str/replace "sample_app" (ns->path project-name)))
-
-                    dest (io/file project-root relative)]]
+              :let [relative (-> (.getPath src)
+                                 (str/replace-first #".*starter-template/" "")
+                                 (str/replace "sample_app"
+                                              (ns->path project-name)))
+                    dest     (io/file project-root relative)]]
         (io/make-parents dest)
         (spit dest
               (-> src

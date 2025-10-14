@@ -1,5 +1,6 @@
 (ns tram-cli.entry
-  (:require [babashka.fs :as fs]
+  (:require [babashka.cli :as cli]
+            [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -14,8 +15,57 @@
                 #(assoc %
                    :continue true
                    :dir      user-project-dir))
+(def cmd-spec
+  {:spec     {:help {:coerce :boolean
+                     :alias  :h
+                     :desc   "Print this help menu."}}
+   :restrict true})
 
-(defn convert-to-hiccup [args]
+(defn do-show-help [_]
+  (println
+    (str/trim
+      "
+tram <command>
+
+Usage:
+
+tram new <name>         create a new project in this directory
+tram test               run unit tests (--watch to watch)
+tram hiccup             convert clipboard contents from html to hiccup (alias html)
+tram dev                run the dev server
+tram generate           tram generators subcommand (run with -h to see more)
+tram help               print this menu
+")))
+
+(defn do-new-project [{:keys [opts]}]
+  (let [{:keys [new-project-name]} opts]
+    (render-new-project-template new-project-name)))
+
+(defn do-generate-here [{:keys [args]}]
+  (do-generate args))
+
+(defn do-test [{:keys [opts]}]
+  (let [watch     (:watch opts)
+        test-type (if (fs/exists? (io/file user-project-dir
+                                           "bin/kaocha"))
+                    :kaocha
+                    :clojure)
+        cmd       (case test-type
+                    :kaocha  "bin/kaocha"
+                    :clojure "clojure -X:test")
+        watch-cmd (case test-type
+                    :kaocha  " --watch"
+                    :clojure ":watch")
+        cmd       (if watch
+                    (str cmd
+                         watch-cmd)
+                    cmd)]
+    (if watch
+      (println "Watching tests...")
+      (println "Running tests..."))
+    (p/shell [cmd])))
+
+(defn do-html-conversion [{:keys [args]}]
   (let [html (or (second args)
                  (str/trim (:out (p/shell {:out :string} "wl-paste"))))]
     (try
@@ -28,57 +78,51 @@
         (println "Could not convert into html: ")
         (prn html)))))
 
-(defn -main [& args]
-  (let [cmd (first (mapcat #(str/split % #" ") args))]
-    (case cmd
-      "new" (render-new-project-template (first (rest args)))
-      "g" (do-generate (rest args))
-      "generate" (do-generate (rest args))
-      "test:watch"
-      (if (fs/exists? (io/file user-project-dir
-                               "bin/kaocha"))
-        (do (println "Watching tests with bin/kaocha")
-            (p/shell "bin/kaocha --watch"))
-        (do
-          (println
-            "bin/kaocha not found, invoking clojure command `clojure -X:test:watch`")
-          (p/shell "clojure -X:test:watch")))
+(defn do-dev [_]
+  (println "Starting development environment...")
+  (spit (str (System/getenv "TRAM_CLI_CALLED_FROM") "/.nrepl-port") "8777")
+  (let
+    [nrepl-future
+     (future
+       (p/shell
+         ;; TODO: parameterize these versions and probably even
+         ;; the whole command.
+         "clojure -Sdeps '{:deps {nrepl/nrepl {:mvn/version \"1.3.1\"} cider/cider-nrepl {:mvn/version \"0.55.7\"} refactor-nrepl/refactor-nrepl {:mvn/version \"3.10.0\"}} :aliases {:cider/nrepl {:main-opts [\"-m\" \"nrepl.cmdline\" \"--middleware\" \"[refactor-nrepl.middleware/wrap-refactor,cider.nrepl/cider-middleware]\"]}}}' -M:dev:test:cider/nrepl"))
 
-      "test"
-      (if (fs/exists? (io/file user-project-dir
-                               "bin/kaocha"))
-        (do (println "Running tests with bin/kaocha")
-            (p/shell "bin/kaocha"))
-        (do
-          (println
-            "bin/kaocha not found, invoking clojure command `clojure -M:test`")
-          (p/shell {:continue true}
-                   "clojure -M:test")))
+     tailwind-future (when (fs/exists? (str user-project-dir
+                                            "/resources/tailwindcss"))
+                       (future (p/shell {:dir (str user-project-dir
+                                                   "/resources/tailwindcss")}
+                                        "npm run dev")))]
+    @nrepl-future
+    (when tailwind-future
+      @tailwind-future)))
 
-      ;; These are both acceptable names
-      "hiccup" (convert-to-hiccup args)
-      "html" (convert-to-hiccup args)
-      "dev"
-      (do
-        (println "Starting development environment...")
-        (spit (str (System/getenv "TRAM_CLI_CALLED_FROM")
-                   "/.nrepl-port")
-              "8777")
-        (let
-          [nrepl-future
-           (future
-             (p/shell
-              ;; TODO: parameterize these versions and probably even the whole command.
-              "clojure -Sdeps '{:deps {nrepl/nrepl {:mvn/version \"1.3.1\"} cider/cider-nrepl {:mvn/version \"0.55.7\"} refactor-nrepl/refactor-nrepl {:mvn/version \"3.10.0\"}} :aliases {:cider/nrepl {:main-opts [\"-m\" \"nrepl.cmdline\" \"--middleware\" \"[refactor-nrepl.middleware/wrap-refactor,cider.nrepl/cider-middleware]\"]}}}' -M:dev:test:cider/nrepl"))
+(def cmd-table
+  [{:cmds       ["new"]
+    :fn         do-new-project
+    :args->opts [:new-project-name]}
+   {:cmds ["g"]
+    :fn   do-generate-here}
+   {:cmds ["generate"]
+    :fn   do-generate-here}
+   {:cmds ["test"]
+    :fn   do-test}
+   {:cmds ["help"]
+    :fn   do-show-help}
+   {:cmds ["hiccup"]
+    :fn   do-html-conversion}
+   {:cmds ["html"]
+    :fn   do-html-conversion}
+   {:cmds ["dev"]
+    :fn   do-dev}
+   {:cmds []
+    :fn   (fn [{:keys [args]}]
+            (if (empty? args)
+              (do-show-help args)
+              (p/shell (str "clojure -M:tram "
+                            (str/join " "
+                                      args)))))}])
 
-           tailwind-future (when (fs/exists? (str user-project-dir
-                                                  "/resources/tailwindcss"))
-                             (future (p/shell {:dir (str
-                                                      user-project-dir
-                                                      "/resources/tailwindcss")}
-                                              "npm run dev")))]
-          @nrepl-future
-          (when tailwind-future
-            @tailwind-future)))
-
-      (p/shell (str "clojure -M:tram " (str/join " " args))))))
+(defn -main [& cli-args]
+  (cli/dispatch cmd-table cli-args {:aliases {:g :generate}}))

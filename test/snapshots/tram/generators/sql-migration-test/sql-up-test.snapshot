@@ -1,0 +1,12 @@
+CREATE TABLE users (
+  name TEXT NOT NULL,
+  email CITEXT NOT NULL UNIQUE,
+  cool TEXT DEFAULT 'yes',
+  signup_date TIMESTAMPTZ DEFAULT NOW()
+)
+
+--;;
+
+CREATE TRIGGER set_updated_at_on_users BEFORE
+UPDATE
+  ON users FOR EACH row EXECUTE FUNCTION update_updated_at_column()

@@ -1,9 +1,5 @@
-(ns tram.migrations
-  "This migrations namespace is both the namespace for serializing and writing
-  blueprints into migration files as well as a convenience namesapce for tram
-  users who want access to migratus functions.
-
-  All public migratus functions are reexported."
+(ns tram.generators.sql-migration
+  "This namespace is for writing migration blueprints into migration files."
   (:require [camel-snake-kebab.core :refer [->snake_case_string]]
             [clojure.string :as str]
             [honey.sql :as sql]
@@ -15,6 +11,28 @@
             [tram.core :as tram]
             [tram.utils.language :as lang])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
+
+(def AttributeSchema
+  [:map
+   [:type :keyword]
+   [:name :keyword]
+   [:required :boolean]
+   [:unique? :boolean]
+   [:default :any]
+   [:trigger [:literal [:update-updated-at]]]])
+
+(def ActionSchema
+  [:map
+   [:attributes AttributeSchema]
+   [:action-type :keyword] ;; only :create-table for now
+  ])
+
+(def MigrationBlueprintSchema
+  [:map
+   [:model :string]     ;; singular
+   [:timestamp :string] ;; "20250628192301"
+   [:migration-name :string]
+   [:actions [:vector ActionSchema]]])
 
 (defn format-sql [sql]
   (SqlFormatter/format sql))
@@ -53,7 +71,6 @@
 (defn serialize-blueprint [blueprint]
   (-> (hh/create-table (symbol (:table blueprint)))
       (hh/with-columns (mapv serialize-attribute (:attributes blueprint)))))
-
 
 (sql/register-fn! :on
                   (fn on-formatter [f args]
@@ -132,21 +149,23 @@
   "Generate the path, filename included, for an up migration."
   (partial generate-migration-filename :up))
 
-
 (defn validate! [blueprint]
-  (when-not (:table blueprint)
-    (throw (ex-info ":table key is required in blueprint"
-                    {}))))
+  nil)
 
 (defn write-to-migration-file [blueprint]
-  (let [primary-migration (serialize-to-sql blueprint)
-        triggers          (serialize-to-trigger-sqls blueprint)
-        sql-string        (str/join "\n\n--;;\n\n"
-                                    (into [primary-migration] triggers))]
+  (let [migration-strings (map
+                            (fn [action]
+                              (let [primary-migration (serialize-to-sql action)
+                                    triggers (serialize-to-trigger-sqls action)]
+                                (str/join "\n\n--;;\n\n"
+                                          (into [primary-migration] triggers))))
+                            (:actions blueprint))
+        sql-string        (str/join "\n\n--;;\n\n" migration-strings)]
     (spit (generate-migration-up-filename blueprint) sql-string)))
 
 (defn write-to-migration-down [blueprint]
-  (let [sql-string (serialize-to-down-sql blueprint)]
+  (let [sql-string (map #(serialize-to-down-sql %) (:actions blueprint))
+        sql-string (str/join "\n\n--;;\n\n" sql-string)]
     (spit (generate-migration-down-filename blueprint) sql-string)))
 
 (defn write-to-migration-files [blueprint]
@@ -154,56 +173,3 @@
   (write-to-migration-down blueprint)
   (write-to-migration-file blueprint)
   nil)
-
-(defn init []
-  (migratus.core/init (tram/get-migration-config)))
-
-(defn migrate
-  "Do pending database migrations.  Runs for the db based on TRAM_ENV. "
-  []
-  (let [migration-config (tram/get-migration-config)]
-    (t/event! :db/migration
-              {:level :info
-               :id    :db/migrating
-               :data  {:config migration-config}})
-    (migratus.core/migrate migration-config)))
-
-(defn create
-  "Create a new migration"
-  [name]
-  (migratus.core/create (tram/get-migration-config) name))
-
-(defn rollback
-  "Undo the last migration migration"
-  []
-  (migratus.core/rollback (tram/get-migration-config)))
-
-(comment
-  (def blueprint
-    {:model          "user"
-     :template       "model"
-     :timestamp      "20250628192301"
-     :table          "users"
-     :migration-name "create-table-users"
-     :attributes     [{:type      :text
-                       :required? true
-                       :name      "name"}
-                      {:type      :citext
-                       :unique?   true
-                       :required? true
-                       :name      "email"}
-                      {:type    :text
-                       :name    "cool"
-                       :default "yes"}
-                      {:type    :timestamptz
-                       :name    "signup_date"
-                       :default :fn/now}
-                      {:name      :created-at
-                       :type      :timestamptz
-                       :required? true
-                       :default   :fn/now}
-                      {:name      :updated-at
-                       :type      :timestamptz
-                       :required? true
-                       :default   :fn/now
-                       :trigger   :update-updated-at}]}))

@@ -57,7 +57,6 @@
    [:default {:optional true}
     [:or :string :int :boolean [:and :keyword #(= "fn" (namespace %))]]]])
 
-
 (def MigrationBlueprint
   [:map
    [:model :string]

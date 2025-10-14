@@ -1,4 +1,4 @@
-(ns tram.kaocha-hooks
+(ns kaocha-utils.kaocha-hooks
   (:require [matcher-combinators.test]))
 
 (defn load-matcher-combinators
