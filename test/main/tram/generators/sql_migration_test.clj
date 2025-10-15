@@ -39,8 +39,13 @@
              :name :id}]
            [[:user-id :integer [:references :users :id]]
             {:type :reference
-             :name :user-id}]]]
-    (is (= expected (sut/serialize-attribute input)))))
+             :name :user-id}]
+           [[:terms-id :integer [:not nil] [:references :terms :id]]
+            {:type       :reference
+             :name       :terms-id
+             :table-name :terms}]]]
+    (testing (str "Attribute " (:name input) " of type " (:type input))
+      (is (= expected (sut/serialize-attribute input))))))
 
 (deftest sql-migration-up-contents
   (let [output (atom nil)]

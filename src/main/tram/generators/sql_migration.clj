@@ -66,7 +66,9 @@
 (m/defmethod serialize-attribute [:default :reference]
   [attr]
   (conj (serialize-attribute (assoc attr :type :integer))
-        [:references (lang/foreign-key-id->table-name (:name attr)) :id]))
+        [:references
+         (or (:table-name attr) (lang/foreign-key-id->table-name (:name attr)))
+         :id]))
 
 (defn serialize-blueprint [blueprint]
   (-> (hh/create-table (symbol (:table blueprint)))
