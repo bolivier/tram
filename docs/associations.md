@@ -8,63 +8,104 @@ Tram only supports 3 kinds of associations.
 
 ## Rationale
 
-ORMs are very complex, they quickly get out of control , and anything too
-complex is usually better handled at the level of sql. 
+ORMs are complex. Nontrivial queries are better handled with raw-sql.
 
-That said, it's not fun to constantly rewrite simple queries for all your
-models.  To that end, Tram provides some simple associations and querying that
-can be done with minimal configuration.
+That said, it sucks to constantly rewrite simple queries for all your models. To
+that end, Tram provides some simple associations and querying that can be done
+with minimal configuration.
+
+Associations are handled via a mechanism called **hydration**. Hydration is when
+a model has additional keys inserted into it that are held in other tables.
+
+If a model has a foreign key on it, that model can be hydrated without
+configuration. For example, a model `:models/book` with a fk to
+`:models/authors` called `:author-id` requires no configuration to allow for
+hydration via `t2/hydrate`.
+
+Hydrating models with a belongs-to relationship require configuration. You'll
+have to define an association with either `tram.associations/belongs-to!` for
+models that have a foreign key on another model, or
+`tram.associations/has-many!` for models that have many other models via a
+foreign key on another table or use a join table.
 
 ## Usage
 
-Call an association in your model files, like this 
+In these examples, there are 4 relevant tables (all abbreviated to only the
+relevant parts).
 
-```clj
-(tram.associations/has-many! :models/users :models/projects :through :users-projects)
-```
+An `accounts` table representing a paying account
+| column | value       |
+|--------|-------------|
+| id     | primary-key |
 
-This declares that a user has many projects, and there exists a join table
-users_projects that connects them. 
-
-After this, you can call `(t2/hydrate <user-model> :projects)` and get back the
-user model with the projects associated. 
-
-This requires a `users` table and a `projects` table, but they don't require any
-foreign keys.
-
-`users_projects`
+A `users` table representing users of an account
 | column     | value                       |
 |------------|-----------------------------|
+| id         | primary-key                 |
+| account_id | foreign key to accounts(id) |
+
+A `settings` table for user settings
+| column | value       |
+|--------|-------------|
+| id     | primary-key |
+
+A join table for users and settings
+`settings_users`
+| column     | value                       |
+|------------|-----------------------------|
+| id         | primary-key                 |
+| setting-id | foreign key to settings(id) |
 | user-id    | foreign key to users(id)    |
-| project-id | foreign key to projects(id) |
 
 
-You can also use `belongs-to!` like this 
+To enable hydration of settings, create a has-many association for settings on users. 
 
 ```clj
-(tram.associations/belongs-to! :models/users :models/settings)
+(tram.associations/has-many! :models/users :models/settings)
 ```
 
-This declares that a foreign key exists on a table `settings` which refers to
-the table `users`.
+The join table is called, by
+convention, settings_users. Concat the two table names in alphabetical order.
 
-This association requires these tables
+The table can be specified with `:through`, although I don't recommend this.
 
-`users`
-| column | value                 |
-|--------|-----------------------|
-| id     | primary key for users |
+```clj
+(tram.associations/has-many! :models/users :models/settings :through :settings-for-users)
+```
 
-`settings`
-| column  | value                    |
-|---------|--------------------------|
-| user-id | foreign key to users(id) |
+The table name should be a kebab-case keyword here.
+
+With that done, you can call hydrate settings. Note that the hydration keywords
+are not namespaced.
+
+```clj
+(t2/hydrate <user-model-instance> :settings)
+```
+
+### Belongs To
+
+Enable hydration of user on account like this 
+
+```clj
+(tram.associations/belongs-to! :models/accounts :models/users)
+```
+
+You can hydrate an account model like this 
+
+```clj
+(t2/hydrate <account-model-instance> :user)
+```
+
+
+Note this is singular because this is a 1-1 relationship.
+
+### Has One
 
 `has-one` associations are implicit and will work whenever a table has a foreign
 key.  In this instance you would write 
 
 ```clj
-(t2/hydrate <settings-model> :user)
+(t2/hydrate <settings-model-instance> :user)
 ```
 
 and you would have the user object

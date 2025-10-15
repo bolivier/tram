@@ -11,7 +11,7 @@
                                                         "1.91.1392"}
                             nubank/matcher-combinators {:mvn/version "3.9.2"}
                             vvvvalvalval/scope-capture {:mvn/version "0.3.3"}}
-              :extra-paths ["test/main" "test/test_app" "test/bb_compatible/"]
+              :extra-paths ["test/main" "test/test_app" "test/bb_compatible"]
               :jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"
                             "-Dio.netty.tryReflectionSetAccessible=true"]
               :main-opts   ["-m" "kaocha.runner" "unit"]}

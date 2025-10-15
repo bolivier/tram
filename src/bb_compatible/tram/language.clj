@@ -58,12 +58,24 @@
   (with-same-output [fk fk-id]
     (dc/pluralize (str/replace fk #"[-_]id$" ""))))
 
-(defn modelize [kw]
-  (keyword "models" (dc/pluralize (str/replace (name kw) #"-id$" ""))))
+(defn modelize
+  "Convert a keyword into the same keyword, but representing the model of that
+  term.
+
+  By default, pluralizes the name of the keyword. Change `plural?` in opts for
+  keywords that are already plural."
+  ([kw {:keys [plural?]}]
+   (let [kw-no-id (str/replace (name kw) #"-id$" "")]
+     (keyword "models"
+              (if plural?
+                (dc/pluralize kw-no-id)
+                kw-no-id))))
+  ([kw]
+   (modelize kw {:plural? true})))
 
 (defn model->filename [model]
   (str (name (dc/singularize model)) ".clj"))
 
 (defn join-table [model-a model-b]
   (let [[first second] (sort [(name model-a) (name model-b)])]
-    (keyword (str (dc/singularize first) "-" second))))
+    (keyword (str first "-" second))))
