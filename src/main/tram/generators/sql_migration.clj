@@ -156,8 +156,33 @@
 (defn validate! [blueprint]
   nil)
 
+(def updated-at
+  {:name      :updated-at
+   :type      :timestamptz
+   :required? true
+   :default   :fn/now
+   :trigger   :update-updated-at})
+(def created-at
+  {:name      :created-at
+   :type      :timestamptz
+   :required? true
+   :default   :fn/now})
+
 (m/defmulti to-sql-string
   (fn [action] (:type action)))
+
+;; Before going to create the tble assoc in the timestamps if the key is
+;; present
+(m/defmethod to-sql-string :before
+  :create-table
+  [action]
+  (let [original-attributes (:attributes action)
+        attributes (concat [{:name :id
+                             :type :primary-key}]
+                           original-attributes
+                           (when (:timestamps action)
+                             [updated-at created-at]))]
+    (assoc action :attributes attributes)))
 
 (m/defmethod to-sql-string :create-table
   [action]
