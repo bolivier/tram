@@ -21,7 +21,7 @@
             [tram.http.utils :as http.utils]
             [tram.http.views :refer [*current-user* *req* *res*]]
             [tram.rendering.template-renderer :as renderer]
-            [tram.utils.core :refer [map-vals]]))
+            [tram.utils :refer [map-vals]]))
 
 (def inject-route-name
   "Injects the name of the current route under the request key `:route-name`"

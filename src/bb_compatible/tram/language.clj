@@ -1,4 +1,4 @@
-(ns tram.utils.language
+(ns tram.language
   "Language related utilities."
   (:require [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
             [clojure.string :as str]

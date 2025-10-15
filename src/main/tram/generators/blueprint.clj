@@ -4,8 +4,8 @@
             [declensia.core :as dc]
             [malli.core :as m]
             [selmer.util]
-            [tram.utils.language :as lang]
-            [tram.utils.time :as time]))
+            [tram.language :as lang]
+            [tram.time :as time]))
 
 (def PostgresType
   [:enum

@@ -1,6 +1,7 @@
 (ns tram.generators.blueprint-test
   (:require [clojure.test :as t]
             [expectations.clojure.test :as e :refer [defexpect expect in]]
+            [rapid-test.core :as rt]
             [tram.generators.blueprint :as sut]))
 
 (defexpect parsing-attributes
@@ -47,8 +48,10 @@
 
 (def timestamp
   "20250628221924")
+
 (e/defexpect parsing-blueprint
-  (with-redefs [tram.utils.time/timestamp (constantly timestamp)]
+  (rt/with-stub [_ {:fn      tram.time/timestamp
+                    :returns timestamp}]
     (let [actual (sut/parse
                    "create-model"
                    ["agents" "!first-name" "^last-name" "references(users)"])]

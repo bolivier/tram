@@ -7,8 +7,8 @@
             [malli.core :as m]
             [selmer.parser :as selmer]
             [selmer.util]
-            [tram.utils.config :refer [get-zprint-config]]
-            [tram.utils.language :as lang]
+            [tram.language :as lang]
+            [tram.tram-config :refer [get-zprint-config]]
             [zprint.core :refer [zprint-file-str]])
   (:import java.text.SimpleDateFormat
            [java.util Date TimeZone]))

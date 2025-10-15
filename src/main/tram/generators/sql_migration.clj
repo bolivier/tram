@@ -9,7 +9,7 @@
             [potemkin :refer [import-vars]]
             [taoensso.telemere :as t]
             [tram.core :as tram]
-            [tram.utils.language :as lang])
+            [tram.language :as lang])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
 
 (def AttributeSchema

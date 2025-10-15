@@ -3,7 +3,7 @@
             [declensia.core :as dc]
             [methodical.core :as m]
             [toucan2.core :as t2]
-            [tram.utils.language :as lang]))
+            [tram.language :as lang]))
 
 (defonce ^:dynamic *relationships*
   (atom {}))

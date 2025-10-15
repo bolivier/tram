@@ -7,7 +7,7 @@
             [tram.db]
             [tram.http.interceptors :as interceptors]
             [tram.http.router :as router]
-            [tram.utils.language :as lang]
+            [tram.language :as lang]
             [zprint.core :refer [zprint-file-str]]))
 
 (import-vars [tram.http.router tram-router defroutes])
