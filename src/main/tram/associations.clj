@@ -1,6 +1,5 @@
 (ns tram.associations
   (:require [clojure.set :as set]
-            [clojure.string :as str]
             [declensia.core :as dc]
             [methodical.core :as m]
             [toucan2.core :as t2]
@@ -9,7 +8,13 @@
 (defonce ^:dynamic *relationships*
   (atom {}))
 
-(defn has-many! [model-with-many model-of-many & {:keys [through]}]
+(defn has-many!
+  "Create a relationship where `model-with-many` has many `model-of-many`.
+
+  Optionally provide a `through` table. This table can be inferried if the name
+  of the table is <model-a-singular>_<model-b-plural> where the models are in
+  alphabetical order."
+  [model-with-many model-of-many & {:keys [through]}]
   (swap! *relationships* (fn [relationships]
                            (update-in relationships
                                       [model-with-many :has-many]
@@ -34,16 +39,14 @@
   [model k]
   (when-not (has-explicit-relationship? model
                                         k)
-    (keyword "model"
-             (dc/pluralize (name k)))))
+    (lang/modelize k)))
+
 
 (m/defmethod t2/simple-hydrate [:default :default]
   [model k instance]
   (cond
     (contains? (get-in @*relationships* [model :has-many]) (lang/modelize k))
-    (let [join-table      (keyword (str/join "-"
-                                             (reverse (sort [(name model)
-                                                             (name k)]))))
+    (let [join-table      (lang/join-table model k)
           fk-for-instance (lang/table-name->foreign-key-id model)
           fk-for-other    (lang/table-name->foreign-key-id k)
           join-clause     [join-table

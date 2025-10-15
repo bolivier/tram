@@ -59,7 +59,11 @@
     (dc/pluralize (str/replace fk #"[-_]id$" ""))))
 
 (defn modelize [kw]
-  (keyword "model" (name kw)))
+  (keyword "models" (dc/pluralize (str/replace (name kw) #"-id$" ""))))
 
 (defn model->filename [model]
   (str (name (dc/singularize model)) ".clj"))
+
+(defn join-table [model-a model-b]
+  (let [[first second] (sort [(name model-a) (name model-b)])]
+    (keyword (str (dc/singularize first) "-" second))))
