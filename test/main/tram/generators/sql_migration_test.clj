@@ -133,6 +133,9 @@
                                    :name    "cool"
                                    :default "yes"}
                                   {:type    :timestamptz
-                                   :name    "signup_date"
+                                   :name    :updated-at
                                    :trigger :update-updated-at
+                                   :default :fn/now}
+                                  {:type    :timestamptz
+                                   :name    :created-at
                                    :default :fn/now}]}]})

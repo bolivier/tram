@@ -156,14 +156,17 @@
 (defn validate! [blueprint]
   nil)
 
+(m/defmulti to-sql-string
+  (fn [action] (:type action)))
+
+(m/defmethod to-sql-string :create-table
+  [action]
+  (let [primary-migration (serialize-to-sql action)
+        triggers (serialize-to-trigger-sqls action)]
+    (str/join "\n\n--;;\n\n" (into [primary-migration] triggers))))
+
 (defn write-to-migration-file [blueprint]
-  (let [migration-strings (map
-                            (fn [action]
-                              (let [primary-migration (serialize-to-sql action)
-                                    triggers (serialize-to-trigger-sqls action)]
-                                (str/join "\n\n--;;\n\n"
-                                          (into [primary-migration] triggers))))
-                            (:actions blueprint))
+  (let [migration-strings (map to-sql-string (:actions blueprint))
         sql-string        (str/join "\n\n--;;\n\n" migration-strings)]
     (spit (generate-migration-up-filename blueprint) sql-string)))
 
