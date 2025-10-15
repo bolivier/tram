@@ -47,3 +47,25 @@
           (when (pred elm)
             elm))
         coll))
+
+(defn index-by
+  "Index a seq of elements by the value of `(f element)`.
+
+  Returns a map of the elements of `coll` keyed by `f`. Throws an error if the
+  seq is not indexable ie. if there are 2 values in the seq for which (f x) are
+  equal."
+  [f coll]
+  (reduce
+    (fn [acc elm]
+      (let [k (f elm)]
+        (when (contains? acc
+                         k)
+          (throw
+            (ex-info
+              "Indexed coll with non-indexable elements (duplicate key generated)."
+              {:coll           coll
+               :duplicated-key k
+               :element        elm})))
+        (assoc acc k elm)))
+    {}
+    coll))
