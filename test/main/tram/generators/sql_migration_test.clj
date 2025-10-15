@@ -1,5 +1,5 @@
 (ns tram.generators.sql-migration-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [rapid-test.core :as rt]
             [tram.core :as tram]
             [tram.generators.sql-migration :as sut]
@@ -9,35 +9,35 @@
 
 (deftest attribute-parsing
   (doseq [[expected input]
-          [[[:attribute :text]
+          [[[:attribute :text [:not nil]]
             {:type :text
              :name :attribute}]
-           [[:attribute :text :unique]
+           [[:attribute :text [:not nil] :unique]
             {:type    :text
              :name    :attribute
              :unique? true}]
-           [[:attribute :text [:not nil]]
+           [[:attribute :text]
             {:type      :text
              :name      :attribute
-             :required? true}]
+             :required? false}]
            [[:attribute :text [:not nil] :unique]
             {:type      :text
              :name      :attribute
              :required? true
              :unique?   true}]
            [[:signup-date :timestamptz [:not nil] [:default [:now]]]
-            {:type      :timestamptz
-             :name      :signup-date
-             :required? true
-             :default   :fn/now}]
+            {:type    :timestamptz
+             :name    :signup-date
+             :default :fn/now}]
            [[:is-cool :text [:default "yes"]]
-            {:type    :text
-             :name    :is-cool
-             :default "yes"}]
+            {:type      :text
+             :name      :is-cool
+             :required? false
+             :default   "yes"}]
            [[:id :serial :primary :key]
             {:type :primary-key
              :name :id}]
-           [[:user-id :integer [:references :users :id]]
+           [[:user-id :integer [:not nil] [:references :users :id]]
             {:type :reference
              :name :user-id}]
            [[:terms-id :integer [:not nil] [:references :terms :id]]

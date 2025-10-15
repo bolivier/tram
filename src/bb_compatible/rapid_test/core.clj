@@ -94,4 +94,5 @@
                               (make-parents snapshot-filename)
                               (spit snapshot-filename actual)
                               actual))]
-    (t/is (= snapshot-contents actual))))
+    (t/is (= snapshot-contents actual)
+          (str "Snapshot " snapshot-name " did not match."))))

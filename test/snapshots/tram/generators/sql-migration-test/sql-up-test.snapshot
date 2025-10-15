@@ -1,8 +1,8 @@
 CREATE TABLE users (
   name TEXT NOT NULL,
   email CITEXT NOT NULL UNIQUE,
-  cool TEXT DEFAULT 'yes',
-  signup_date TIMESTAMPTZ DEFAULT NOW()
+  cool TEXT NOT NULL DEFAULT 'yes',
+  signup_date TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
 
 --;;

@@ -49,7 +49,9 @@
   (let [base [(keyword (:name attr)) (:type attr)]]
     (into base
           (remove nil?)
-          [(when (:required? attr)
+          [(when (get attr
+                      :required?
+                      true)
              [:not nil])
            (when (:unique? attr)
              :unique)

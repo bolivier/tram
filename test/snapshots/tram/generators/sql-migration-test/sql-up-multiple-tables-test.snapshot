@@ -1,8 +1,8 @@
 CREATE TABLE users (
   name TEXT NOT NULL,
   email CITEXT NOT NULL UNIQUE,
-  cool TEXT DEFAULT 'yes',
-  signup_date TIMESTAMPTZ DEFAULT NOW()
+  cool TEXT NOT NULL DEFAULT 'yes',
+  signup_date TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
 
 --;;
@@ -15,7 +15,7 @@ UPDATE
 
 CREATE TABLE accounts (
   cc_number TEXT NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
 
 --;;
