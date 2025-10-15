@@ -1,5 +1,6 @@
 (ns tram.test-fixtures
-  (:require [reitit.core :as r]))
+  (:require [rapid-test.core :as rt]
+            [reitit.core :as r]))
 
 (def tram-config
   {:database/development {:db {:dbname "tram_sample_development"
@@ -27,6 +28,8 @@
 
 (defmacro with-tram-config
   [& body]
+  (rt/with-stub [_ {:fn      tram.core/get-tram-config
+                    :returns tram-config}])
   `(with-redefs [tram.core/get-tram-config (constantly ~tram-config)]
      ~@body))
 

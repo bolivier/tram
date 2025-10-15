@@ -55,8 +55,7 @@
 
     :test {:extra-paths ["test"]
            :main-opts   ["-m" "kaocha.runner"]
-           :extra-deps  {com.github.seancorfield/expectations {:mvn/version "2.2.214"}
-                         pjstadig/humane-test-output          {:mvn/version "0.11.0"}
+           :extra-deps  {pjstadig/humane-test-output          {:mvn/version "0.11.0"}
                          lambdaisland/kaocha                  {:mvn/version "1.91.1392"}}
            :jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"
                          "-Dio.netty.tryReflectionSetAccessible=true"]}

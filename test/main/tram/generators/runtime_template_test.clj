@@ -1,16 +1,13 @@
 (ns tram.generators.runtime-template-test
-  (:require [expectations.clojure.test :as e]
+  (:require [clojure.test :refer [deftest is]]
             [tram.generators.runtime-template :as sut]
             [tram.test-fixtures :as fixtures]))
 
-(fixtures/with-tram-config
-  (e/defexpect get-ns-for-template
-    (e/expect "runtimes.generate-users" (sut/get-runtime-ns fixtures/blueprint))
+(deftest get-ns-for-template
+  (is (= "runtimes.generate-users" (sut/get-runtime-ns fixtures/blueprint)))
+  (is (= "dev/runtimes/generate_users.clj"
+         (sut/get-runtime-filename fixtures/blueprint))))
 
-    (e/expect "dev/runtimes/generate_users.clj"
-              (sut/get-runtime-filename fixtures/blueprint))))
-
-(fixtures/with-tram-config
-  (e/defexpect template
-    (e/expect "tram/templates/model.clj.template"
-              (sut/get-template fixtures/blueprint))))
+(deftest getting-template-name
+  (is (= "tram/templates/model.clj.template"
+         (sut/get-template fixtures/blueprint))))
