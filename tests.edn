@@ -12,6 +12,6 @@
           {:id          :bb-compatible
            :ns-patterns [".*"]
            :test-paths  ["test/bb_compatible"]}
-          #_{:id          :cli
-             :ns-patterns [".*"]
-             :test-paths  ["test/bb_only/tram_cli"]}]}
+          {:id          :cli
+           :ns-patterns [".*"]
+           :test-paths  ["test/bb_only/tram_cli"]}]}
