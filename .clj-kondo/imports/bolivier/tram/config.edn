@@ -1,4 +1,3 @@
-{:lint-as {rapid-test.core/with-stub   clojure.core/let
-           tram.core/defroutes         clojure.core/def
+{:lint-as {tram.core/defroutes         clojure.core/def
            tram.http.router/defroutes  clojure.core/def
            tram.utils/with-same-output clojure.core/let}}

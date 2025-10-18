@@ -1,0 +1,11 @@
+{:database/test {:db            {:dbname   "tram_test"
+                                 :dbtype   "postgresql"
+                                 :host     "localhost"
+                                 :password "tram"
+                                 :port     5433
+                                 :user     "brandon"}
+                 :init-script   "init.sql"
+                 :migration-dir "test-migrations/"
+                 :migration-table-name "migrations"
+                 :store         :database}
+ :project/name  :tram}

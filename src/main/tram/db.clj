@@ -25,7 +25,7 @@
   (read-column-by-index [^org.postgresql.util.PGobject pgobj _2 _3]
     (pgobj->clj pgobj)))
 
-(defn clj->jsonb-pgobj [value]
+(defn clj->jsonb [value]
   (doto (PGobject.)
     (.setType "jsonb")
     (.setValue (json/generate-string value))))
@@ -35,7 +35,7 @@
   (set-parameter [^clojure.lang.IPersistentMap v
                   ^java.sql.PreparedStatement stmt
                   ^long idx]
-    (.setObject stmt idx (clj->jsonb-pgobj v)))
+    (.setObject stmt idx (clj->jsonb v)))
 
   clojure.lang.IPersistentVector
   (set-parameter [^clojure.lang.IPersistentVector v
@@ -48,4 +48,4 @@
                            (apply str
                              (rest type-name)))]
         (.setObject stmt idx (.createArrayOf conn String (to-array v)))
-        (.setObject stmt idx (clj->jsonb-pgobj v))))))
+        (.setObject stmt idx (clj->jsonb v))))))

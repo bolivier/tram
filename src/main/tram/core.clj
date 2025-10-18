@@ -7,7 +7,7 @@
             [tram.db]
             [tram.http.interceptors :as interceptors]
             [tram.http.router :as router]
-            [tram.utils.language :as lang]
+            [tram.language :as lang]
             [zprint.core :refer [zprint-file-str]]))
 
 (import-vars [tram.http.router tram-router defroutes])
@@ -65,10 +65,14 @@
     (edn/read r)))
 
 (defn get-env []
-  (System/getenv "TRAM_ENV"))
+  (or (System/getProperty "TRAM_ENV")
+      (System/getenv "TRAM_ENV")
+      (throw (ex-info "No TRAM_ENV set. "
+                      {:error   "No TRAM_ENV set."
+                       :options #{"development" "test" "production"}}))))
 
 (defn get-tram-config []
-  (with-open [r (java.io.PushbackReader. (io/reader (io/file "tram.edn")))]
+  (with-open [r (java.io.PushbackReader. (io/reader (io/file "./tram.edn")))]
     (edn/read r)))
 
 (defn get-tram-database-config []
@@ -79,13 +83,17 @@
   ([]
    (get-migration-config (get-env)))
   ([env]
-   (let [config (get-tram-config)
-         db-key (keyword "database" env)]
-     (get config db-key))))
+   (let [config    (get-tram-config)
+         db-key    (keyword "database" env)
+         db-config (get config db-key)]
+     (when-not db-config
+       (throw (ex-info "Could not find database configuration from tram.edn."
+                       {:env env})))
+     db-config)))
 
 (defn get-database-config
   ([]
-   (get-database-config "development"))
+   (get-database-config (get-env)))
   ([env]
    (get (get-migration-config env) :db)))
 

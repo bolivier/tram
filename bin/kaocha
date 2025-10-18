@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-clojure -M:test "$@"
+TRAM_ENV=test clojure -M:test "$@"

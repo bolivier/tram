@@ -6,13 +6,46 @@ on:
   pull_request:
     branches: ["main"]
 
+env:
+  # Database configuration for CI - matches tram.edn test config
+  POSTGRES_DB: tram_test
+  POSTGRES_USER: brandon
+  POSTGRES_PASSWORD: tram
+  TRAM_ENV: test
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
+
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Start PostgreSQL via docker compose
+        env:
+          USER: ${{ env.POSTGRES_USER }}
+        run: |
+          # Start the PostgreSQL container from root docker compose.yml
+          # This uses the test database configuration from tram.edn
+          docker compose up -d
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if docker exec tram-postgres-test pg_isready -U $POSTGRES_USER -d $POSTGRES_DB > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+
+          # Verify connection one more time
+          docker exec tram-postgres-test pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
 
       - uses: actions/setup-java@v4
         with:
@@ -36,6 +69,8 @@ jobs:
           sudo ./linux-install.sh
 
       - name: Run tests
+        env:
+          PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
         run: clojure -M:test
 
       - name: Install babashka
@@ -45,4 +80,6 @@ jobs:
           ./install
 
       - name: Run bb tests
+        env:
+          PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
         run: bin/test-bb

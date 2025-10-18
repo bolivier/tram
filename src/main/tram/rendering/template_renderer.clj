@@ -3,6 +3,7 @@
   (:require [clojure.string :as str]
             [reitit.core :as r]
             [tram.http.lookup :as lookup]
+            [tram.http.utils :as http.utils]
             [tram.http.views :refer [*current-user* *req* *res*]]))
 
 (defprotocol ITemplate
@@ -78,6 +79,15 @@
                                             "/"
                                             function-name)))))))))
 
+(defn uses-layout? [req]
+  (not (http.utils/htmx-request? req)))
+
+(defn make-root-layout-fn [ctx]
+  (if (uses-layout? (:request ctx))
+    (apply comp
+      (:layouts ctx))
+    identity))
+
 (defn render
   "Renders a template."
   [ctx]
@@ -97,7 +107,7 @@ Expected to find template called `"
             "` at: "
             (get-namespace template ctx))
           {}))
-      (let [layout-fn (apply comp (:layouts ctx))]
+      (let [layout-fn (make-root-layout-fn ctx)]
         (binding [*current-user* (:current-user request)
                   *req*          request
                   *res*          response]

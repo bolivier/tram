@@ -1,8 +1,10 @@
 CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   email CITEXT NOT NULL UNIQUE,
-  cool TEXT DEFAULT 'yes',
-  signup_date TIMESTAMPTZ DEFAULT NOW()
+  cool TEXT NOT NULL DEFAULT 'yes',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
 
 --;;

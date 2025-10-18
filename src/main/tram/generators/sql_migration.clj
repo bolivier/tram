@@ -9,7 +9,7 @@
             [potemkin :refer [import-vars]]
             [taoensso.telemere :as t]
             [tram.core :as tram]
-            [tram.utils.language :as lang])
+            [tram.language :as lang])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
 
 (def AttributeSchema
@@ -49,7 +49,9 @@
   (let [base [(keyword (:name attr)) (:type attr)]]
     (into base
           (remove nil?)
-          [(when (:required? attr)
+          [(when (get attr
+                      :required?
+                      true)
              [:not nil])
            (when (:unique? attr)
              :unique)
@@ -66,7 +68,9 @@
 (m/defmethod serialize-attribute [:default :reference]
   [attr]
   (conj (serialize-attribute (assoc attr :type :integer))
-        [:references (lang/foreign-key-id->table-name (:name attr)) :id]))
+        [:references
+         (or (:table-name attr) (lang/foreign-key-id->table-name (:name attr)))
+         :id]))
 
 (defn serialize-blueprint [blueprint]
   (-> (hh/create-table (symbol (:table blueprint)))
@@ -152,14 +156,42 @@
 (defn validate! [blueprint]
   nil)
 
+(def updated-at
+  {:name      :updated-at
+   :type      :timestamptz
+   :required? true
+   :default   :fn/now
+   :trigger   :update-updated-at})
+(def created-at
+  {:name      :created-at
+   :type      :timestamptz
+   :required? true
+   :default   :fn/now})
+
+(m/defmulti to-sql-string
+  (fn [action] (:type action)))
+
+;; Before going to create the tble assoc in the timestamps if the key is
+;; present
+(m/defmethod to-sql-string :before
+  :create-table
+  [action]
+  (let [original-attributes (:attributes action)
+        attributes (concat [{:name :id
+                             :type :primary-key}]
+                           original-attributes
+                           (when (:timestamps action)
+                             [updated-at created-at]))]
+    (assoc action :attributes attributes)))
+
+(m/defmethod to-sql-string :create-table
+  [action]
+  (let [primary-migration (serialize-to-sql action)
+        triggers (serialize-to-trigger-sqls action)]
+    (str/join "\n\n--;;\n\n" (into [primary-migration] triggers))))
+
 (defn write-to-migration-file [blueprint]
-  (let [migration-strings (map
-                            (fn [action]
-                              (let [primary-migration (serialize-to-sql action)
-                                    triggers (serialize-to-trigger-sqls action)]
-                                (str/join "\n\n--;;\n\n"
-                                          (into [primary-migration] triggers))))
-                            (:actions blueprint))
+  (let [migration-strings (map to-sql-string (:actions blueprint))
         sql-string        (str/join "\n\n--;;\n\n" migration-strings)]
     (spit (generate-migration-up-filename blueprint) sql-string)))
 

@@ -18,8 +18,7 @@
                "with-mock-tram-config" :binding
                "with-same-output" :binding
                "with-stub"       :binding
-               "with-temp-ns"    :arg1
-               "with-tram-config" :flow}
+               "with-temp-ns"    :arg1}
  :map         {:comma?    false ;; no commas in maps
                :force-nl? true} ;; newlines required in maps
  :style       [:justified       ;; justify pairs

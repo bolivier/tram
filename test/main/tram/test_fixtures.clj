@@ -1,5 +1,6 @@
 (ns tram.test-fixtures
-  (:require [reitit.core :as r]))
+  (:require [rapid-test.core :as rt]
+            [reitit.core :as r]))
 
 (def tram-config
   {:database/development {:db {:dbname "tram_sample_development"
@@ -24,11 +25,6 @@
                           :migration-table-name "migrations"
                           :store :database}
    :project/name         "tram-sample"})
-
-(defmacro with-tram-config
-  [& body]
-  `(with-redefs [tram.core/get-tram-config (constantly ~tram-config)]
-     ~@body))
 
 (defn ok-good-handler [req]
   {:status 200

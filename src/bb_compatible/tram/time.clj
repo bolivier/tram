@@ -1,4 +1,4 @@
-(ns tram.utils.time
+(ns tram.time
   (:import java.text.SimpleDateFormat
            [java.util Date TimeZone]))
 

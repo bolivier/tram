@@ -1,10 +1,10 @@
-(ns tram.utils.config
+(ns tram.tram-config
   "Utilities for the tram.edn config file."
   (:require [camel-snake-kebab.core :refer [->snake_case]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [malli.core :as m]
-            [tram.utils.language :as lang]))
+            [tram.language :as lang]))
 
 (def DatabaseConnectionSchema
   [:map

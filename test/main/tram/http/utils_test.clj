@@ -1,19 +1,13 @@
 (ns tram.http.utils-test
-  (:require [expectations.clojure.test :as e]
+  (:require [clojure.test :refer [deftest is]]
             [tram.http.utils :as sut]))
 
-(e/defexpect html-request?
-  (e/expect false (sut/html-request? {:headers {"accept" "application/edn"}}))
-  (e/expect false (sut/html-request? {:headers {"accept" "application/json"}}))
+(deftest html-request?
+  (is (not (sut/html-request? {:headers {"accept" "application/edn"}})))
+  (is (not (sut/html-request? {:headers {"accept" "application/json"}})))
+  (is (not (sut/html-request? {:headers {"accept" "*/*"}})))
+  (is (sut/html-request? {:headers {"accept" "text/html"}})))
 
-  ;; needs to be explicit
-  (e/expect false (sut/html-request? {:headers {"accept" "*/*"}}))
-
-  ;; true case
-  (e/expect (sut/html-request? {:headers {"accept" "text/html"}}))
-)
-
-(e/defexpect htmx-request?
-  (e/expect false (sut/htmx-request? {:headers {}}))
-  (e/expect (sut/htmx-request? {:headers {"hx-request" "true"}}))
-)
+(deftest htmx-request?
+  (is (not (sut/htmx-request? {:headers {}})))
+  (is (sut/htmx-request? {:headers {"hx-request" "true"}})))

@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16
+    container_name: tram-postgres-test
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${USER:-brandon}
+      POSTGRES_DB: tram_test
+      POSTGRES_PASSWORD: tram
+    volumes:
+      - ./.postgres:/var/lib/postgresql/data
+    restart: unless-stopped
