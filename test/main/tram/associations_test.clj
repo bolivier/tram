@@ -26,7 +26,7 @@
                 {:setting-id settings-id
                  :user-id    (:id user)})))
 
-(use-fixtures :once (fn [f] (teardown-db) (setup-db) (f)))
+(use-fixtures :once (fn [f] (teardown-db) (setup-db) (f) (teardown-db)))
 
 ;; These tests are kind of implementation details, but I don't care for now
 ;; because this is kinda complicated.

@@ -26,13 +26,6 @@
                           :store :database}
    :project/name         "tram-sample"})
 
-(defmacro with-tram-config
-  [& body]
-  (rt/with-stub [_ {:fn      tram.core/get-tram-config
-                    :returns tram-config}])
-  `(with-redefs [tram.core/get-tram-config (constantly ~tram-config)]
-     ~@body))
-
 (defn ok-good-handler [req]
   {:status 200
    :body   "good"})

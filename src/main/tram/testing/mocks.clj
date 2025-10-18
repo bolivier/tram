@@ -27,11 +27,6 @@
                           :store :database}
    :project/name         "tram-sample"})
 
-(defmacro with-tram-config
-  [& body]
-  `(with-redefs [tram.core/get-tram-config (constantly ~tram-config)]
-     ~@body))
-
 (defmacro with-temp-ns
   [ns-name & body]
   `(do (create-ns '~ns-name)
@@ -39,4 +34,4 @@
          (require '[clojure.core :refer :all])
          ~@(map (fn [form]
                   `(eval '~form))
-                body))))
+             body))))
