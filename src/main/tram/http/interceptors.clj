@@ -3,7 +3,6 @@
             [camel-snake-kebab.extras :refer [transform-keys]]
             [clojure.string :as str]
             [clojure.walk :refer [prewalk]]
-            [methodical.core :as m]
             [potemkin :refer [import-vars]]
             [reitit.core :as r]
             [reitit.http.coercion
@@ -11,11 +10,12 @@
              [coerce-exceptions-interceptor
               coerce-request-interceptor
               coerce-response-interceptor]]
-            [reitit.http.interceptors.exception :refer [exception-interceptor]]
+            [reitit.http.interceptors.exception :as exception]
             [reitit.http.interceptors.multipart :refer [multipart-interceptor]]
             [reitit.http.interceptors.muuntaja :as muuntaja]
             [reitit.http.interceptors.parameters :as rhip]
             [reitit.ring]
+            [taoensso.telemere :as t]
             [tram.http.route-helpers :refer [expandable-route-ref?]]
             [tram.http.routing :as route]
             [tram.http.utils :as http.utils]
@@ -94,8 +94,7 @@
   {:name  ::template-renderer
    :leave (fn [ctx]
             (cond
-              (or (some? (get-in ctx [:response :body]))
-                  (str/starts-with? (get-in ctx [:request :uri]) "/assets")
+              (or (str/starts-with? (get-in ctx [:request :uri]) "/assets")
                   (<= 300 (get-in ctx [:response :status]) 399))
               ctx
 
@@ -201,7 +200,37 @@
    coercion-interceptors
    render-template-interceptor])
 
-(import-vars [reitit.http.interceptors.exception exception-interceptor])
+(defn default-error-handler [message exception request]
+  (t/event! ::uncaught-exception
+            {:data {:request   request
+                    :exception exception
+                    :message   message}})
+  {:status 500
+   :body   "An unknown error occurred"})
+
+
+;; This is to support catching reitit coercion requests with a tram keyword.
+;; It's not strictly necessary, but you would have to update the usage of the
+;; keyword below in the exception interceptor.
+(derive :tram.req/coercion :reitit.coercion/request-coercion)
+
+(defn exception-interceptor
+  ([]
+   (exception-interceptor {}))
+  ([config]
+   (exception/exception-interceptor
+     (merge {:default (partial default-error-handler "error")
+             :tram.req/coercion
+             (fn [e req]
+               (let [method (get-in req [:request-method])
+                     schema (get (ex-data e) :schema)
+                     body   (get (ex-data e) :value)
+                     error-handler-fn
+                     (get-in req [:reitit.core/match :data method :error])]
+                 (prn 'output (error-handler-fn schema (assoc req :body body)))
+                 (error-handler-fn schema (assoc req :body body))))}
+            config))))
+
 (import-vars [muuntaja format-interceptor])
 
 (defn layout-interceptor [layout-fn]
