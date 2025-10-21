@@ -35,10 +35,11 @@
             [reitit.http :as http]
             [reitit.ring]
             [tram.http.interceptors :refer [layout-interceptor]]
-            [tram.http.lookup :refer [handlers-ns->views-ns]]))
+            [tram.http.lookup :refer [handlers-ns->views-ns]]
+            [tram.language :as lang]))
 
 (def HandlerSpecSchema
-  [:map [:handler fn?] [:handler-var [:fn var?]]])
+  [:map [:handler fn?]])
 
 (def Interceptor
   [:map
@@ -83,16 +84,6 @@
 
     :else (and (map? node) (or (:name node) (:layout node)))))
 
-(defn fn->var [f]
-  (loop [interned-symbols (ns-map *ns*)]
-    (if (empty? interned-symbols)
-      nil
-      (let [[_ v] (first interned-symbols)]
-        (if (and (var? v)
-                 (= f (var-get v)))
-          v
-          (recur (rest interned-symbols)))))))
-
 (defn default-handler
   "Default handler behavior for non-fn is to set the value to be the template.
 
@@ -102,10 +93,17 @@
     {:status   200
      :template template}))
 
+(defn get-automagic-template-symbol [sym]
+  (let [template-symbol (symbol (lang/convert-ns *ns* :view) (str sym))]
+    (if (requiring-resolve template-symbol)
+      template-symbol
+      nil)))
+
 (m/defmulti ->handler-spec
   (fn [handler-entry]
     (cond
       (keyword? handler-entry) :view-keyword
+      (symbol? handler-entry)  :symbol-spec
       (map? handler-entry)     :handler-spec
       (fn? handler-entry)      :handler
       (var? handler-entry)     :var
@@ -113,37 +111,30 @@
 
 (m/defmethod ->handler-spec :default
   [handler-entry]
-  (throw (ex-info "Unexpected handler entry." {:handler-entry handler-entry})))
+  (throw (ex-info (str "Unexpected handler-entry: " handler-entry)
+                  {:bad-handler-entry handler-entry})))
+
+(m/defmethod ->handler-spec :symbol-spec
+  [handler-entry]
+  {:handler  (symbol (str *ns*) (str (name handler-entry)))
+   :template (get-automagic-template-symbol handler-entry)})
 
 (m/defmethod ->handler-spec :view-keyword
   [handler-entry]
-  {:handler     (default-handler handler-entry)
-   :handler-var (fn->var handler-entry)})
+  {:handler  (default-handler handler-entry)
+   :template (get-automagic-template-symbol (name handler-entry))})
 
 (m/defmethod ->handler-spec :handler-spec
   [handler-entry]
-  (let [handler (:handler handler-entry)]
-    (when-not (:handler handler-entry)
-      (throw (ex-info "Tried to coerce handler-spec without a :handler keyword."
-                      {:handler-spec handler-entry})))
-    (assoc handler-entry :handler-var (fn->var handler))))
+  (when-not (:handler handler-entry)
+    (throw (ex-info "Tried to coerce handler-spec without a :handler keyword."
+                    {:handler-spec handler-entry})))
+  (assoc handler-entry
+    :template (get-automagic-template-symbol (name (:handler handler-entry)))))
 
 (m/defmethod ->handler-spec :list
   [handler-entry]
   {:handler handler-entry})
-
-(m/defmethod ->handler-spec :var
-  [handler-entry]
-  {:handler     @handler-entry
-   :handler-var handler-entry})
-
-(m/defmethod ->handler-spec :handler
-  [handler-entry]
-  (let [handler-var (fn->var handler-entry)]
-    {:handler     handler-entry
-     :handler-var handler-var}))
-
-
 
 (def verb?
   "Convenience fn to make validating easier."
@@ -186,18 +177,6 @@
                                    f)
                          zipper))))))
 
-(defn replace-symbols-with-vars
-  "Walks the tree and updates symbols to their corresponding vars."
-  [tree]
-  (prewalk (fn [n]
-             ;; This resolves any symbols (mostly for function names)
-             ;; into vars.
-             (if-let [n-var
-                      (and (symbol? n) (not= 'fn n) (get (ns-map *ns*) n))]
-               (var-get n-var)
-               n))
-           tree))
-
 (defmacro defroutes
   "Define routes in Tram.
 
@@ -209,7 +188,7 @@
   route data, and to add the var reference of the handler itself to the handler
   data."
   [var-name routes]
-  (let [evaluated-routes (replace-symbols-with-vars routes)]
+  (let [evaluated-routes routes]
     `(def ~var-name
        ~(map-routes coerce-route-entries-to-specs evaluated-routes))))
 

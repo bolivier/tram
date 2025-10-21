@@ -2,7 +2,8 @@
   "Language related utilities."
   (:require [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
             [clojure.string :as str]
-            [declensia.core :as dc]))
+            [declensia.core :as dc]
+            [malli.core :as malli]))
 
 (defmacro with-same-output
   "TODO move this into a new utils lib
@@ -79,3 +80,19 @@
 (defn join-table [model-a model-b]
   (let [[first second] (sort [(name model-a) (name model-b)])]
     (keyword (str first "-" second))))
+
+(def ns-type-lookup
+  {:view    "views"
+   :handler "handlers"})
+
+(defn convert-ns [a-ns to]
+  (when-not (malli/validate [:enum :view :handler]
+                            to)
+    (throw (ex-info "Tried to convert invalid ns types"
+                    {:ns a-ns
+                     :to to})))
+  (let [[ns-base _ ns-end] (str/split (str a-ns) #"\.")]
+    (str/join "."
+              [ns-base
+               (ns-type-lookup to)
+               (str/replace ns-end #"(handlers|views)$" (ns-type-lookup to))])))

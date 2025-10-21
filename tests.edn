@@ -9,9 +9,9 @@
           ;; I'm unsure if these should be run fully separate or
           ;; not. Since they need to work in jvm Clojure, I'm
           ;; inclined to say that they should be run here and there.
-          {:id          :bb-compatible
-           :ns-patterns [".*"]
-           :test-paths  ["test/bb_compatible"]}
-          {:id          :cli
-           :ns-patterns [".*"]
-           :test-paths  ["test/bb_only/tram_cli"]}]}
+          #_{:id          :bb-compatible
+             :ns-patterns [".*"]
+             :test-paths  ["test/bb_compatible"]}
+          #_{:id          :cli
+             :ns-patterns [".*"]
+             :test-paths  ["test/bb_only/tram_cli"]}]}

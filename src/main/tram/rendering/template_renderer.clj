@@ -21,7 +21,7 @@
 (extend-protocol ITemplate
   clojure.lang.Keyword
   (get-name [this _] (name this))
-  (get-namespace [this ctx]
+  (get-namespace [_ ctx]
     (str/replace (:namespace (:data (:reitit.core/match (:request ctx))))
                  #"handler"
                  "view"))
@@ -55,29 +55,12 @@
         (let [template-ns (lookup/handlers-ns->views-ns handler-ns)]
           template-ns))))
   (get-view-fn [_ ctx]
-    (let [request   (:request ctx)
-          router    (::r/router request)
-          uri       (:uri request)
-          method    (:request-method request)
-          match     (r/match-by-path router uri)
-          caller-ns (:namespace (:data match))]
-      (when caller-ns
-        (let [function-name (-> (::r/router request)
-                                (r/match-by-path uri)
-                                :data
-                                method
-                                :handler-var
-                                meta
-                                :name
-                                str
-                                (str/replace #"-handler$"
-                                             ""))
-              template-ns   (get-namespace nil
-                                           ctx)]
-          (when function-name
-            (requiring-resolve (symbol (str template-ns
-                                            "/"
-                                            function-name)))))))))
+    (let [request (:request ctx)
+          router  (::r/router request)
+          uri     (:uri request)
+          method  (:request-method request)
+          match   (r/match-by-path router uri)]
+      (get-in match [:data method :template]))))
 
 (defn uses-layout? [req]
   (not (http.utils/htmx-request? req)))
@@ -106,7 +89,9 @@ Expected to find template called `"
             (get-name template ctx)
             "` at: "
             (get-namespace template ctx))
-          {}))
+          {:error         :no-template
+           :uri           (:uri request)
+           :template-name (get-name template ctx)}))
       (let [layout-fn (make-root-layout-fn ctx)]
         (binding [*current-user* (:current-user request)
                   *req*          request
