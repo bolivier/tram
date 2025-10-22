@@ -1,5 +1,4 @@
-#kaocha/v1
-{:plugins [:hooks]
- :tests [{:id          :unit
-          :test-paths  ["test"]
-          :ns-patterns [".*"]}]}
+#kaocha/v1 {:plugins [:hooks]
+            :tests   [{:id          :unit
+                       :ns-patterns [".*"]
+                       :test-paths  ["test"]}]}

@@ -7,17 +7,16 @@
               register-new-account
               set-session-cookie]]
             [sample-app.views.authentication-views :as views]
-            [toucan2.core :as t2]
-            [tram.http.route-helpers :refer [hx-redirect ok redirect]]
-            [tram.http.router :refer [defroutes]]))
+            [tram.core :refer [defroutes]]
+            [tram.db :as db]
+            [tram.routes :refer [redirect]]))
 
 (defn sign-up-post-handler [{:keys [body-params]}]
   (if-let [user (register-new-account body-params)]
-    (let [session (t2/insert-returning-instance! :models/sessions
+    (let [session (db/insert-returning-instance! :models/sessions
                                                  {:user-id (:id user)})]
-      (set-session-cookie (-> {:session {:identity (:id user)}}
-                              ok
-                              (hx-redirect :route/projects))
+      (set-session-cookie (redirect {:session {:identity (:id user)}}
+                                    :route/projects)
                           (:id session)))
     {:status 422
      :body   (views/sign-up-form-error)}))
@@ -26,7 +25,7 @@
   (let [{:keys [body-params]}    req
         {:keys [email password]} body-params]
     (if-let [user (get-authenticated-user email password)]
-      (let [session (t2/insert-returning-instance! :models/sessions
+      (let [session (db/insert-returning-instance! :models/sessions
                                                    {:user-id (:id user)})]
         (set-session-cookie {:status  200
                              :headers {"Hx-Redirect" "/dashboard"}
@@ -37,8 +36,8 @@
 
 (defn log-out-handler [req]
   (let [{:keys [session-id]} (get-cookie-value req)
-        session (t2/select-one :models/sessions session-id)]
-    (t2/delete! :models/sessions :user-id (:user-id session)))
+        session (db/select-one :models/sessions session-id)]
+    (db/delete! :models/sessions :user-id (:user-id session)))
   (clear-session-cookie (-> {:session nil}
                             (redirect :route/sign-in))))
 

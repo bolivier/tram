@@ -108,6 +108,16 @@ tram help               print this menu
     (doseq [process processes]
       (deref process))))
 
+(defn do-db-migrate [_]
+  (let [p (p/process {:out :inherit
+                      :err :inherit}
+                     "clojure -X tram.db/migrate-from-cli")]
+    (println "Migrating database.")
+    (println "Starting JVM...")
+    (println
+      "Did you know you can run migrations from the dev/migrations.clj namespace?")
+    @p))
+
 (def cmd-table
   [{:cmds       ["new"]
     :fn         do-new-project
@@ -124,6 +134,8 @@ tram help               print this menu
     :fn   do-html-conversion}
    {:cmds ["html"]
     :fn   do-html-conversion}
+   {:cmds ["db:migrate"]
+    :fn   do-db-migrate}
    {:cmds ["dev"]
     :fn   do-dev}
    {:cmds []

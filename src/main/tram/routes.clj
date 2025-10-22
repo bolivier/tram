@@ -6,6 +6,7 @@
             [camel-snake-kebab.extras :refer [transform-keys]]
             [clojure.string :as str]
             [clojure.walk :refer [prewalk]]
+            [muuntaja.core :as muuntaja]
             [potemkin :refer [import-vars]]
             [reitit.core :as r]
             [reitit.http :as http]
@@ -16,16 +17,15 @@
               coerce-response-interceptor]]
             [reitit.http.interceptors.exception :as exception]
             [reitit.http.interceptors.multipart :refer [multipart-interceptor]]
-            [reitit.http.interceptors.muuntaja :as muuntaja]
+            [reitit.http.interceptors.muuntaja :as rhim]
             [reitit.http.interceptors.parameters :as rhip]
             [reitit.ring]
-            [tram.html :refer [expanders]]
+            [tram.html :refer [expanders] :as tram.html]
             [tram.impl.http]
             [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
             [tram.logging :as log]
             [tram.rendering.template-renderer :as renderer]
             [tram.utils :refer [map-vals]]))
-
 
 (import-vars [tram.impl.http
               *current-user*
@@ -36,8 +36,6 @@
               full-redirect
               redirect]
              [tram.html make-route])
-
-
 
 (def expand-hiccup-interceptor
   "Walks your hiccup tree to find any customizations that need to be expanded.
@@ -186,7 +184,25 @@
                  (error-handler-fn schema (assoc req :body body))))}
             config))))
 
-(import-vars [muuntaja format-interceptor])
+(defn make-muuntaja-instance
+  "make a muuntaja instance with default options.
+
+  Includes an html formatter, a urlencoded formatter, and sets the default
+  format tho text/html.
+
+  Options are merged the map fed to `muuntaja.core/create` last."
+  ([]
+   (make-muuntaja-instance {}))
+  ([options]
+   (-> muuntaja/default-options
+       (assoc-in [:formats "text/html"] tram.html/html-formatter)
+       (assoc-in [:formats "application/x-www-form-urlencoded"]
+                 tram.html/form-urlencoded-formatter)
+       (assoc :default-format "text/html")
+       (merge options)
+       (muuntaja/create))))
+
+(import-vars [rhim format-interceptor])
 
 (defmacro defroutes
   "Define routes in Tram.

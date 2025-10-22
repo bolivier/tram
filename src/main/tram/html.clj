@@ -100,21 +100,3 @@
   "Muuntaja formatter for form-encoded content."
   (mfc/map->Format {:name    "application/x-www-form-urlencoded"
                     :decoder [form-decoder]}))
-
-(defn make-muuntaja-instance
-  "make a muuntaja instance with default options.
-
-  Includes an html formatter, a urlencoded formatter, and sets the default
-  format tho text/html.
-
-  Options are merged the map fed to `muuntaja.core/create` last."
-  ([]
-   (make-muuntaja-instance {}))
-  ([options]
-   (-> m/default-options
-       (assoc-in [:formats "text/html"] html-formatter)
-       (assoc-in [:formats "application/x-www-form-urlencoded"]
-                 form-urlencoded-formatter)
-       (assoc :default-format "text/html")
-       (merge options)
-       (m/create))))

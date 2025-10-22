@@ -1,8 +1,8 @@
 (ns sample-app.concerns.authentication
   (:require [clojure.string :as str]
             [sample-app.models.user :as user]
-            [toucan2.core :as t2]
-            [tram.crypto :refer [verify-password]]))
+            [tram.db :as db]
+            [tram.utils :refer [verify-password]]))
 
 (defn correct-password? [hashed-password guess]
   (boolean (when hashed-password
@@ -16,13 +16,13 @@
   (let [user-password (user/get-user-password email)]
     (if (correct-password? user-password
                            password-guess)
-      (t2/select-one :models/users
+      (db/select-one :models/users
                      :email
                      email)
       nil)))
 
 (defn register-new-account [{:keys [email password]}]
-  (t2/insert-returning-instance! :models/users
+  (db/insert-returning-instance! :models/users
                                  {:email    email
                                   :password password}))
 
@@ -94,9 +94,9 @@
    :enter (fn [ctx]
             (try
               (let [{:keys [session-id]} (get-cookie-value (:request ctx))
-                    {:keys [user-id]} (t2/select-one :models/sessions
+                    {:keys [user-id]} (db/select-one :models/sessions
                                                      session-id)
-                    user (t2/select-one :models/users user-id)]
+                    user (db/select-one :models/users user-id)]
                 (if user
                   (assoc-in ctx
                     [:request :current-user]

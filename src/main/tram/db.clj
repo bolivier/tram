@@ -1,15 +1,40 @@
 (ns ^:public tram.db
   "Primary namespace for db operations in Tram."
-  (:require [cheshire.core :as json]
-            [migratus.core :as migratus]
-            [next.jdbc.date-time]
-            [next.jdbc.prepare :as prepare]
-            [next.jdbc.result-set :as rs]
-            [potemkin :refer [import-vars]]
-            [toucan2.core]
-            [tram.associations]
-            [tram.logging :as log]
-            [tram.tram-config :as tram.config])
+  (:require
+    [cheshire.core :as json]
+    [migratus.core :as migratus]
+    [next.jdbc.date-time]
+    [next.jdbc.prepare :as prepare]
+    [next.jdbc.result-set :as rs]
+    [potemkin :refer [import-vars]]
+    [toucan2.connection]
+    [toucan2.core]
+    [toucan2.delete]
+    [toucan2.execute]
+    [toucan2.insert]
+    [toucan2.instance]
+    [toucan2.model]
+    [toucan2.protocols]
+    [toucan2.save]
+    [toucan2.select]
+    [toucan2.tools.after-insert]
+    [toucan2.tools.after-select]
+    [toucan2.tools.after-update]
+    [toucan2.tools.before-delete]
+    [toucan2.tools.before-insert]
+    [toucan2.tools.before-select]
+    [toucan2.tools.before-update]
+    [toucan2.tools.compile]
+    [toucan2.tools.debug]
+    [toucan2.tools.default-fields]
+    [toucan2.tools.hydrate]
+    [toucan2.tools.named-query]
+    [toucan2.tools.transformed]
+    [toucan2.update]
+    [tram.associations]
+    [tram.generators.sql-migration]
+    [tram.logging :as log]
+    [tram.tram-config :as tram.config])
   (:import [org.postgresql.util PGobject]))
 
 (defn pgobj->clj [^org.postgresql.util.PGobject pgobj]
@@ -57,7 +82,8 @@
         (.setObject stmt idx (.createArrayOf conn String (to-array v)))
         (.setObject stmt idx (clj->jsonb v))))))
 
-(import-vars [tram.associations belongs-to! has-many!])
+(import-vars [tram.associations belongs-to! has-many!]
+             [tram.generators.sql-migration write-to-migration-files])
 
 ;; toucan2.core
 (import-vars
@@ -103,8 +129,6 @@
   [toucan2.tools.before-insert define-before-insert]
   [toucan2.tools.before-select define-before-select]
   [toucan2.tools.before-update define-before-update]
-  [toucan2.tools.compile build compile]
-  [toucan2.tools.debug debug]
   [toucan2.tools.default-fields define-default-fields]
   [toucan2.tools.hydrate
    batched-hydrate
@@ -131,6 +155,16 @@
                  :id    :db/migrating
                  :data  {:config migration-config}})
     (migratus/migrate migration-config)))
+
+(defn migrate-from-cli
+  "This is used to call `migrate` from the cli, which passes an arg. It should
+  not be used by you."
+  [_]
+  (try
+    (init)
+    (catch Exception _
+      (println "Skipping initialize")))
+  (migrate))
 
 (defn create
   "Create a new migration"

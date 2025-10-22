@@ -1,5 +1,5 @@
 (ns runtimes.generate-sessions
-  (:require [tram.migrations :refer [migrate write-to-migration-files]]))
+  (:require [tram.db :refer [migrate write-to-migration-files]]))
 
 
 (def blueprint

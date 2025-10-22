@@ -1,6 +1,5 @@
 {:extend      {:indent 0} ;; for extend-protocol et al.  Prevents
-                          ;; indentation
- ;; there.
+ ;; indentation there.
  :pair-fn     {:hang? false}
  :binding     {:force-nl? true}
  :fn-force-nl #{:arg1-body :arg2}
