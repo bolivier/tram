@@ -2,7 +2,7 @@
   (:require [babashka.process :as p]))
 
 (defn -main [& _]
-  @(p/process {:out   :inherit
-               :error :inherit
-               :dir   "resources/tailwindcss"}
+  @(p/process {:out :inherit
+               :err :inherit
+               :dir "resources/tailwindcss"}
               "npm run dev"))

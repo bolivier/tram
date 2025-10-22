@@ -42,8 +42,9 @@
     (throw (ex-info "Tried to convert invalid ns types"
                     {:ns a-ns
                      :to to})))
-  (let [[ns-base _ ns-end] (str/split (str a-ns) #"\.")]
-    (str/join "."
-              [ns-base
-               (ns-type-lookup to)
-               (str/replace ns-end #"(handlers|views)$" (ns-type-lookup to))])))
+  (let [segments  (str/split (str a-ns) #"\.")
+        converter (fn [segment]
+                    (str/replace segment
+                                 #"(handlers|views)$"
+                                 (ns-type-lookup to)))]
+    (str/join "." (map converter segments))))

@@ -35,9 +35,8 @@
        :body   (views/sign-in-form-error)})))
 
 (defn log-out-handler [req]
-  (let [{:keys [session-id]} (get-cookie-value req)
-        session (db/select-one :models/sessions session-id)]
-    (db/delete! :models/sessions :user-id (:user-id session)))
+  (let [{:keys [session-id]} (get-cookie-value req)]
+    (db/delete! :models/sessions session-id))
   (clear-session-cookie (-> {:session nil}
                             (redirect :route/sign-in))))
 

@@ -4,14 +4,8 @@
                           kaocha-utils.kaocha-hooks/set-up-test-database]
   :plugins [:kaocha.plugin/hooks]
   :tests [{:id          :unit
-           :ns-patterns ["^tram.*" "^rapid-test.*"]
+           :ns-patterns ["^tram." "^rapid-test."]
            :test-paths  ["test/main" "test/bb_compatible"]}
-          ;; I'm unsure if these should be run fully separate or
-          ;; not. Since they need to work in jvm Clojure, I'm
-          ;; inclined to say that they should be run here and there.
-          #_{:id          :bb-compatible
-             :ns-patterns [".*"]
-             :test-paths  ["test/bb_compatible"]}
-          #_{:id          :cli
-             :ns-patterns [".*"]
-             :test-paths  ["test/bb_only/tram_cli"]}]}
+          {:id          :cli
+           :ns-patterns ["^tram_cli"]
+           :test-paths  ["test/bb_only/tram_cli" "test/bb_compatible"]}]}

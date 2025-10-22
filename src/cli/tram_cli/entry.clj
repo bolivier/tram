@@ -90,9 +90,7 @@ tram help               print this menu
            path     (list ns-suffix)]
       (cond
         (or (empty? rev-path) (= "tasks" (first rev-path))) (str/join "." path)
-        (empty? (first rev-path))
-        (recur (rest rev-path) (conj (first rev-path)))
-
+        (empty? (first rev-path)) (recur (rest rev-path) (first rev-path))
         :else (recur (rest rev-path) (conj path (first rev-path)))))))
 
 (defn do-dev [_]

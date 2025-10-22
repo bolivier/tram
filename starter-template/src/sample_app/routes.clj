@@ -18,7 +18,7 @@
   [""
    ["/assets/*" {:get (ring/create-resource-handler)}]
    ["/healthcheck"
-    {:name    :route/home
+    {:name    :route/healthcheck
      :handler (constantly {:status 200
                            :body   "Alive."})}]
    auth.handlers/routes

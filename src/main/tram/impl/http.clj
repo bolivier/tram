@@ -39,7 +39,7 @@
        (assoc-in [:headers "location"] (make-route route-name)))))
 
 (defn redirect
-  "Returns a resp for a htmx redirect. These use a 200 status, but have a htmx
+  "Returns a resp for a htmx redirect. These use a 301 status, and have a htmx
   header to indicate a redirect."
   ([route]
    (redirect {} route))

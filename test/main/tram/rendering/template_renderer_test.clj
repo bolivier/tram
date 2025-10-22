@@ -1,14 +1,15 @@
 (ns tram.rendering.template-renderer-test
   (:require [clojure.test :refer [deftest is]]
             [rapid-test.req :as rt.req]
+            [reitit.core :as r]
             [test-app.handlers.authentication-handlers :refer [test-router]]
             [test-app.views.authentication-views :as views]
             [tram.rendering.template-renderer :as sut]))
 
 (deftest rendering-nil-template-test
-  (let [request {:uri "/sign-in"
+  (let [request {:uri       "/sign-in"
                  :request-method :get
-                 :reitit.core/router test-router}
+                 ::r/router test-router}
         body    (-> {:request request}
                     sut/render
                     (get-in [:response :body]))]
@@ -18,10 +19,10 @@
   (let [match   (-> test-router
                     (reitit.core/match-by-name :route/forgot-password))
         handler (get-in match [:data :get :handler])
-        request {:uri "/forgot-password"
+        request {:uri            "/forgot-password"
                  :request-method :get
-                 :reitit.core/match match
-                 :reitit.core/router test-router}
+                 ::r/match       match
+                 ::r/router      test-router}
         ctx     (sut/render {:request  request
                              :response (handler request)})]
     (is (= (views/forgot-password nil) (:body (:response ctx))))))
@@ -30,10 +31,10 @@
   (let [match   (-> test-router
                     (reitit.core/match-by-name :route/fn))
         handler (get-in match [:data :get :handler])
-        request {:uri "/templated/function"
+        request {:uri            "/templated/function"
                  :request-method :get
-                 :reitit.core/match match
-                 :reitit.core/router test-router}
+                 ::r/match       match
+                 ::r/router      test-router}
         ctx     (sut/render {:request  request
                              :response (handler request)})]
     (is (= (views/my-fn-template nil) (:body (:response ctx))))))
@@ -42,10 +43,10 @@
   (let [match   (-> test-router
                     (reitit.core/match-by-name :route/keyword))
         handler (get-in match [:data :get :handler])
-        request {:uri "/templated/keyword"
+        request {:uri            "/templated/keyword"
                  :request-method :get
-                 :reitit.core/match match
-                 :reitit.core/router test-router}
+                 ::r/match       match
+                 ::r/router      test-router}
         ctx     (sut/render {:request  request
                              :response (handler request)})]
     (is (= (views/my-keyword-template nil) (:body (:response ctx))))))
@@ -54,10 +55,10 @@
   (let [match   (-> test-router
                     (reitit.core/match-by-name :route/sign-out))
         handler (get-in match [:data :get :handler])
-        request {:uri "/sign-out"
+        request {:uri            "/sign-out"
                  :request-method :get
-                 :reitit.core/match match
-                 :reitit.core/router test-router}]
+                 ::r/match       match
+                 ::r/router      test-router}]
     (is (thrown-match? clojure.lang.ExceptionInfo
                        {:uri           "/sign-out"
                         :template-name "<nil>"

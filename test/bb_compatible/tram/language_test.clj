@@ -1,6 +1,8 @@
 (ns tram.language-test
   (:require [clojure.test :refer [deftest is]]
-            [test-app.handlers.authentication-handlers]
+            test-app.handlers.admin.users-handlers
+            test-app.handlers.authentication-handlers
+            test-app.views.admin.users-views
             [tram.language :as sut]))
 
 (def views-ns
@@ -15,6 +17,20 @@
 (deftest convert-view-ns-test
   (is (= (str views-ns) (sut/convert-ns views-ns :view)))
   (is (= (str handlers-ns) (sut/convert-ns views-ns :handler))))
+
+(deftest convert-nested-ns-test
+  (let [views-ns    (the-ns 'test-app.views.admin.users-views)
+        handlers-ns (the-ns 'test-app.handlers.admin.users-handlers)]
+    (is (= (str views-ns) (sut/convert-ns views-ns :view)))
+    (is (= (str handlers-ns) (sut/convert-ns views-ns :handler)))))
+
+(deftest convert-nested-ns-edge-case-test
+  (require '[test-app.views.admin.animal-handlers-views]
+           '[test-app.handlers.admin.animal-handlers-handlers])
+  (let [views-ns    (the-ns 'test-app.views.admin.animal-handlers-views)
+        handlers-ns (the-ns 'test-app.handlers.admin.animal-handlers-handlers)]
+    (is (= (str views-ns) (sut/convert-ns views-ns :view)))
+    (is (= (str handlers-ns) (sut/convert-ns views-ns :handler)))))
 
 (deftest modelize-singular
   (let [tests [[:models/users :users]

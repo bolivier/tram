@@ -23,7 +23,7 @@
    (get-migration-config (get-env)))
   ([env]
    (let [config    (get-tram-config)
-         db-key    (keyword "database" env)
+         db-key    (keyword "database" (name env))
          db-config (get config db-key)]
      (when-not db-config
        (throw (ex-info "Could not find database configuration from tram.edn."

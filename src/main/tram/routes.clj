@@ -100,7 +100,7 @@
    :leave (fn [ctx]
             (cond
               (or (str/starts-with? (get-in ctx [:request :uri]) "/assets")
-                  (<= 300 (get-in ctx [:response :status]) 399))
+                  (<= 300 (get-in ctx [:response :status] 300) 399))
               ctx
 
               (re-find #"application/json"
@@ -179,8 +179,8 @@
                      schema (get (ex-data e) :schema)
                      body   (get (ex-data e) :value)
                      error-handler-fn (get-in req
-                                              [::r/match :data method :error])]
-                 (prn 'output (error-handler-fn schema (assoc req :body body)))
+                                              [::r/match :data method :error]
+                                              default-error-handler)]
                  (error-handler-fn schema (assoc req :body body))))}
             config))))
 
