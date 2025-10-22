@@ -1,10 +1,11 @@
 (ns tram.rendering.template-renderer
-  "Render html templates from the ring response."
+  "Render html templates from the ring response.
+
+  TODO revisit how this works.  It seems not that good. "
   (:require [clojure.string :as str]
             [reitit.core :as r]
-            [tram.http.lookup :as lookup]
-            [tram.http.utils :as http.utils]
-            [tram.http.views :refer [*current-user* *req* *res*]]))
+            [tram.impl.http :refer [htmx-request?]]
+            [tram.language :as lang]))
 
 (defprotocol ITemplate
   "Protocol for something that can be used as a render template.
@@ -52,7 +53,8 @@
           match      (r/match-by-path router uri)
           handler-ns (:namespace (:data match))]
       (when handler-ns
-        (let [template-ns (lookup/handlers-ns->views-ns handler-ns)]
+        (let [template-ns (lang/convert-ns handler-ns
+                                           :view)]
           template-ns))))
   (get-view-fn [_ ctx]
     (let [request (:request ctx)
@@ -63,7 +65,7 @@
       (get-in match [:data method :template]))))
 
 (defn uses-layout? [req]
-  (not (http.utils/htmx-request? req)))
+  (not (htmx-request? req)))
 
 (defn make-root-layout-fn [ctx]
   (if (uses-layout? (:request ctx))
@@ -95,7 +97,4 @@ Expected to find template called `"
            :uri           (:uri request)
            :template-name (get-name template ctx)}))
       (let [layout-fn (make-root-layout-fn ctx)]
-        (binding [*current-user* (:current-user request)
-                  *req*          request
-                  *res*          response]
-          (assoc-in ctx [:response :body] (layout-fn (view-fn locals))))))))
+        (assoc-in ctx [:response :body] (layout-fn (view-fn locals)))))))

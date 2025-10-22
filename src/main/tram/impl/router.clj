@@ -1,4 +1,4 @@
-(ns tram.http.router
+(ns tram.impl.router
   "Routing has a somewhat complected structure to make it easy to use, and so here
   are some terms to keep things consistent.
 
@@ -28,14 +28,9 @@
 
   The second element of the vector is a route.  Note that it has a name."
   (:require [clojure.set :as set]
-            [clojure.walk :refer [prewalk]]
             [clojure.zip :as zip]
             [methodical.core :as m]
-            [potemkin :refer [import-vars]]
-            [reitit.http :as http]
             [reitit.ring]
-            [tram.http.interceptors :refer [layout-interceptor]]
-            [tram.http.lookup :refer [handlers-ns->views-ns]]
             [tram.language :as lang]))
 
 (def HandlerSpecSchema
@@ -140,6 +135,19 @@
   "Convenience fn to make validating easier."
   verbs)
 
+(defn layout-interceptor
+  "Mostly private interceptor for adding layouts from a layout key in the route to
+  a `:layouts` key in the context.
+
+  This is dynamically injected into `:interceptors` for a route that has a
+  `:layout` key."
+  [layout-fn]
+  {:name  ::layout-interceptor
+   :enter (fn [ctx]
+            (update ctx
+                    :layouts
+                    (fn [layouts] (conj (or layouts []) layout-fn))))})
+
 (defn coerce-route-entries-to-specs [route]
   (reduce (fn [route k]
             (cond
@@ -153,7 +161,7 @@
                                   (keyword? v)
                                   (layout-interceptor
                                     (requiring-resolve
-                                      (symbol (str (handlers-ns->views-ns *ns*))
+                                      (symbol (lang/convert-ns *ns* :view)
                                               (name v))))
 
                                   (symbol? v) (layout-interceptor (resolve v))
@@ -176,30 +184,3 @@
                          (zip/edit zipper
                                    f)
                          zipper))))))
-
-(defmacro defroutes
-  "Define routes in Tram.
-
-  Without using `defroutes`, you won't get automatic template resolution in your
-  routes. If you don't care to automatically resolve template names, then you
-  can use `def` to create routes.
-
-  The purpose of this macro is to add the namespace of your handlers to the
-  route data, and to add the var reference of the handler itself to the handler
-  data."
-  [var-name routes]
-  (let [evaluated-routes routes]
-    `(def ~var-name
-       ~(map-routes coerce-route-entries-to-specs evaluated-routes))))
-
-(defn tram-router
-  "`reitit.http/router` with default options for tram.
-
-  `routes` - vector of routes.
-  `options` - map of possible overrides"
-  ([routes]
-   (tram-router routes {}))
-  ([routes options]
-   (http/router routes options)))
-
-(import-vars [reitit.ring ring-handler])

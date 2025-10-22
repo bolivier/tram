@@ -1,4 +1,8 @@
-(ns tram.utils)
+(ns ^:public tram.utils
+  (:require [buddy.hashers :as hashers]))
+
+;; REVIEW Should I move some of these to the bb_compatible ns and use potemkin
+;; to reexport them here?
 
 (defn map-keys [f coll]
   (reduce-kv (fn [acc k v] (assoc acc (f k) v)) {} coll))
@@ -69,3 +73,17 @@
         (assoc acc k elm)))
     {}
     coll))
+
+(defn hash-password
+  "Calls out to `buddy.hashers/derive`.
+
+  Uses their recommended algorithm `:bcrypt+blake2b-512`."
+  [password]
+  (hashers/derive password))
+
+(defn verify-password
+  "Calls out to `buddy.hashers/verify`.
+
+  Uses their recommended algorithm `:bcrypt+blake2b-512`."
+  [password hashed-value]
+  (hashers/verify password hashed-value))

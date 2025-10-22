@@ -1,60 +1,31 @@
-(ns tram.http.router-test
-  (:require [clojure.test :as t :refer [deftest is]]
+(ns tram.routes-test
+  (:require [clojure.test :refer [deftest is]]
             [clojure.zip :as zip]
             [matcher-combinators.test]
+            [reitit.core :as r]
             [test-app.handlers.authentication-handlers :refer [routes] :as auth]
             [test-app.views.authentication-views :as views]
-            [tram.http.router :as sut]
-            [tram.rendering.template-renderer :refer [get-view-fn]]))
+            [tram.routes :as sut]
+            [tram.test-fixtures :refer [sample-router]]))
 
-#_(def route-data
-    (macroexpand
-      '(tram.core/defroutes
-        routes
-        [""
-         {:layout view/layout}
-         ["/sign-in"
-          {:get  sign-in
-           :name :route/sign-in}]
-         ["/forgot-password"
-          {:get          :view/forgot-password
-           :interceptors [{:enter identity
-                           :name  :identity}]
-           :name         :route/forgot-password
-           :post         forgot}]
-         ["/healthcheck"
-          {:get  (fn [_] {:status 200})
-           :name :route/healthcheck
-           :post (constantly {:status 200})}]])))
+(defn component []
+  [:a {:href :route/dashboard}])
 
-#_(deftest route-data-macroexpansion-test
-    (is
-      (match?
-        '(def
-          routes
-          [""
-           {:interceptors [{:enter fn?
-                            :name  :tram.http.interceptors/layout-interceptor}]
-            :layout       view/layout
-            :namespace    "tram.http.router-test"}
-           ["/sign-in"
-            {:get       tram.http.router-test/sign-in
-             :name      :route/sign-in
-             :namespace "tram.http.router-test"}]
-           ["/forgot-password"
-            {:get          {:handler     fn?
-                            :handler-var nil}
-             :interceptors [{:enter clojure.core/identity
-                             :name  :identity}]
-             :name         :route/forgot-password
-             :namespace    "tram.http.router-test"
-             :post         tram.http.router-test/forgot}]
-           ["/healthcheck"
-            {:get       {:handler (fn [_] {:status 200})}
-             :name      :route/healthcheck
-             :namespace "tram.http.router-test"
-             :post      {:handler (clojure.core/constantly {:status 200})}}]])
-        route-data)))
+(deftest expanding-hiccup
+  (let [expander (:leave sut/expand-hiccup-interceptor)]
+    (is (match? {:request  {::r/router sample-router}
+                 :response {:headers {"hx-redirect" "/dashboard"}}}
+                (expander {:request  {::r/router sample-router}
+                           :response {:headers {"hx-redirect" :route/dashboard}
+                                      :body    [component]}})))
+    (is (match? {:response {:body [:a {:href "/dashboard"}]}}
+                (expander {:request  {::r/router sample-router}
+                           :response {:body [component]}})))
+    (is (match? {:response {:body [:a {:href "/dashboard"}]}}
+                (expander {:request  {::r/router sample-router}
+                           :response {:body [:a {:href
+                                                 (sut/make-route
+                                                   :route/dashboard)}]}})))))
 
 (defn get-spec-from-routes
   "Takes the routes to search, and a route uri to search for. Finds the uri and
@@ -70,8 +41,7 @@
 
 (deftest layout-interceptor-added-from-key
   (let [global-route-data (get-spec-from-routes routes "")]
-    (is (match? {:interceptors [{:name
-                                 :tram.http.interceptors/layout-interceptor}]}
+    (is (match? {:interceptors [{:name :tram.impl.router/layout-interceptor}]}
                 global-route-data)
         "Router did not add layout-interceptor to :interceptors key.")
     (let [enter-fn (:enter (first (:interceptors global-route-data)))
@@ -109,15 +79,6 @@
                         :post (constantly {:status 200})}])))]
     (is (match? '["/healthcheck"
                   {:get  {:handler (fn [_] {:status 200})}
-                   :post {:handler
-                          (constantly {:status 200})}
+                   :post {:handler (constantly {:status 200})}
                    :name :route/healthcheck}]
                 healthcheck-route-data))))
-
-(defn foo [])
-
-(deftest coerce-route-entries-to-specs-test
-  (is (match? {:interceptors [{:name  :tram.http.interceptors/layout-interceptor
-                               :enter fn?}]
-               :layout       views/layout}
-              (sut/coerce-route-entries-to-specs {:layout views/layout}))))

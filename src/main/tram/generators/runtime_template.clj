@@ -13,7 +13,7 @@
             [clojure.string :as str]
             [selmer.parser :as selmer]
             [selmer.util]
-            [tram.core :as tram]
+            [tram.tram-config :as tram.config]
             [zprint.core :refer [zprint-file-str]]))
 
 (def runtime-defaults
@@ -38,7 +38,9 @@
   "tram/templates/model.clj.template")
 
 (defn format-code [clj-source-string]
-  (zprint-file-str clj-source-string ::model-template (tram/get-zprint-config)))
+  (zprint-file-str clj-source-string
+                   ::model-template
+                   (tram.config/get-zprint-config)))
 
 (defn render
   "Render a blueprint into runtime code.
