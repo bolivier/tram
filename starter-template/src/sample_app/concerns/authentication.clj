@@ -1,8 +1,14 @@
 (ns sample-app.concerns.authentication
-  (:require [clojure.string :as str]
+  (:require [buddy.hashers :as hashers]
+            [clojure.string :as str]
             [sample-app.models.user :as user]
-            [tram.db :as db]
-            [tram.utils :refer [verify-password]]))
+            [tram.db :as db]))
+
+(defn hash-password [password]
+  (hashers/derive password))
+
+(defn verify-password [password hashed-value]
+  (hashers/verify password hashed-value))
 
 (defn correct-password? [hashed-password guess]
   (boolean (when hashed-password

@@ -1,7 +1,6 @@
 (ns tram-cli.generate
   "TODO review this ns.  I wrote it in a rush.  This is whatever.  I copypasta'd"
   (:require [camel-snake-kebab.core :refer [->snake_case_string]]
-            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [malli.core :as m]
