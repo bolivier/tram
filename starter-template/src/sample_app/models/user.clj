@@ -2,10 +2,14 @@
   (:require [tram.db :as db]
             [tram.utils :refer [hash-password]]))
 
-(db/define-after-select :models/users [user] (dissoc user :password))
-(db/define-before-insert :models/users
-                         [user]
-                         (update user :password hash-password))
+(db/define-after-select
+  :models/users
+  [user]
+  (dissoc user :password))
+(db/define-before-insert
+  :models/users
+  [user]
+  (update user :password hash-password))
 
 (defn get-user-password
   "Gets the users password."

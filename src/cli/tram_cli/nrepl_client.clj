@@ -34,7 +34,8 @@
     (Long/parseLong x)
     x))
 
-(def current-id (atom 0))
+(def current-id
+  (atom 0))
 
 (defn next-id []
   (str (swap! current-id inc)))
