@@ -1,7 +1,5 @@
 (ns sample-app.views.authentication-views
-  (:require [tram.http.route-helpers :refer [make-route]]
-            [tram.http.routing :as route]
-            [tram.http.views :refer [*current-user* *req* *res*]]))
+  (:require [tram.routes :refer [*current-user* make-route]]))
 
 (defn sign-up [_ctx]
   [:div {:class "max-w-md mx-auto mb-1 mt-10"}
