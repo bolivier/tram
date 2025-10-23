@@ -18,8 +18,6 @@
   [_connectable f]
   (t2/do-with-connection (tram.core/get-database-config "test") f))
 
-
-
 (defn seed-up [_config]
   (t2/insert! :models/accounts {}))
 

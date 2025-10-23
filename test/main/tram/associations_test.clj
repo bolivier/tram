@@ -1,6 +1,7 @@
 (ns tram.associations-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [matcher-combinators.matchers :as m]
+            matcher-combinators.test
             [toucan2.core :as t2]
             [tram.associations :as sut]
             [tram.language :as lang]))
