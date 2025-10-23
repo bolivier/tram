@@ -5,7 +5,7 @@
     #?@(:bb []
         :default [[migratus.core :as migratus]
                   [next.jdbc :as jdbc]
-                  [tram.core :as tram]])))
+                  [tram.tram-config :as tram.config]])))
 
 
 (defn load-matcher-combinators
@@ -24,7 +24,7 @@
       :default
       [(do
          (when-not @seeded?
-           (let [migration-config (tram/get-migration-config "test")
+           (let [migration-config (tram.config/get-migration-config "test")
                  config           (:db migration-config)]
              (try
                ;; Ensure we run CREATE DATABASE against a management DB.

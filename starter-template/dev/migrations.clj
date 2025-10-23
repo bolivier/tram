@@ -1,15 +1,15 @@
 (ns migrations
   "This is a utility namespace you can use to run migrations from the REPL."
-  (:require [tram.migrations :as m]))
+  (:require [tram.db :as db]))
 
 
 (comment
   ;; initialize the database using the 'init.sql' script
-  (m/init)
+  (db/init)
   ;; Create a new migration
-  (m/create "rearrange-users-to-add-teams")
+  (db/create "migration-name")
   ;; apply pending migrations
-  (m/migrate)
+  (db/migrate)
   ;; rollback the migration with the latest timestamp
-  (m/rollback)
+  (db/rollback)
   nil)

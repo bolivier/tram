@@ -1,15 +1,15 @@
 (ns sample-app.server
   (:require [integrant.core :as ig]
-            [sample-app.config :as sys]
-            [sample-app.routes]
             [org.httpkit.server :as hk-server]
             [reitit.http :as http]
             [reitit.interceptor.sieppari :as sieppari]
-            [reitit.ring :as ring]))
+            [reitit.ring :as ring]
+            [sample-app.config :as sys]
+            [sample-app.routes]))
 
 (defmethod ig/init-key ::sys/app
-  [_ {:keys [routes]}]
-  (http/ring-handler routes
+  [_ {:keys [router]}]
+  (http/ring-handler router
                      (ring/routes (ring/create-default-handler)
                                   (ring/redirect-trailing-slash-handler))
                      {:executor sieppari/executor}))
