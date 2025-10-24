@@ -23,11 +23,9 @@
       (is (match?
             {:interceptors [`(tram.impl.router/layout-interceptor views/layout)]
              :layout       :view/layout}
-            (binding [*ns* (the-ns 'test-app.handlers.authentication-handlers)]
-              (sut/coerce-route-entries-to-specs '{:layout :view/layout})))))))
+            (sut/coerce-route-entries-to-specs '{:layout :view/layout}))))))
 
 (deftest default-layout-behavior-test
   (binding [*ns* (the-ns 'test-app.handlers.authentication-handlers)]
-    (is (match? {:get
-                 {:handler 'tram.impl.router/default-handler}}
+    (is (match? {:get {:handler 'tram.impl.router/default-handler}}
                 (sut/coerce-route-entries-to-specs {:get :view/layout})))))
