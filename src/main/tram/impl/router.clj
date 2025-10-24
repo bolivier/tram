@@ -156,16 +156,13 @@
                       :interceptors
                       (fn [interceptors]
                         (conj (or interceptors [])
-                              (let [v (get route k)]
-                                (cond
-                                  (keyword? v)
-                                  (layout-interceptor
-                                    (requiring-resolve
-                                      (symbol (lang/convert-ns *ns* :view)
-                                              (name v))))
-
-                                  (symbol? v) (layout-interceptor (resolve v))
-                                  :else (layout-interceptor v))))))
+                              (let [layout-value (get route k)]
+                                (if (keyword? layout-value)
+                                  (list `layout-interceptor
+                                        (symbol (lang/convert-ns *ns*
+                                                                 :view)
+                                                (name layout-value)))
+                                  `(layout-interceptor ~layout-value))))))
 
               (verb? k) (update route k ->handler-spec)
               :else route))
