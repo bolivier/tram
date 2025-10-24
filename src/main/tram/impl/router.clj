@@ -80,13 +80,11 @@
     :else (and (map? node) (or (:name node) (:layout node)))))
 
 (defn default-handler
-  "Default handler behavior for non-fn is to set the value to be the template.
+  "Default handler for endpoints.  Simply return a 200 status code.
 
   Any valid template is acceptable."
-  [template]
-  (fn [_]
-    {:status   200
-     :template template}))
+  [_]
+  {:status 200})
 
 (defn get-automagic-template-symbol [sym]
   (let [template-symbol (symbol (lang/convert-ns *ns* :view) (str sym))]
@@ -116,7 +114,7 @@
 
 (m/defmethod ->handler-spec :view-keyword
   [handler-entry]
-  {:handler  (default-handler handler-entry)
+  {:handler  `default-handler
    :template (get-automagic-template-symbol (name handler-entry))})
 
 (m/defmethod ->handler-spec :handler-spec
