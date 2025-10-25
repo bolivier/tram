@@ -18,10 +18,38 @@
     (println "Error: project name must be kebab-case.")
     (System/exit 1)))
 
+(defn validate-git-installed!
+  "Validates that git is intstalled."
+  []
+  (when-not (-> "git help"
+                p/process
+                deref
+                :exit
+                zero?)
+    (throw (ex-info "Git is required to generate a new Tram project."
+                    {:error  :git-missing
+                     :advice "Please install git"}))))
+
+(defn download-starter-template
+  "Downloads the Tram repo to a temp file.
+
+  TODO: cache this"
+  []
+  (let [download-dir (io/file (str (fs/temp-dir)))]
+    (fs/delete-tree (io/file download-dir "tram"))
+    (try
+      @(p/process {:dir download-dir}
+                  "git clone git@github.com:bolivier/tram.git")
+      (catch Exception _
+        (println "Could not download Tram starter template.")
+        (System/exit 1)))
+    (io/file download-dir "tram" "starter-template")))
+
 (defn render-new-project-template [project-name]
   (validate-project-name! project-name)
+  (validate-git-installed!)
   (let [project-root  (io/file called-from-dir project-name)
-        template-root (io/file "starter-template")]
+        template-root (download-starter-template)]
     (binding [p/*defaults* (assoc p/*defaults*
                              :dir      project-root
                              :continue true)]

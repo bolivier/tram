@@ -7,6 +7,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     name: Build and push Homebrew formula
 
     steps:
@@ -19,13 +21,18 @@ jobs:
           VERSION=${GITHUB_REF##*/}
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Install babashka
+        run: |
+          bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
+
+      - name: Create uberjar
+        run: |
+          bb uberjar tram.jar -m tram-cli.entry
+
       - name: Package release tarball
         run: |
           mkdir release
-          cp bb.edn tram tram.edn readme.md release/
-
-          mkdir release/src
-          cp -r src/cli src/bb_compatible release/src/
+          cp tram.jar release/
 
           tar -czf tram.tar.gz -C release .
           sync
@@ -37,10 +44,9 @@ jobs:
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Upload tarball to GitHub Release
-        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
+        uses: softprops/action-gh-release@v2
         with:
           files: tram.tar.gz
-          token: ${{ secrets.HOMEBREW_CI_TOKEN_PAT }}
 
       - name: Clone homebrew tap repo
         uses: actions/checkout@v4

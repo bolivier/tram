@@ -1,6 +1,6 @@
 (ns sample-app.models.user
-  (:require [tram.db :as db]
-            [tram.utils :refer [hash-password]]))
+  (:require [tram.concerns.authentication :refer [hash-password]]
+            [tram.db :as db]))
 
 (db/define-after-select
   :models/users
