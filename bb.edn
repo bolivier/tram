@@ -17,6 +17,8 @@
  :paths ["src/cli"
          "src/bb_compatible"
          "resources"
+         "starter-template"
+         "bin"
          "test/bb_compatible"
          "test/bb_only"]}
-1
+

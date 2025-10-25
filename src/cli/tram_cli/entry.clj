@@ -46,8 +46,7 @@ tram help               print this menu
 
 (defn do-test [{:keys [opts]}]
   (let [watch     (:watch opts)
-        test-type (if (fs/exists? (io/file user-project-dir
-                                           "bin/kaocha"))
+        test-type (if (fs/exists? (io/resource "bin/kaocha"))
                     :kaocha
                     :clojure)
         cmd       (case test-type
