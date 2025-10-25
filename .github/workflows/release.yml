@@ -1,0 +1,72 @@
+name: Build and Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    name: Build and push Homebrew formula
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+
+      - name: Set up variables
+        id: vars
+        run: |
+          VERSION=${GITHUB_REF##*/}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Package release tarball
+        run: |
+          mkdir release
+          cp bb.edn tram tram.edn readme.md release/
+
+          mkdir release/src
+          cp -r src/cli src/bb_compatible release/src/
+
+          tar -czf tram.tar.gz -C release .
+          sync
+
+      - name: Calculate SHA256
+        id: shasum
+        run: |
+          SHA=$(shasum -a 256 tram.tar.gz | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Upload tarball to GitHub Release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
+        with:
+          files: tram.tar.gz
+          token: ${{ secrets.HOMEBREW_CI_TOKEN_PAT }}
+
+      - name: Clone homebrew tap repo
+        uses: actions/checkout@v4
+        with:
+          repository: bolivier/homebrew-tram
+          token: ${{ secrets.HOMEBREW_CI_TOKEN_PAT }}
+          path: homebrew-tap
+
+      - name: Replace placeholders in formula
+        run: |
+          TEMPLATE_PATH="homebrew-tap/Formula/tram.template.rb"
+          OUTPUT_PATH="homebrew-tap/Formula/tram.rb"
+
+          VERSION="${{ steps.vars.outputs.version }}"
+          SHA="${{ steps.shasum.outputs.sha256 }}"
+
+          sed "s|__VERSION__|$VERSION|g; s|__SHA__|$SHA|g" "$TEMPLATE_PATH" > "$OUTPUT_PATH"
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.HOMEBREW_CI_TOKEN_PAT }}
+          path: homebrew-tap
+          branch: "update-formula-${{ steps.vars.outputs.version }}"
+          base: main
+          title: "Update tram formula to ${{ steps.vars.outputs.version }}"
+          body: |
+            Automated PR to update the formula for version `${{ steps.vars.outputs.version }}`.
+            SHA256: `${{ steps.shasum.outputs.sha256 }}`
