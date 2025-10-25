@@ -1,6 +1,6 @@
-(ns tram.http.utils-test
+(ns tram.impl.http-test
   (:require [clojure.test :refer [deftest is]]
-            [tram.http.utils :as sut]))
+            [tram.impl.http :as sut]))
 
 (deftest html-request?
   (is (not (sut/html-request? {:headers {"accept" "application/edn"}})))

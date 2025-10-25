@@ -1,4 +1,4 @@
-(ns tram.utils)
+(ns ^:public tram.utils)
 
 (defn map-keys [f coll]
   (reduce-kv (fn [acc k v] (assoc acc (f k) v)) {} coll))

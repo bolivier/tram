@@ -1,5 +1,5 @@
 {:config-paths ["../resources/clj-kondo.exports/bolivier/tram"]
- :lint-as      {tram.core/defroutes         clojure.core/def
+ :lint-as      {rapid-test.core/with-stub   clojure.core/let
+                tram.core/defroutes         clojure.core/def
                 tram.http.routing/defroutes clojure.core/def
-                tram.utils/with-same-output clojure.core/let
-                rapid-test.core/with-stub clojure.core/let}}
+                tram.utils/with-same-output clojure.core/let}}

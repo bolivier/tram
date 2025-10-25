@@ -4,14 +4,13 @@
             [sample-app.config :as c]
             [sample-app.db]
             [sample-app.server]
-            [taoensso.telemere :as t]))
+            [tram.logging :as log]))
 
 (defn start-app []
-  (t/log! "Starting system")
   (->> c/system
        (ig/prep)
        (ig/init))
-  (t/log! "Started system"))
+  (log/event! "System started"))
 
 (defn -main []
   (start-app))

@@ -1,3 +1,20 @@
-{:lint-as {tram.core/defroutes         clojure.core/def
-           tram.http.router/defroutes  clojure.core/def
-           tram.utils/with-same-output clojure.core/let}}
+{:lint-as
+ {;; Tram-specific macros
+  tram.core/defroutes   clojure.core/def
+  tram.routes/defroutes clojure.core/def
+  tram.utils/with-same-output clojure.core/let
+
+  ;; Re-exported toucan2 macros from tram.db
+  tram.db/with-connection   clojure.core/let
+  tram.db/with-transaction  clojure.core/let
+  tram.db/with-call-count   clojure.core/let
+  tram.db/define-after-insert   clojure.core/def
+  tram.db/define-after-select   clojure.core/def
+  tram.db/define-after-update   clojure.core/def
+  tram.db/define-before-delete  clojure.core/def
+  tram.db/define-before-insert  clojure.core/def
+  tram.db/define-before-select  clojure.core/def
+  tram.db/define-before-update  clojure.core/def
+  tram.db/define-default-fields clojure.core/def
+  tram.db/define-named-query    clojure.core/def
+  tram.db/deftransforms         clojure.core/def}}

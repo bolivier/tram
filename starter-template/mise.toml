@@ -1,4 +1,2 @@
 [env]
-
-[tools]
-postgres = '17'
+TRAM_ENV = 'development'
