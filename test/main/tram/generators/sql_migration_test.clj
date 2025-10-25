@@ -1,9 +1,11 @@
 (ns tram.generators.sql-migration-test
   (:require [clojure.test :refer [deftest is testing]]
+            [matcher-combinators.test]
             [rapid-test.core :as rt]
             [tram.core :as tram]
             [tram.generators.sql-migration :as sut]
-            [tram.test-fixtures :refer [tram-config]]))
+            [tram.test-fixtures :refer [tram-config]]
+            [tram.tram-config :as tram.config]))
 
 (declare blueprint)
 
@@ -49,7 +51,7 @@
 
 (deftest sql-migration-up-contents
   (let [output (atom nil)]
-    (rt/with-stub [_ {:fn      tram/get-migration-config
+    (rt/with-stub [_ {:fn      tram.config/get-migration-config
                       :returns (:database/development tram-config)}
                    calls spit]
       (sut/write-to-migration-file blueprint)
@@ -73,7 +75,7 @@
                                                    :trigger :update-updated-at
                                                    :default :fn/now}]})
         output (atom nil)]
-    (rt/with-stub [_ {:fn      tram/get-migration-config
+    (rt/with-stub [_ {:fn      tram.config/get-migration-config
                       :returns (:database/development tram-config)}
                    calls spit]
       (sut/write-to-migration-file blueprint-with-multiple-actions)
@@ -84,7 +86,7 @@
 
 (deftest sql-migration-down-contents
   (let [output (atom nil)]
-    (rt/with-stub [_ {:fn      tram/get-migration-config
+    (rt/with-stub [_ {:fn      tram.config/get-migration-config
                       :returns (:database/development tram-config)}
                    calls spit]
       (sut/write-to-migration-down blueprint)
@@ -108,7 +110,7 @@
                                                    :trigger :update-updated-at
                                                    :default :fn/now}]})
         output (atom nil)]
-    (rt/with-stub [_ {:fn      tram/get-migration-config
+    (rt/with-stub [_ {:fn      tram.config/get-migration-config
                       :returns (:database/development tram-config)}
                    calls spit]
       (sut/write-to-migration-down blueprint-with-multiple-actions)

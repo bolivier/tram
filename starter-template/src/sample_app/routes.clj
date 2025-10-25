@@ -7,39 +7,35 @@
     [sample-app.concerns.http :refer [as-full-page]]
     [sample-app.config :as sys]
     [sample-app.handlers.authentication-handlers :as auth.handlers]
-    [sample-app.http.utils :refer [redirect-to-home-handler]]
     [sample-app.views.authentication-views]
-    [tram.http.format :refer (make-muuntaja-instance)]
-    [tram.http.interceptors :as tram.interceptors]
-    [tram.http.router :refer [tram-router]]))
+    [tram.routes :refer [tram-router] :as tr]))
 
 (def muuntaja-instance
-  (make-muuntaja-instance))
+  (tr/make-muuntaja-instance))
 
 (defmethod ig/init-key ::sys/routes
   [_ _]
+  [""
+   ["/assets/*" {:get (ring/create-resource-handler)}]
+   ["/healthcheck"
+    {:name    :route/healthcheck
+     :handler (constantly {:status 200
+                           :body   "Alive."})}]
+   auth.handlers/routes
+   ["/dashboard"
+    {:name :route/dashboard
+     :get  {:handler (fn [_]
+                       {:status 200
+                        :template
+                        #'sample-app.views.authentication-views/dashboard})}}]])
+
+(defmethod ig/init-key ::sys/router
+  [_ {:keys [routes]}]
   (tram-router
-    [""
-     ["/assets/*" {:get (ring/create-resource-handler)}]
-     ["/" {:get redirect-to-home-handler}]
-     ["/healthcheck"
-      {:name    :route/home
-       :handler (constantly {:status 200
-                             :body   "Alive."})}]
-     auth.handlers/routes
-     ["/dashboard"
-      {:name :route/dashboard
-       :get  {:handler
-              (fn [_]
-                {:status 200
-                 :template
-                 #'sample-app.views.authentication-views/dashboard})}}]]
+    routes
     {:data {:muuntaja     muuntaja-instance
             :coercion     rcm/coercion
-            :interceptors (into []
-                                (flatten [(tram.interceptors/format-interceptor
-                                            muuntaja-instance)
-                                          (tram.interceptors/as-page-interceptor
-                                            as-full-page)
-                                          tram.interceptors/default-interceptors
-                                          authentication-interceptor]))}}))
+            :interceptors (concat [(tr/format-interceptor muuntaja-instance)
+                                   (tr/wrap-page-interceptor as-full-page)]
+                                  tr/default-interceptors
+                                  [authentication-interceptor])}}))

@@ -1,5 +1,7 @@
-(ns tram.logging
-  "Convenience ns for reexporting `taoensso.telemere`"
+(ns ^:public tram.logging
+  "Primary namespace for logging in Tram.
+
+  Most functions are rexported from `taoensso.telemere`."
   (:require [potemkin :refer [import-vars]]
             [taoensso.telemere :as t]))
 

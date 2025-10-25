@@ -1,26 +1,29 @@
-{:database/development {:db            {:dbname "sample_app_development"
-                                        :dbtype "postgresql"
-                                        :host   "localhost"
-                                        :port   5433
-                                        :user   "brandon"}
+{:database/development {:db            {:dbname   "sample_app_development"
+                                        :dbtype   "postgresql"
+                                        :host     "localhost"
+                                        :password "tram"
+                                        :port     5433
+                                        :user     "brandon"}
                         :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
                         :store         :database}
- :database/production  {:db            {:dbname "sample_app_production"
-                                        :dbtype "postgresql"
-                                        :host   "localhost"
-                                        :port   5433
-                                        :user   "brandon"}
+ :database/production  {:db            {:dbname   "sample_app_production"
+                                        :dbtype   "postgresql"
+                                        :host     "localhost"
+                                        :password "tram"
+                                        :port     5433
+                                        :user     "brandon"}
                         :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
                         :store         :database}
- :database/test        {:db            {:dbname "sample_app_test"
-                                        :dbtype "postgresql"
-                                        :host   "localhost"
-                                        :port   5433
-                                        :user   "brandon"}
+ :database/test        {:db            {:dbname   "sample_app_test"
+                                        :dbtype   "postgresql"
+                                        :host     "localhost"
+                                        :password "tram"
+                                        :port     5433
+                                        :user     "brandon"}
                         :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"

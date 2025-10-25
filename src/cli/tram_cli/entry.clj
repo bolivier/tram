@@ -32,7 +32,7 @@ Usage:
 tram new <name>         create a new project in this directory
 tram test               run unit tests (--watch to watch)
 tram hiccup             convert clipboard contents from html to hiccup (alias html)
-tram dev                run the dev server
+tram dev                run dev commands (tasks)
 tram generate           tram generators subcommand (run with -h to see more)
 tram help               print this menu
 ")))
@@ -78,25 +78,43 @@ tram help               print this menu
         (println "Could not convert into html: ")
         (prn html)))))
 
+(defn task-file->ns
+  "Convert an io/file into a namespace that is compatible with bb -m."
+  [file]
+  (let [rev-path  (reverse (str/split (str file) #"/"))
+        filename  (first rev-path)
+        ns-suffix (-> filename
+                      (str/replace #"\.clj$" "")
+                      (str/replace "_" "-"))]
+    (loop [rev-path (rest rev-path)
+           path     (list ns-suffix)]
+      (cond
+        (or (empty? rev-path) (= "tasks" (first rev-path))) (str/join "." path)
+        (empty? (first rev-path)) (recur (rest rev-path) (first rev-path))
+        :else (recur (rest rev-path) (conj path (first rev-path)))))))
+
 (defn do-dev [_]
   (println "Starting development environment...")
-  (spit (str (System/getenv "TRAM_CLI_CALLED_FROM") "/.nrepl-port") "8777")
-  (let
-    [nrepl-future
-     (future
-       (p/shell
-         ;; TODO: parameterize these versions and probably even
-         ;; the whole command.
-         "clojure -Sdeps '{:deps {nrepl/nrepl {:mvn/version \"1.3.1\"} cider/cider-nrepl {:mvn/version \"0.55.7\"} refactor-nrepl/refactor-nrepl {:mvn/version \"3.10.0\"}} :aliases {:cider/nrepl {:main-opts [\"-m\" \"nrepl.cmdline\" \"--middleware\" \"[refactor-nrepl.middleware/wrap-refactor,cider.nrepl/cider-middleware]\"]}}}' -M:dev:test:cider/nrepl"))
+  (let [task-files (map task-file->ns
+                     (fs/list-dir (io/file user-project-dir "tasks" "dev")))
+        processes  (mapv (fn [task]
+                           (p/process {:dir user-project-dir
+                                       :err :inherit
+                                       :out :inherit}
+                                      (str "bb -cp 'tasks' -m " task)))
+                     task-files)]
+    (doseq [process processes]
+      (deref process))))
 
-     tailwind-future (when (fs/exists? (str user-project-dir
-                                            "/resources/tailwindcss"))
-                       (future (p/shell {:dir (str user-project-dir
-                                                   "/resources/tailwindcss")}
-                                        "npm run dev")))]
-    @nrepl-future
-    (when tailwind-future
-      @tailwind-future)))
+(defn do-db-migrate [_]
+  (let [p (p/process {:out :inherit
+                      :err :inherit}
+                     "clojure -X tram.db/migrate-from-cli")]
+    (println "Migrating database.")
+    (println "Starting JVM...")
+    (println
+      "Did you know you can run migrations from the dev/migrations.clj namespace?")
+    @p))
 
 (def cmd-table
   [{:cmds       ["new"]
@@ -114,6 +132,8 @@ tram help               print this menu
     :fn   do-html-conversion}
    {:cmds ["html"]
     :fn   do-html-conversion}
+   {:cmds ["db:migrate"]
+    :fn   do-db-migrate}
    {:cmds ["dev"]
     :fn   do-dev}
    {:cmds []

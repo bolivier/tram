@@ -6,10 +6,8 @@
             [honey.sql.helpers :as hh]
             [methodical.core :as m]
             [migratus.core]
-            [potemkin :refer [import-vars]]
-            [taoensso.telemere :as t]
-            [tram.core :as tram]
-            [tram.language :as lang])
+            [tram.language :as lang]
+            [tram.tram-config :as tram.config])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
 
 (def AttributeSchema
@@ -136,7 +134,8 @@
 (defn generate-migration-filename
   "Generate the path, filename included, for an up migration."
   [direction blueprint]
-  (let [{:keys [migration-dir]} (tram/get-migration-config (tram/get-env))
+  (let [{:keys [migration-dir]} (tram.config/get-migration-config
+                                  (tram.config/get-env))
         filename (str (:timestamp blueprint)
                       "-"
                       (:migration-name blueprint)
