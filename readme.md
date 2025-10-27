@@ -4,6 +4,8 @@
 
 > TRAM :: Tools for Rapid Application Modeling
 
+[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.bolivier/tram.svg)](https://clojars.org/org.clojars.bolivier/tram)
+
 Tram is an opinionated Clojure web framework, inspired by Ruby on Rails, to help
 you quickly and joyfully build web applications. Tram provides default
 libraries, scaffolding that wires them together, and a CLI tool for managing 
