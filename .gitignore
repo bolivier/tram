@@ -4,3 +4,4 @@
 /.nrepl-port
 /tram-daemon.log
 .postgres
+/target
