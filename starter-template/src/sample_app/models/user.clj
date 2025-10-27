@@ -1,5 +1,5 @@
 (ns sample-app.models.user
-  (:require [sample-ap.concerns.authentication :refer [hash-password]]
+  (:require [sample-app.concerns.authentication :refer [hash-password]]
             [tram.db :as db]))
 
 (db/define-after-select
