@@ -1,7 +1,6 @@
 (ns sample-app.concerns.authentication
   (:require [buddy.hashers :as hashers]
             [clojure.string :as str]
-            [sample-app.models.user :as user]
             [tram.db :as db]))
 
 (defn hash-password [password]
@@ -15,11 +14,16 @@
              (verify-password guess
                               hashed-password))))
 
+(defn get-user-password
+  "Gets the users password."
+  [email]
+  (:password (db/select-one "users" :email email)))
+
 (defn get-authenticated-user
   "Returns either the user correctly authenticated by `email` and `password` or
   `nil`."
   [email password-guess]
-  (let [user-password (user/get-user-password email)]
+  (let [user-password (get-user-password email)]
     (if (correct-password? user-password
                            password-guess)
       (db/select-one :models/users
