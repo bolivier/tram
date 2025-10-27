@@ -5,6 +5,14 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
+(defn get-bin-file-paths
+  "Get string relative path of all files in /bin."
+  []
+  (->> (fs/list-dir "starter-template/bin")
+       (map #(fs/relativize "starter-template" %))
+       (map str)))
+
+
 (def called-from-dir
   (io/file (System/getenv "TRAM_CLI_CALLED_FROM")))
 
@@ -74,13 +82,13 @@
                   slurp
                   (str/replace "sample_app" (->snake_case project-name))
                   (str/replace "sample-app" project-name))))
-      (doseq [db-script ["bin/db-init"]]
-        (fs/copy (io/file template-root db-script)
-                 (io/file project-root db-script)
+      (doseq [bin (get-bin-file-paths)]
+        (fs/copy (io/file template-root bin)
+                 (io/file project-root bin)
                  {:copy-attributes  true
                   :replace-existing true})
-        (spit (io/file project-root db-script)
-              (-> (io/file project-root db-script)
+        (spit (io/file project-root bin)
+              (-> (io/file project-root bin)
                   slurp
                   (str/replace "sample_app" (->snake_case project-name))
                   (str/replace "sample-app" project-name))))
