@@ -10,9 +10,3 @@
   :models/users
   [user]
   (update user :password hash-password))
-
-(defn get-user-password
-  "Gets the users password."
-  [email]
-  ;; query with a string to skip after-select above
-  (:password (db/select-one "users" :email email)))

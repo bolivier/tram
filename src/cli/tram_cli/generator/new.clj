@@ -9,6 +9,7 @@
   "Get string relative path of all files in /bin."
   []
   (->> (fs/list-dir "starter-template/bin")
+       (remove fs/directory?)
        (map #(fs/relativize "starter-template" %))
        (map str)))
 

@@ -5,6 +5,7 @@
               :extra-paths ["dev"]}
   :test      {:extra-deps  {lambdaisland/kaocha         {:mvn/version
                                                          "1.91.1392"}
+                            nubank/matcher-combinators  {:mvn/version "3.9.2"}
                             pjstadig/humane-test-output {:mvn/version "0.11.0"}}
               :extra-paths ["test"]
               :jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"
@@ -21,7 +22,7 @@
  {org.clojure/clojure {:mvn/version "1.12.0"}
   org.clojure/data.xml {:mvn/version "0.2.0-alpha6"}
   meander/epsilon {:mvn/version "0.0.650"}
-  bolivier/tram {:git/sha "695cc815f802ddf9c7c0364d951cea824fdee549"
+  bolivier/tram {:git/sha "ffa76d718d1aea2fe857a29c9f63969dcfd437b0"
                  :git/url "https://github.com/bolivier/tram"}
   integrant/integrant {:mvn/version "0.8.0"}
   integrant/repl {:mvn/version "0.4.0"}
