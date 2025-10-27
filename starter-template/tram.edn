@@ -1,9 +1,9 @@
 {:database/development {:db            {:dbname   "sample_app_development"
                                         :dbtype   "postgresql"
                                         :host     "localhost"
-                                        :password "tram"
+                                        :password #env PG_PASSWORD
                                         :port     5433
-                                        :user     "brandon"}
+                                        :user     #env PG_USER}
                         :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
@@ -11,9 +11,9 @@
  :database/production  {:db            {:dbname   "sample_app_production"
                                         :dbtype   "postgresql"
                                         :host     "localhost"
-                                        :password "tram"
+                                        :password #env PG_PASSWORD
                                         :port     5433
-                                        :user     "brandon"}
+                                        :user     #env PG_USER}
                         :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
@@ -21,9 +21,9 @@
  :database/test        {:db            {:dbname   "sample_app_test"
                                         :dbtype   "postgresql"
                                         :host     "localhost"
-                                        :password "tram"
+                                        :password #env PG_PASSWORD
                                         :port     5433
-                                        :user     "brandon"}
+                                        :user     #env PG_USER}
                         :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
