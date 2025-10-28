@@ -44,11 +44,12 @@
 
   TODO: cache this"
   []
+  (println "Cloning Tram git repo")
   (let [download-dir (io/file (str (fs/temp-dir)))]
     (fs/delete-tree (io/file download-dir "tram"))
     (try
-      @(p/process {:dir download-dir}
-                  "git clone https://github.com/bolivier/tram.git")
+      (p/shell {:dir download-dir}
+               "git clone https://github.com/bolivier/tram.git")
       (catch Exception _
         (println "Could not download Tram starter template.")
         (System/exit 1)))
@@ -62,6 +63,7 @@
     (binding [p/*defaults* (assoc p/*defaults*
                              :dir      project-root
                              :continue true)]
+      (println "Creating project dir")
       (try
         (fs/create-dir project-root)
         (catch Exception _
@@ -93,6 +95,8 @@
                   slurp
                   (str/replace "sample_app" (->snake_case project-name))
                   (str/replace "sample-app" project-name))))
+      (println "Installing node deps for Tailwind")
+      (p/shell {:dir (io/file project-root "resources" "tailwindcss")} "npm i")
       (println "Initializing a git repo.")
       (p/shell "git init")
       (p/shell "git add .")
