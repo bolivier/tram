@@ -1,6 +1,7 @@
 (ns tram.tram-config
   "Utilities for the tram.edn config file."
-  (:require [clojure.edn :as edn]
+  (:require [aero.core :refer [read-config]]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]))
 
 (defn get-zprint-config []
@@ -15,8 +16,7 @@
                        :options #{"development" "test" "production"}}))))
 
 (defn get-tram-config []
-  (with-open [r (java.io.PushbackReader. (io/reader (io/file "tram.edn")))]
-    (edn/read r)))
+  (read-config "tram.edn"))
 
 (defn get-migration-config
   ([]
