@@ -70,6 +70,10 @@
                                                  [{:type      :text
                                                    :required? true
                                                    :name      :cc-number}
+                                                  {:type      :reference
+                                                   :required? true
+                                                   :index?    true
+                                                   :name      :user-id}
                                                   {:type      :text
                                                    :required? true
                                                    :unique?   true

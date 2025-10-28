@@ -1,6 +1,6 @@
 (ns {{namespace}}
   (:require
-   [tram.migrations :refer [write-to-migration-files]]))
+   [tram.db :refer [write-to-migration-files]]))
 
 
 (def blueprint

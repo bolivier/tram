@@ -31,10 +31,8 @@
                      email)
       nil)))
 
-(defn register-new-account [{:keys [email password]}]
-  (db/insert-returning-instance! :models/users
-                                 {:email    email
-                                  :password password}))
+(defn register-new-account [account]
+  (db/insert-returning-instance! :models/users account))
 
 (def cookie-name
   "session-id")

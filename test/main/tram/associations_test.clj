@@ -66,10 +66,10 @@
     (is (match? {:bird nil?}
                 (t2/hydrate (t2/select-one :models/users :name "Olivia") :bird))
         "User did not match"))
-  ;; TODO this test returns an account type
-  #_(is (match? {:bird {:id int?}}
-                (t2/hydrate (t2/select-one :models/users) :bird :account))
-        "User did not match"))
+  (is (match? {:bird    {:id int?}
+               :account {:id int?}}
+              (t2/hydrate (t2/select-one :models/users) :bird :account))
+      "User did not match"))
 
 (deftest integration-has-many
   (let [account (t2/select-one :models/accounts)]

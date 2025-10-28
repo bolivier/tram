@@ -1,6 +1,7 @@
 (ns tram.language
   "Language related utilities."
-  (:require [clojure.string :as str]
+  (:require [camel-snake-kebab.core :as csk]
+            [clojure.string :as str]
             [declensia.core :as dc]
             [malli.core :as malli]
             [tram.utils :refer [with-same-output]]))
@@ -12,6 +13,18 @@
 (defn foreign-key-id->table-name [fk-id]
   (with-same-output [fk fk-id]
     (dc/pluralize (str/replace fk #"[-_]id$" ""))))
+
+(defn as-column
+  "Take a kebab-case keyword or string and return a db-safe snake_case string."
+  [kw-or-str]
+  (csk/->snake_case_string kw-or-str))
+
+(defn index-name
+  "Generate the name for an index of `col` on `table`."
+  [table col]
+  (let [table-name  (csk/->snake_case_string table)
+        column-name (as-column col)]
+    (str "idx_" table-name "_" column-name)))
 
 (defn modelize
   "Convert a keyword into the same keyword, but representing the model of that

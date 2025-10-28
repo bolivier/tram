@@ -1,6 +1,6 @@
 (ns tram.generators.sql-migration
   "This namespace is for writing migration blueprints into migration files."
-  (:require [camel-snake-kebab.core :refer [->snake_case_string]]
+  (:require [camel-snake-kebab.core :as csk]
             [clojure.string :as str]
             [honey.sql :as sql]
             [honey.sql.helpers :as hh]
@@ -76,7 +76,7 @@
 
 (sql/register-fn! :on
                   (fn on-formatter [f args]
-                    [(str "ON " (->snake_case_string (first args)))]))
+                    [(str "ON " (csk/->snake_case_string (first args)))]))
 
 (defn generic-formatter [clause x]
   (let [[sql & params] (if (or (vector? x)
@@ -87,7 +87,8 @@
 
 (sql/register-clause!
   :execute-function
-  (fn [clause x] [(str (sql/sql-kw clause) " " (->snake_case_string x) "()")])
+  (fn [clause x]
+    [(str (sql/sql-kw clause) " " (csk/->snake_case_string x) "()")])
   nil)
 (sql/register-clause! :for-each #'generic-formatter :execute-function)
 
@@ -121,22 +122,14 @@
   nil)
 
 (defn render-index [attr action]
-  (let [col-name (name (:name attr))]
-    (str "CREATE INDEX idx_"
+  (let [col-name (csk/->snake_case_string (:name attr))]
+    (str "CREATE INDEX "
+         (lang/index-name (:table action) (:name attr))
+         " ON "
          (:table action)
-         "_"
-         col-name
-         " ON accounts("
-         col-name
+         "("
+         (lang/as-column col-name)
          ")")))
-
-(comment
-  (def action
-    (second (:actions blueprint)))
-  (def attr
-    (-> action
-        :attributes
-        second)))
 
 (defn serialize-to-trigger-sqls
   "Finds any references to triggers that need to be added to the migration file."
