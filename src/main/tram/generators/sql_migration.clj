@@ -70,7 +70,7 @@
          (or (:table-name attr) (lang/foreign-key-id->table-name (:name attr)))
          :id]))
 
-(defn serialize-blueprint [blueprint]
+(defn serialize-sql-action [blueprint]
   (-> (hh/create-table (symbol (:table blueprint)))
       (hh/with-columns (mapv serialize-attribute (:attributes blueprint)))))
 
@@ -102,6 +102,8 @@
 
 (sql/register-clause! :create-trigger #'generic-formatter :before-update)
 
+
+
 (defmulti render-trigger
   (fn [attr _] (:trigger attr)))
 
@@ -118,15 +120,36 @@
   [_ _]
   nil)
 
+(defn render-index [attr action]
+  (let [col-name (name (:name attr))]
+    (str "CREATE INDEX idx_"
+         (:table action)
+         "_"
+         col-name
+         " ON accounts("
+         col-name
+         ")")))
+
+(comment
+  (def action
+    (second (:actions blueprint)))
+  (def attr
+    (-> action
+        :attributes
+        second)))
+
 (defn serialize-to-trigger-sqls
   "Finds any references to triggers that need to be added to the migration file."
-  [blueprint]
-  (remove nil?
-    (map (fn [attr] (render-trigger attr blueprint))
-      (filter :trigger (:attributes blueprint)))))
+  [action]
+  (concat (remove nil?
+            (map (fn [attr] (render-trigger attr action))
+              (filter :trigger (:attributes action))))
+          (remove nil?
+            (map (fn [attr] (render-index attr action))
+              (filter :index? (:attributes action))))))
 
-(defn serialize-to-sql [blueprint]
-  (format-sql (first (sql/format (serialize-blueprint blueprint)))))
+(defn serialize-to-sql [action]
+  (format-sql (first (sql/format (serialize-sql-action action)))))
 
 (defn serialize-to-down-sql [blueprint]
   (format-sql (first (sql/format (hh/drop-table (symbol (:table blueprint)))))))

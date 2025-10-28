@@ -70,6 +70,11 @@
                                                  [{:type      :text
                                                    :required? true
                                                    :name      :cc-number}
+                                                  {:type      :text
+                                                   :required? true
+                                                   :unique?   true
+                                                   :index?    true
+                                                   :name      :username}
                                                   {:type    :timestamptz
                                                    :name    :updated-at
                                                    :trigger :update-updated-at
