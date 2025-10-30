@@ -1,0 +1,5 @@
+ALTER TABLE "users" ADD COLUMN 'name' TEXT NOT NULL
+
+--;;
+
+CREATE INDEX idx_users_name ON users(name)

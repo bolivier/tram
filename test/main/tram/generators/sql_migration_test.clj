@@ -128,6 +128,29 @@
       (reset! output (second (:args (first @calls)))))
     (rt/match-snapshot @output ::sql-down-multiple-tables-test)))
 
+(deftest add-column-to-sql-string
+  (is (match? "ALTER TABLE \"users\" ADD COLUMN 'name' TEXT"
+              (sut/to-sql-string {:type   :add-column
+                                  :table  "users"
+                                  :column {:name      "name"
+                                           :type      :text
+                                           :required? false}})))
+  (is (match? "ALTER TABLE \"users\" ADD COLUMN 'name' TEXT NOT NULL"
+              (sut/to-sql-string {:type   :add-column
+                                  :table  "users"
+                                  :column {:name      "name"
+                                           :type      :text
+                                           :required? true
+                                           :unique?   true}})))
+  (rt/match-snapshot (sut/to-sql-string {:type   :add-column
+                                         :table  "users"
+                                         :column {:name      "name"
+                                                  :type      :text
+                                                  :index?    true
+                                                  :required? true
+                                                  :unique?   true}})
+                     ::add-column-sql-string))
+
 (def blueprint
   {:migration-name "create-table-users"
    :timestamp      "20250627163855"

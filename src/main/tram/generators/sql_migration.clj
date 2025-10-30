@@ -134,12 +134,17 @@
 (defn serialize-to-trigger-sqls
   "Finds any references to triggers that need to be added to the migration file."
   [action]
-  (concat (remove nil?
-            (map (fn [attr] (render-trigger attr action))
-              (filter :trigger (:attributes action))))
-          (remove nil?
+  (remove nil?
+    (concat (map (fn [attr] (render-trigger attr action))
+              (filter :trigger (:attributes action)))
             (map (fn [attr] (render-index attr action))
-              (filter :index? (:attributes action))))))
+              (filter :index? (:attributes action)))
+            [(when (:index? (:column action))
+               (render-index (:column action)
+                             action))
+             (when (:trigger (:column action))
+               (render-trigger (:column action)
+                               action))])))
 
 (defn serialize-to-sql [action]
   (format-sql (first (sql/format (serialize-sql-action action)))))
@@ -183,6 +188,9 @@
    :required? true
    :default   :fn/now})
 
+(def sql-joiner
+  "\n\n--;;\n\n")
+
 (m/defmulti to-sql-string
   (fn [action] (:type action)))
 
@@ -201,19 +209,51 @@
 
 (m/defmethod to-sql-string :create-table
   [action]
-  (let [primary-migration (serialize-to-sql action)
+  (let [primary-migration
+        (format-sql (first (sql/format
+                             (-> (hh/create-table (symbol (:table action)))
+                                 (hh/with-columns (mapv serialize-attribute
+                                                    (:attributes action)))))))
+
         triggers (serialize-to-trigger-sqls action)]
-    (str/join "\n\n--;;\n\n" (into [primary-migration] triggers))))
+    (str/join sql-joiner (into [primary-migration] triggers))))
+
+(m/defmethod to-sql-string :add-column
+  [action]
+  action
+  (let [{:keys [column]} action
+        {:keys [name type required? unique? default]
+         :or   {required? true}}
+        column
+
+        col-data (remove nil?
+                   [name
+                    type
+                    (when required?
+                      [:not nil])
+                    (when default
+                      [:default default])])
+        primary (first (sql/format (-> (apply hh/add-column col-data)
+                                       (hh/alter-table (:table action)))))
+        triggers (serialize-to-trigger-sqls action)]
+    (str/join sql-joiner (into [primary] triggers))))
+
+(m/defmethod to-sql-string :default
+  [action]
+  (throw (ex-info "Tried to create a sql-string from an invalid type"
+                  {:error  :no-matching-method-type
+                   :action action})))
 
 (defn write-to-migration-file [blueprint]
   (let [migration-strings (map to-sql-string (:actions blueprint))
-        sql-string        (str/join "\n\n--;;\n\n" migration-strings)]
+        sql-string        (str/join sql-joiner migration-strings)]
     (spit (generate-migration-up-filename blueprint) sql-string)))
+
 
 (defn write-to-migration-down [blueprint]
   (let [sql-string (map #(serialize-to-down-sql %)
                      (reverse (:actions blueprint)))
-        sql-string (str/join "\n\n--;;\n\n" sql-string)]
+        sql-string (str/join sql-joiner sql-string)]
     (spit (generate-migration-down-filename blueprint) sql-string)))
 
 (defn write-to-migration-files [blueprint]
