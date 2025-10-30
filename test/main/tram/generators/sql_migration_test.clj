@@ -54,7 +54,7 @@
     (rt/with-stub [_ {:fn      tram.config/get-migration-config
                       :returns (:database/development tram-config)}
                    calls spit]
-      (sut/write-to-migration-file blueprint)
+      (sut/write-to-migration-up blueprint)
       (is (match? #"^resources/migrations/\d+-create-table-users.up.sql"
                   (first (:args (first @calls)))))
       (reset! output (second (:args (first @calls)))))
@@ -87,7 +87,7 @@
     (rt/with-stub [_ {:fn      tram.config/get-migration-config
                       :returns (:database/development tram-config)}
                    calls spit]
-      (sut/write-to-migration-file blueprint-with-multiple-actions)
+      (sut/write-to-migration-up blueprint-with-multiple-actions)
       (is (match? #"^resources/migrations/\d+-create-table-users.up.sql"
                   (first (:args (first @calls)))))
       (reset! output (second (:args (first @calls)))))
@@ -128,26 +128,26 @@
       (reset! output (second (:args (first @calls)))))
     (rt/match-snapshot @output ::sql-down-multiple-tables-test)))
 
-(deftest add-column-to-sql-string
+(deftest add-column-to-up-sql-string
   (is (match? "ALTER TABLE \"users\" ADD COLUMN name TEXT"
-              (sut/to-sql-string {:type   :add-column
-                                  :table  "users"
-                                  :column {:name      "name"
-                                           :type      :text
-                                           :required? false}})))
+              (sut/to-up-sql-string {:type   :add-column
+                                     :table  "users"
+                                     :column {:name      "name"
+                                              :type      :text
+                                              :required? false}})))
   (is (match? "ALTER TABLE \"users\" ADD COLUMN name TEXT NOT NULL UNIQUE"
-              (sut/to-sql-string {:type   :add-column
-                                  :table  "users"
-                                  :column {:name    "name"
-                                           :type    :text
-                                           :unique? true}})))
-  (rt/match-snapshot (sut/to-sql-string {:type   :add-column
-                                         :table  "users"
-                                         :column {:name      "name"
-                                                  :type      :text
-                                                  :index?    true
-                                                  :required? true
-                                                  :unique?   true}})
+              (sut/to-up-sql-string {:type   :add-column
+                                     :table  "users"
+                                     :column {:name    "name"
+                                              :type    :text
+                                              :unique? true}})))
+  (rt/match-snapshot (sut/to-up-sql-string {:type   :add-column
+                                            :table  "users"
+                                            :column {:name      "name"
+                                                     :type      :text
+                                                     :index?    true
+                                                     :required? true
+                                                     :unique?   true}})
                      ::add-column-sql-string))
 
 (def blueprint
