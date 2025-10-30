@@ -129,19 +129,18 @@
     (rt/match-snapshot @output ::sql-down-multiple-tables-test)))
 
 (deftest add-column-to-sql-string
-  (is (match? "ALTER TABLE \"users\" ADD COLUMN 'name' TEXT"
+  (is (match? "ALTER TABLE \"users\" ADD COLUMN name TEXT"
               (sut/to-sql-string {:type   :add-column
                                   :table  "users"
                                   :column {:name      "name"
                                            :type      :text
                                            :required? false}})))
-  (is (match? "ALTER TABLE \"users\" ADD COLUMN 'name' TEXT NOT NULL"
+  (is (match? "ALTER TABLE \"users\" ADD COLUMN name TEXT NOT NULL UNIQUE"
               (sut/to-sql-string {:type   :add-column
                                   :table  "users"
-                                  :column {:name      "name"
-                                           :type      :text
-                                           :required? true
-                                           :unique?   true}})))
+                                  :column {:name    "name"
+                                           :type    :text
+                                           :unique? true}})))
   (rt/match-snapshot (sut/to-sql-string {:type   :add-column
                                          :table  "users"
                                          :column {:name      "name"

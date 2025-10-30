@@ -36,6 +36,8 @@
   (SqlFormatter/format sql))
 
 (m/defmulti serialize-attribute
+  "Returns a version of the attribute as a vector ready to go to a honeysql
+  helper."
   (fn [{:keys [name type]}] [name type]))
 
 (m/defmethod serialize-attribute [:id :primary-key]
@@ -103,8 +105,6 @@
 
 (sql/register-clause! :create-trigger #'generic-formatter :before-update)
 
-
-
 (defmulti render-trigger
   (fn [attr _] (:trigger attr)))
 
@@ -122,32 +122,26 @@
   nil)
 
 (defn render-index [attr action]
-  (let [col-name (csk/->snake_case_string (:name attr))]
-    (str "CREATE INDEX "
-         (lang/index-name (:table action) (:name attr))
-         " ON "
-         (:table action)
-         "("
-         (lang/as-column col-name)
-         ")")))
+  (when (:index? attr)
+    (let [col-name (csk/->snake_case_string (:name attr))]
+      (str "CREATE INDEX "
+           (lang/index-name (:table action)
+                            (:name attr))
+           " ON "
+           (:table action)
+           "("
+           (lang/as-column col-name)
+           ")"))))
 
 (defn serialize-to-trigger-sqls
   "Finds any references to triggers that need to be added to the migration file."
   [action]
   (remove nil?
-    (concat (map (fn [attr] (render-trigger attr action))
-              (filter :trigger (:attributes action)))
-            (map (fn [attr] (render-index attr action))
-              (filter :index? (:attributes action)))
-            [(when (:index? (:column action))
-               (render-index (:column action)
-                             action))
-             (when (:trigger (:column action))
-               (render-trigger (:column action)
-                               action))])))
+    (concat (map (fn [attr] (render-trigger attr action)) (:attributes action))
+            (map (fn [attr] (render-index attr action)) (:attributes action))
+            [(render-index (:column action) action)]
+            [(render-trigger (:column action) action)])))
 
-(defn serialize-to-sql [action]
-  (format-sql (first (sql/format (serialize-sql-action action)))))
 
 (defn serialize-to-down-sql [blueprint]
   (format-sql (first (sql/format (hh/drop-table (symbol (:table blueprint)))))))
@@ -182,6 +176,7 @@
    :required? true
    :default   :fn/now
    :trigger   :update-updated-at})
+
 (def created-at
   {:name      :created-at
    :type      :timestamptz
@@ -221,20 +216,9 @@
 (m/defmethod to-sql-string :add-column
   [action]
   action
-  (let [{:keys [column]} action
-        {:keys [name type required? unique? default]
-         :or   {required? true}}
-        column
-
-        col-data (remove nil?
-                   [name
-                    type
-                    (when required?
-                      [:not nil])
-                    (when default
-                      [:default default])])
-        primary (first (sql/format (-> (apply hh/add-column col-data)
-                                       (hh/alter-table (:table action)))))
+  (let [col-data (serialize-attribute (:column action))
+        primary  (first (sql/format (-> (apply hh/add-column col-data)
+                                        (hh/alter-table (:table action)))))
         triggers (serialize-to-trigger-sqls action)]
     (str/join sql-joiner (into [primary] triggers))))
 
