@@ -147,11 +147,10 @@
 
 (defn default-error-handler
   "Default error handler for `tram.routes/exception-interceptor`."
-  [message exception request]
+  [exception request]
   (log/event! ::uncaught-exception
               {:data {:request   request
-                      :exception exception
-                      :message   message}})
+                      :exception exception}})
   {:status 500
    :body   "An unknown error occurred"})
 
@@ -165,7 +164,7 @@
    (exception-interceptor {}))
   ([config]
    (exception/exception-interceptor
-     (merge {:default (partial default-error-handler "error")
+     (merge {:default default-error-handler
              :tram.req/coercion
              (fn [e req]
                (let [method (get-in req [:request-method])

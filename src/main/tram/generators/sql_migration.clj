@@ -107,6 +107,19 @@
            (lang/as-column col-name)
            ")"))))
 
+(defn render-down-trigger [attr action]
+  (when (:trigger attr)
+    (let [trigger-name (csk/->snake_case_string (:trigger attr))
+          table-name   (name (:table action))]
+      (str "DROP TRIGGER " trigger-name
+           " ON " table-name))))
+
+(defn render-down-index [attr action]
+  (when (:index? attr)
+    (str "DROP INDEX "
+         (lang/index-name (:table action)
+                          (:name attr)))))
+
 (defn serialize-to-extra-statements
   "Creates extra sql statements for indexes and triggers."
   [action]
@@ -116,8 +129,33 @@
           indexes  (map #(render-index % action) attrs)]
       (concat triggers indexes))))
 
-(defn to-down-sql-string [action]
-  (format-sql (first (sql/format (hh/drop-table (symbol (:table action)))))))
+(defn serialize-to-extra-down-statements
+  "Creates down sql for indexes and triggers."
+  [action]
+  (remove nil?
+    (let [attrs    (conj (:attributes action) (:column action))
+          triggers (map #(render-down-trigger % action) attrs)
+          indexes  (map #(render-down-index % action) attrs)]
+      (concat triggers indexes))))
+
+(m/defmulti to-down-sql-string
+  :type)
+
+(m/defmethod to-down-sql-string :default
+  [action]
+  (throw (ex-info "Tried to generate down sql for unsupported type"
+                  {:action action
+                   :possible-solution (str "Implement `to-down-sql-string` for "
+                                           (:type action))})))
+
+(m/defmethod to-down-sql-string :create-table
+  [action]
+  (first (sql/format (hh/drop-table (symbol (:table action))))))
+
+(m/defmethod to-down-sql-string :add-column
+  [action]
+  (first (sql/format {:drop-column [(:name (:column action))]
+                      :alter-table (:table action)})))
 
 (defn generate-migration-filename
   "Generate the path, filename included, for an up migration."
