@@ -82,3 +82,8 @@
   (let [user (t2/select-one :models/users)]
     (is (seq (:settings (t2/hydrate user :settings))))
     (is (match? {:settings [{:id int?}]} (t2/hydrate user :settings)))))
+
+(deftest has-one-alias
+  (sut/has-one! :models/accounts :models/users {:as :owner})
+  (is (match? :models/users
+              (t2/model-for-automagic-hydration :models/accounts :owner))))

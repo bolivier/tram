@@ -45,6 +45,10 @@
         nil
         (throw e)))))
 
+(defn has-one! [owner belonger {:keys [as]}]
+  (swap! *associations*
+    (fn [associations] (assoc-in associations [owner :has-one as] belonger))))
+
 (defn has-many!
   "Create a association where `owner` has many `belonger`s.
 
@@ -105,9 +109,12 @@
   (let [has-association (or (has-explicit-association? model (lang/modelize k))
                             (has-explicit-association?
                               model
-                              (lang/modelize k {:plural? false})))]
-    (when-not has-association
-      (lang/modelize k))))
+                              (lang/modelize k {:plural? false})))
+        alias-model     (get-in @*associations* [model :has-one k])]
+    (if has-association
+      nil
+      (or alias-model
+          (lang/modelize k)))))
 
 
 (m/defmethod t2/simple-hydrate [:default :default]

@@ -69,3 +69,14 @@
         (assoc acc k elm)))
     {}
     coll))
+
+(defprotocol IEnsure
+  "To ensure a thing is a particular class (takes an example)"
+  (ensure [desired coll]))
+
+(extend-protocol IEnsure
+  clojure.lang.PersistentVector
+  (ensure [_ coll]
+    (if (vector? coll)
+      coll
+      [coll])))

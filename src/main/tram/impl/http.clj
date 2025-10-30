@@ -36,7 +36,7 @@
   ([resp route-name]
    (-> resp
        (assoc :status 303)
-       (assoc-in [:headers "location"] (make-route route-name)))))
+       (assoc-in [:headers "location"] route-name))))
 
 (defn redirect
   "Returns a resp for a htmx redirect. These use a 301 status, and have a htmx
@@ -46,4 +46,4 @@
   ([resp route]
    (-> resp
        (assoc :status 301)
-       (assoc-in [:headers "hx-redirect"] (make-route route)))))
+       (assoc-in [:headers "hx-redirect"] route))))

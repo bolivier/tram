@@ -61,3 +61,19 @@
                                  #"(handlers|views)$"
                                  (ns-type-lookup to)))]
     (str/join "." (map converter segments))))
+
+(defn ordinal
+  "Gets the ordinal suffix of a number, `n`"
+  [n]
+  (let [ones-digit (mod n 10)]
+    (case ones-digit
+      1 "st"
+      2 "nd"
+      3 "rd"
+      "th")))
+
+(defn with-ordinal
+  "Convert number `n` to a string and append the result of
+  `tram.language/ordinal`"
+  [n]
+  (str n (ordinal n)))
