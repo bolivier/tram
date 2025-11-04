@@ -20,6 +20,7 @@
   ([router route-name]
    (make-path router route-name {}))
   ([router route-name route-params]
+   (prn "making a path" route-name route-params)
    (:path (r/match-by-name router route-name route-params))))
 
 (defn make-route
@@ -51,6 +52,7 @@
     (cond
       (expandable-route-ref? node)
       (let [[_ route-name route-params] node]
+        (prn node)
         (make-path router route-name route-params))
 
       (and (keyword? node) (= "route" (namespace node)))

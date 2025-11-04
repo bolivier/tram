@@ -35,3 +35,10 @@
    (get-database-config (get-env)))
   ([env]
    (get (get-migration-config env) :db)))
+
+(defn get-seed-config []
+  (merge (get-migration-config)
+         {:init-script   "init.sql"
+          :migration-dir "seeders/migrations"
+          :migration-table-name "seeds"
+          :store         :database}))

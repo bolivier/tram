@@ -45,3 +45,15 @@
                [:models/settings :setting]]]
     (doseq [[expected input] tests]
       (is (= expected (sut/modelize input))))))
+
+(deftest ns->filename-test
+  (is (= "some/nested_route/my_file.clj"
+         (sut/ns->filename "some.nested-route.my-file"))))
+
+(deftest ns->filename-multiarity-test
+  (is (= "some/nested_route/my_file.clj"
+         (sut/ns->filename "some" "nested-route" "my-file"))))
+
+(deftest filename->ns-multiarity-test
+  (is (= "some.nested-route.my-file"
+         (sut/filename->ns "some" "nested_route" "my_file.clj"))))

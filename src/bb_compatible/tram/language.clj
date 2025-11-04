@@ -6,6 +6,10 @@
             [malli.core :as malli]
             [tram.utils :refer [with-same-output]]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; databaes lang utils ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn table-name->foreign-key-id [table-name]
   (with-same-output [table table-name]
     (str (dc/singularize table) "-id")))
@@ -26,6 +30,8 @@
         column-name (as-column col)]
     (str "idx_" table-name "_" column-name)))
 
+
+
 (defn modelize
   "Convert a keyword into the same keyword, but representing the model of that
   term.
@@ -45,9 +51,57 @@
   (let [[first second] (sort [(name model-a) (name model-b)])]
     (keyword (str first "-" second))))
 
-(def ns-type-lookup
-  {:view    "views"
-   :handler "handlers"})
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; namespace lang utils ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn ns-ize
+  "Takes a string and converts file-y characters to their ns counterparts.
+
+  Replaces slashes with dots, and underscores with dashes.
+
+  See also: `tram.language/file-ize`"
+  [s]
+  (-> s
+      (str/replace "/" ".")
+      (str/replace "_" "-")))
+
+(defn file-ize
+  "Takes a string and converts ns-y characters to their file counterparts.
+
+  Replaces dots with slashes, and dashes with underscores.
+
+  See also: `tram.language/ns-ize`"
+  [s]
+  (-> s
+      (str/replace "." "/")
+      (str/replace "-" "_")))
+
+(defn ns->filename
+  "Takes a `ns` either as a namespace or a string and converts it to a string representation of a filename.
+
+  Converts dots to slashes.  Appends .clj"
+  ([nsp1 & nsps]
+   (ns->filename (str/join "." (concat [nsp1] nsps))))
+  ([ns]
+   (-> ns
+       str
+       file-ize
+       (str ".clj"))))
+
+(defn filename->ns
+  "Takes a string filename and converts it to a string representation of a namespacee with `tram.language/file-ize`.
+
+  Has a multi-arity version that will join filename partials with \"/\" before calling back to itself.
+
+  Removes .clj suffix."
+  ([fnp1 & fnps]
+   (filename->ns (str/join "/" (concat [fnp1] fnps))))
+  ([filename]
+   (-> filename
+       str
+       ns-ize
+       (str/replace #"\.clj$" ""))))
 
 (defn convert-ns [a-ns to]
   (when-not (malli/validate [:enum :view :handler]
@@ -55,12 +109,18 @@
     (throw (ex-info "Tried to convert invalid ns types"
                     {:ns a-ns
                      :to to})))
-  (let [segments  (str/split (str a-ns) #"\.")
-        converter (fn [segment]
-                    (str/replace segment
-                                 #"(handlers|views)$"
-                                 (ns-type-lookup to)))]
+  (let [ns-type-lookup {:view    "views"
+                        :handler "handlers"}
+        segments       (str/split (str a-ns) #"\.")
+        converter      (fn [segment]
+                         (str/replace segment
+                                      #"(handlers|views)$"
+                                      (ns-type-lookup to)))]
     (str/join "." (map converter segments))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;; numeric lang utils ;;
+;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn ordinal
   "Gets the ordinal suffix of a number, `n`"
