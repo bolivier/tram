@@ -25,6 +25,22 @@ CREATE TABLE users (
 
 --;;
 
+create table articles (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  author_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+)
+
+--;;
+
+CREATE TABLE addresses (
+  id SERIAL PRIMARY KEY,
+  full_address TEXT NOT NULL,
+  homeowner_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+)
+
+--;;
+
 CREATE TABLE settings_users (
   id SERIAL PRIMARY KEY,
   setting_id INTEGER NOT NULL REFERENCES settings(id) ON DELETE CASCADE,

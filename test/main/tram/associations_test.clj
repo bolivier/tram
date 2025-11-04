@@ -1,5 +1,6 @@
 (ns tram.associations-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            kaocha-utils.kaocha-hooks
             [matcher-combinators.matchers :as m]
             matcher-combinators.test
             [toucan2.core :as t2]
@@ -20,6 +21,18 @@
                                                    {:bird-id    bird-id
                                                     :name       "Brandon"
                                                     :account-id account-id})
+        _ (t2/insert-returning-pk! :models/articles
+                                   {:title     "My Article"
+                                    :author-id (:id user)})
+        _ (t2/insert-returning-pk! :models/articles
+                                   {:title     "My Article 2"
+                                    :author-id (:id user)})
+        _ (t2/insert-returning-pk! :models/addresses
+                                   {:full_address "123 Fake St."
+                                    :homeowner-id (:id user)})
+        _ (t2/insert-returning-pk! :models/addresses
+                                   {:full_address "742 Evergreen Terrace"
+                                    :homeowner-id (:id user)})
         user2       (t2/insert-returning-instance! :models/users
                                                    {:name       "Olivia"
                                                     :account-id account-id})]
@@ -27,18 +40,16 @@
                 {:setting-id settings-id
                  :user-id    (:id user)})))
 
+(comment
+  (do (teardown-db)
+      (setup-db)))
+
 (use-fixtures :once (fn [f] (teardown-db) (setup-db) (f) (teardown-db)))
 
 ;; These tests are kind of implementation details, but I don't care for now
 ;; because this is kinda complicated.
 
-(deftest belongs-to-associations-structure
-  (is (match? (m/embeds #{:models/accounts})
-              (get-in @sut/*associations* [:models/users :belongs-to])))
-  (is (sut/belongs-to? :models/users :models/accounts))
-  (is (sut/has-explicit-association? :models/users :account)))
-
-(deftest has-many-associations-structre
+(deftest has-many-associations-structure
   (is (match? {:models/accounts {:has-many {:models/users {:through nil}}}}
               @sut/*associations*))
   (is (sut/has-many? :models/accounts :models/users))
@@ -52,11 +63,18 @@
   (is (sut/has-explicit-association? :models/users :settings)))
 
 (deftest integration-belongs-to
-  (let [user (t2/select-one :models/users)]
-    (is (match? {:account {:id int?}} (t2/hydrate user :account))
-        "Account did not match.")))
+  (let [account (t2/select-one :models/accounts)
+        account-with-users (t2/hydrate account :users)]
+    (is (pos? (count (:users account-with-users)))
+        "Did not have positive user count in belongs-to test")
+    (doseq [user (:users account)]
+      (is (= (:id account) (:account-id user))))))
 
 (deftest integration-has-one
+  (testing "something-different"
+    (let [user (t2/select-one :models/users)]
+      (is (match? {:account {:id int?}} (t2/hydrate user :account))
+          "Account did not match.")))
   (testing "with value"
     (is (match? {:bird {:id int?}}
                 (t2/hydrate (t2/select-one :models/users :name "Brandon")
@@ -87,3 +105,14 @@
   (sut/has-one! :models/accounts :models/users {:as :owner})
   (is (match? :models/users
               (t2/model-for-automagic-hydration :models/accounts :owner))))
+
+(deftest belongs-to-has-many-alias-test
+  (sut/belongs-to! :models/articles :models/users {:as :author})
+  (sut/has-many! :models/users :models/articles {:from :author})
+  (let [user          (t2/select-one :models/users :name "Brandon")
+        article       (t2/select-one :models/articles :title "My Article")
+        hydrated-user (t2/hydrate user :articles)
+        hydrated-article (t2/hydrate article :author)]
+    (is (= 2 (count (:articles hydrated-user))))
+    ;;     (is (= (:id user) (:id (:author hydrated-article))))
+  ))

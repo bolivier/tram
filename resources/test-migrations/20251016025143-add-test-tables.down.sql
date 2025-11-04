@@ -2,6 +2,11 @@ DROP TABLE settings_users;
 
 --;;
 
+
+DROP TABLE addresses;
+
+--;;
+
 DROP TABLE users;
 
 --;;

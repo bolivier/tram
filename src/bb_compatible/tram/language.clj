@@ -10,6 +10,9 @@
 ;; databaes lang utils ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn name->foreign-key [s]
+  (keyword (str (name s) "-id")))
+
 (defn table-name->foreign-key-id [table-name]
   (with-same-output [table table-name]
     (str (dc/singularize table) "-id")))

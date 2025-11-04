@@ -56,13 +56,23 @@
   filled into a set."
   ([owner belonger]
    (has-many! owner belonger :through (lookup-join-table owner belonger)))
-  ([owner belonger & {:keys [through]}]
-   (swap! *associations* (fn [associations]
-                           (update-in associations
-                                      [owner :has-many]
-                                      assoc
-                                      belonger
-                                      {:through through})))))
+  ([owner belonger & {:keys [through from]}]
+   (def from
+     from)
+   (if from
+     (swap! *associations* (fn [associations]
+                             (update-in associations
+                                        [owner :has-many]
+                                        assoc
+                                        belonger
+                                        {:from (lang/name->foreign-key from)})))
+     (swap! *associations* (fn [associations]
+                             (update-in associations
+                                        [owner :has-many]
+                                        assoc
+                                        belonger
+                                        {:through through
+                                         :from    from}))))))
 
 (defn belongs-to!
   "Creates a belongs-to association between `owner` and `belonger`.
@@ -71,11 +81,14 @@
 
   This implemented with the term \"owns\" instead of \"belongs-to\" because of
   the direction of lookup in the general case."
-  [belonger owner]
-  (swap! *associations* (fn [associations]
-                          (-> associations
-                              (update-in [belonger :belongs-to] set)
-                              (update-in [belonger :belongs-to] conj owner)))))
+  ([belonger owner _opts]
+   (belongs-to! belonger owner))
+  ([belonger owner]
+   (swap! *associations* (fn [associations]
+                           (->
+                             associations
+                             (update-in [belonger :belongs-to] set)
+                             (update-in [belonger :belongs-to] conj owner))))))
 
 (defn belongs-to?
   "Checks if `belonger` belongs-to `owner`.
@@ -91,6 +104,10 @@
   Expects both args to be fully qualified keywords with the
   ns :models/<some-model>."
   [model attribute-model]
+  (def model
+    model)
+  (def attribute-model
+    attribute-model)
   (some? (get-in @*associations* [model :has-many attribute-model])))
 
 (defn has-explicit-association?
@@ -101,11 +118,19 @@
   For belongs-to associations, `attribute` should be a singular keyword.
   For has-many associations, `attribute` should be a plural keyword."
   [base attribute]
+  (def base
+    base)
+  (def attribute
+    attribute)
   (or (belongs-to? base (lang/modelize attribute))
       (has-many? base (lang/modelize attribute {:plural? false}))))
 
 (m/defmethod t2/model-for-automagic-hydration [:default :default]
   [model k]
+  (def model
+    model)
+  (def k
+    k)
   (let [has-association (or (has-explicit-association? model (lang/modelize k))
                             (has-explicit-association?
                               model
@@ -119,6 +144,12 @@
 
 (m/defmethod t2/simple-hydrate [:default :default]
   [model k instance]
+  (def model
+    model)
+  (def k
+    k)
+  (def instance
+    instance)
   (let [join-table
         (get-in @*associations*
                 [model :has-many (lang/modelize k {:plural? false}) :through])]
@@ -147,9 +178,13 @@
                      [model :has-many (lang/modelize k {:plural? false})]))
       (assoc instance
         k
-        (t2/select (lang/modelize k {:plural? false})
-                   (keyword (lang/table-name->foreign-key-id (name model)))
-                   (:id instance)))
+        (t2/select
+          (lang/modelize k {:plural? false})
+          (or (get-in
+                @*associations*
+                [model :has-many (lang/modelize k {:plural? false}) :from])
+              (keyword (lang/table-name->foreign-key-id (name model))))
+          (:id instance)))
 
       (contains? (get-in @*associations* [model :belongs-to]) (lang/modelize k))
       (assoc instance
