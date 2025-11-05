@@ -195,3 +195,18 @@
       :else
       (t2/select (keyword "models" (dc/pluralize (name k)))
                  (get instance (keyword (str (name k) "-id")))))))
+
+(m/defmulti foo
+  (fn [x]
+    (if (even? x)
+      :even
+      :odd)))
+
+(m/defmethod foo :default
+  [_]
+  :default-method)
+
+(m/add-primary-method! #'foo :even (fn [& args] args))
+
+(foo 3)
+(foo 2)

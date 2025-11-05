@@ -11,15 +11,12 @@
   (t2/delete! :models/accounts))
 
 (defn setup-db []
-  (alter-var-root #'sut/*associations* (constantly {}))
+  (alter-var-root #'sut/*associations* (constantly (atom {})))
   (sut/belongs-to! :models/users :models/accounts)
   (sut/has-many! :models/accounts :models/users)
   (sut/has-many! :models/users :models/settings)
   (let [account-id  (t2/insert-returning-pk! :models/accounts {})
         settings-id (t2/insert-returning-pk! :models/settings {})
-        _ (t2/insert! (lang/join-table :users :settings)
-                      {:setting-id settings-id
-                       :user-id    (:id user)})
         bird-id     (t2/insert-returning-pk! :models/birds {})
         user        (t2/insert-returning-instance! :models/users
                                                    {:bird-id    bird-id
@@ -28,6 +25,9 @@
         _ (t2/insert-returning-pk! :models/articles
                                    {:title     "My Article"
                                     :author-id (:id user)})
+        _ (t2/insert! (lang/join-table :users :settings)
+                      {:setting-id settings-id
+                       :user-id    (:id user)})
         _ (t2/insert-returning-pk! :models/articles
                                    {:title     "My Article 2"
                                     :author-id (:id user)})
@@ -118,3 +118,31 @@
         hydrated-article (t2/hydrate article :author)]
     (is (= 2 (count (:articles hydrated-user))))
     (is (= (:id user) (:id (:author hydrated-article))))))
+
+;; new tests
+
+;; belongs-to single
+
+;; belongs-to many
+
+;; belongs-to alias
+
+;; has-one
+
+;; has-one alias
+
+;; has-one (join table)
+
+;; has-one (join table) alias
+
+;; has-many (opposite belongs-to)
+
+;; has-many alias (opposite belongs-to)
+
+;; has-many (join table)
+
+;; has-many (join table) alias
+
+;; has-and-belongs-to-many
+
+;; has-and-belongs-to-many alias
