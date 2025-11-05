@@ -11,11 +11,15 @@
   (t2/delete! :models/accounts))
 
 (defn setup-db []
+  (alter-var-root #'sut/*associations* (constantly {}))
   (sut/belongs-to! :models/users :models/accounts)
   (sut/has-many! :models/accounts :models/users)
   (sut/has-many! :models/users :models/settings)
   (let [account-id  (t2/insert-returning-pk! :models/accounts {})
         settings-id (t2/insert-returning-pk! :models/settings {})
+        _ (t2/insert! (lang/join-table :users :settings)
+                      {:setting-id settings-id
+                       :user-id    (:id user)})
         bird-id     (t2/insert-returning-pk! :models/birds {})
         user        (t2/insert-returning-instance! :models/users
                                                    {:bird-id    bird-id
@@ -33,12 +37,9 @@
         _ (t2/insert-returning-pk! :models/addresses
                                    {:full_address "742 Evergreen Terrace"
                                     :homeowner-id (:id user)})
-        user2       (t2/insert-returning-instance! :models/users
-                                                   {:name       "Olivia"
-                                                    :account-id account-id})]
-    (t2/insert! (lang/join-table :users :settings)
-                {:setting-id settings-id
-                 :user-id    (:id user)})))
+        _ (t2/insert-returning-instance! :models/users
+                                         {:name       "Olivia"
+                                          :account-id account-id})]))
 
 (comment
   (do (teardown-db)
@@ -104,9 +105,11 @@
 (deftest has-one-alias
   (sut/has-one! :models/accounts :models/users {:as :owner})
   (is (match? :models/users
-              (t2/model-for-automagic-hydration :models/accounts :owner))))
+              (t2/model-for-automagic-hydration :models/accounts :owner)))
+  (t2/select-one :models/users))
 
 (deftest belongs-to-has-many-alias-test
+  (sut/has-one! :models/articles :models/users {:as :author})
   (sut/belongs-to! :models/articles :models/users {:as :author})
   (sut/has-many! :models/users :models/articles {:from :author})
   (let [user          (t2/select-one :models/users :name "Brandon")
@@ -114,5 +117,4 @@
         hydrated-user (t2/hydrate user :articles)
         hydrated-article (t2/hydrate article :author)]
     (is (= 2 (count (:articles hydrated-user))))
-    ;;     (is (= (:id user) (:id (:author hydrated-article))))
-  ))
+    (is (= (:id user) (:id (:author hydrated-article))))))

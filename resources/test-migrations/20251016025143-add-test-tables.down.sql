@@ -1,9 +1,17 @@
+DROP TABLE accounts CASCADE;
+
+--;;
+
 DROP TABLE settings_users;
 
 --;;
 
 
 DROP TABLE addresses;
+
+--;;
+
+DROP TABLE articles;
 
 --;;
 
@@ -16,7 +24,3 @@ DROP TABLE birds;
 --;;
 
 DROP TABLE settings;
-
---;;
-
-DROP TABLE accounts;
