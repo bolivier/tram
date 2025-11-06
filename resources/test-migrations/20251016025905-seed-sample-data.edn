@@ -1,4 +1,0 @@
-{:down-fn      seed-down
- :ns           test-migrations.seed-data
- :transaction? true
- :up-fn        seed-up}

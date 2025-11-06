@@ -33,8 +33,12 @@
                (catch org.postgresql.util.PSQLException _
                  ;; most likely already exists
                  nil))
-             (migratus/init migration-config)
-             (migratus/reset migration-config)
+             (do
+               (migratus/init migration-config)
+               (migratus/migrate migration-config))
+             (comment
+               (migratus/reset migration-config)
+                nil)
              (reset! seeded? true)))
          test)]))
 

@@ -7,12 +7,13 @@
             [tram.associations :as sut]
             [tram.language :as lang]))
 
+
+
 (defn teardown-db []
   (t2/delete! :models/accounts))
 
 (defn setup-db []
   (alter-var-root #'sut/*associations* (constantly (atom {})))
-  (sut/belongs-to! :models/users :models/accounts)
   (sut/has-many! :models/accounts :models/users)
   (sut/has-many! :models/users :models/settings)
   (let [account-id  (t2/insert-returning-pk! :models/accounts {})
@@ -44,6 +45,30 @@
 (comment
   (do (teardown-db)
       (setup-db)))
+
+(comment
+  (do (require '[tram.tram-config :as tram.config])
+      (require '[matcher-combinators.test])
+      (require '[migratus.core :as migratus]
+               '[next.jdbc :as jdbc]
+               '[test-migrations.seed-data]
+               '[tram.tram-config :as tram.config])
+      ;; On BB, splice in nothing. On JVM Clojure, pull in
+      ;; jdbc/migratus/tram.
+      (let [migration-config (tram.config/get-migration-config "test")
+            config (:db migration-config)]
+        (try
+          ;; Ensure we run CREATE DATABASE against a management DB.
+          (jdbc/execute! (jdbc/get-datasource (assoc config
+                                                :dbname "postgres"))
+                         ["CREATE DATABASE tram_test"])
+          (catch org.postgresql.util.PSQLException _
+            ;; most likely already exists
+            nil))
+        (migratus/init migration-config)
+        (migratus/reset migration-config)
+        (migratus/migrate migration-config)
+        (setup-db))))
 
 (use-fixtures :once (fn [f] (teardown-db) (setup-db) (f) (teardown-db)))
 
@@ -122,6 +147,10 @@
 ;; new tests
 
 ;; belongs-to single
+(deftest belongs-to-single-test
+  (let [user    (t2/select-one :models/users :name "Brandon")
+        account (t2/select-one :models/accounts)]
+    (is (match? account (:account (t2/hydrate user :account))))))
 
 ;; belongs-to many
 
