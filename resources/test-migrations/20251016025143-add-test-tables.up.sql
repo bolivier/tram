@@ -46,3 +46,11 @@ CREATE TABLE settings_users (
   setting_id INTEGER NOT NULL REFERENCES settings(id) ON DELETE CASCADE,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
 )
+
+--;;
+
+CREATE TABLE computers (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  developer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
+)

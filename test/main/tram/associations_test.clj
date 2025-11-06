@@ -18,6 +18,7 @@
   (sut/has-many! :models/accounts :users)
   (sut/has-many! :models/users :settings)
   (sut/has-one! :models/birds :user)
+  (sut/has-many! :models/users :computers {:foreign-key :developer-id})
   (sut/has-one! :models/users
                 :home
                 {:model       :models/addresses
@@ -29,6 +30,12 @@
                                                    {:bird-id    bird-id
                                                     :name       "Brandon"
                                                     :account-id account-id})
+        _ (t2/insert! :models/computers
+                      {:developer-id (:id user)
+                       :name         "Thinkpad"})
+        _ (t2/insert! :models/computers
+                      {:developer-id (:id user)
+                       :name         "Macbook"})
         _ (t2/insert-returning-pk! :models/articles
                                    {:title     "My Article"
                                     :author-id (:id user)})
@@ -107,6 +114,13 @@
            (-> hydrated-user
                :settings
                count)))))
+
+(deftest has-many-opposite-belongs-to-alias-test
+  (let [developer (brandon)
+        hydrated-developer (t2/hydrate developer :computers)]
+    (is (match? {:id   int?
+                 :name (m/any-of "Thinkpad" "Macbook")}
+                (first (:computers hydrated-developer))))))
 
 (deftest has-one-test
   (let [bird (t2/select-one :models/birds :id (:bird-id (brandon)))

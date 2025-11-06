@@ -68,12 +68,15 @@
   This is the inverse of a `belongs-to!` relationship so that the keys can be
   filled into a set."
   ([owner attribute]
+   (has-many! owner attribute {:foreign-key (lang/model->foreign-key owner)}))
+  ([owner attribute opts]
    (swap! *associations*
      (fn [associations]
        (let [attribute-model (lang/modelize attribute {:plural? false})
-             entry {:model      attribute-model
-                    :type       :many-to-many
-                    :join-table (lookup-join-table owner attribute)}]
+             entry {:model       attribute-model
+                    :type        :many-to-many
+                    :foreign-key (:foreign-key opts)
+                    :join-table  (lookup-join-table owner attribute)}]
          (assoc-in associations [owner :has-many attribute] entry))))))
 
 (defn has-many?
@@ -151,12 +154,9 @@
                       :where where-clause})))
 
       (some? (get-in @*associations* [model :has-many k :model]))
-      (assoc instance
-        k
-        (t2/select (lang/modelize k {:plural? false})
-                   (or (get-in @*associations* [model :has-many k :from])
-                       (keyword (lang/table-name->foreign-key-id (name model))))
-                   (:id instance)))
+      (let [entry (get-in @*associations* [model :has-many k])]
+        (assoc instance
+          k (t2/select (:model entry) (:foreign-key entry) (:id instance))))
 
       (has-one? model k)
       (let [entry     (get-in @*associations* [model :has-one k])

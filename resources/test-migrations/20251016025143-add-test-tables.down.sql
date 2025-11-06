@@ -1,26 +1,30 @@
-DROP TABLE accounts CASCADE;
+DROP TABLE accounts  CASCADE;
 
 --;;
 
-DROP TABLE settings_users;
+drop table computers  cascade
+
+--;;
+
+DROP TABLE settings_users cascade
 
 --;;
 
 
-DROP TABLE addresses;
+DROP TABLE addresses cascade
 
 --;;
 
-DROP TABLE articles;
+DROP TABLE articles cascade
 
 --;;
 
-DROP TABLE users;
+DROP TABLE users cascade
 
 --;;
 
-DROP TABLE birds;
+DROP TABLE birds cascade
 
 --;;
 
-DROP TABLE settings;
+DROP TABLE settings cascade
