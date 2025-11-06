@@ -2,30 +2,19 @@
   "Associations are managed through the *associations* dynamic var. The keys of
   the map are models that have some asociations defined on them.
 
-  For now these take a couple forms:
+  The structure of these associations is a nested map with paths
+  like this
+  [model association-type hydrating-attribute association-entry]
+  eg.
+  {:models/users {:has-one {:address {:foreign-key :homeonwer-id
+                                       :model      :models/users}}}}
 
-  {:models/users {:has-many {:models/settings {:through nil}}}}
+  The entries contain data about how to find the model to hydrate at
+  `hydrating-attribute`.
 
-  is a association that says there is a settings table and a users table and
-  they are connected through a join table using the default conventional name:
-  setting_users. That is configurable with `:through`.
+  Most commonly the keys are `:foreign-key`, `:table`, and `:model`.
 
-  The other type is
-
-  {:models/accounts {:owns #{:models/users}}}
-
-  This association means that there is a table users, which has a foreign key
-  `:account-id` to the table accounts.
-
-  If there are no associations, then
-  `toucan2.core/model-for-automagic-hydration` should return a model keyword for
-  the model to hydrate. This works in the 'has-a' case without configuration.
-
-  If you have registered an association, then
-  `toucan2.core/model-for-automagic-hydration` should return `nil` for that
-  model/key combination. When that happens, the hydration mechanism should
-  fallthrough to `toucan2.core/simple-hydrate`, which has been extended to do
-  the has-many and belongs-to lookups."
+  These can be overridden with the `opts` param."
   (:require [declensia.core :as dc]
             [methodical.core :as m]
             [toucan2.core :as t2]
@@ -46,99 +35,80 @@
         (throw e)))))
 
 (defn has-one!
-  ([owner attribute]
-   (has-one! owner
+  "Creates a has-one association.
+
+  After calling, `model` can be passed to `tram.db/hydrate` along with
+  `attribute` and a new key, `attribute`, will be added to the instance with the
+  relevant model.
+
+  For example, `(has-one! :model/users :address)` will allow you to
+  write `(tram.db/hydrate user-instance :address)` and user-instance will get a
+  new key `:address` with corresponding address model instance."
+  ([model attribute]
+   (has-one! model
              attribute
              {:model       (lang/modelize attribute)
-              :foreign-key (lang/model->foreign-key owner)}))
-  ([owner attribute opts]
+              :foreign-key (lang/model->foreign-key model)}))
+  ([model attribute opts]
    (swap! *associations* (fn [associations]
-                           (update-in associations
-                                      [owner :has-one attribute]
-                                      (fn [entry]
-                                        (-> entry
-                                            (assoc :model (:model opts))
-                                            (assoc
-                                              :foreign-key (:foreign-key
-                                                             opts)))))))))
+                           (assoc-in associations
+                                     [model :has-one attribute]
+                                     opts)))))
 
 (defn has-many!
-  "Create a association where `owner` has many `belonger`s.
+  "Creates a has-many association.
 
-  This is the inverse of a `belongs-to!` relationship so that the keys can be
-  filled into a set."
-  ([owner attribute]
-   (has-many! owner attribute {:foreign-key (lang/model->foreign-key owner)}))
+  After calling, `model` can be passed to `tram.db/hydrate` along with
+  `attribute` and a new key, `attribute`, will be added to the instance with the
+  relevant models.
+
+  For example, `(has-many! :model/users :settings)` will allow you to
+  write `(tram.db/hydrate user-instance :settings)` and user-instance will get a
+  new key `:settings` with matching values.
+
+  The database level relationship can either be:
+
+  - corresponding attribute table has a foreign key to model instance
+  - `model` and the model for `attribute` have a join table."
+  ([model attribute]
+   (has-many! model attribute {:foreign-key (lang/model->foreign-key model)}))
   ([owner attribute opts]
    (swap! *associations*
-     (fn [associations]
-       (let [attribute-model (lang/modelize attribute {:plural? false})
-             entry {:model       attribute-model
-                    :type        :many-to-many
-                    :foreign-key (:foreign-key opts)
-                    :join-table  (lookup-join-table owner attribute)}]
-         (assoc-in associations [owner :has-many attribute] entry))))))
+          (fn [associations]
+            (let [attribute-model (lang/modelize attribute {:plural? false})
+                  entry {:model       attribute-model
+                         :foreign-key (:foreign-key opts)
+                         :join-table  (lookup-join-table owner attribute)}]
+              (assoc-in associations [owner :has-many attribute] entry))))))
 
-(defn has-many?
-  "Checks if `model` has-many `attibute-model`s.
-
-  Expects both args to be fully qualified keywords with the
-  ns :models/<some-model>."
-  [model attribute]
-  (def model
-    model)
-  (def attribute-model
-    attribute)
+(defn has-many? [model attribute]
   (some? (get-in @*associations* [model :has-many attribute])))
 
 (defn has-one? [model attribute]
   (some? (get-in @*associations* [model :has-one attribute :model])))
 
-(defn has-explicit-association?
-  "Checks for an explicitly defined association between `base`, a fully qualified
-  model keyword, and `attribute` a non-namespaced keyword representing the
-  attribute keyword.
-
-  For belongs-to associations, `attribute` should be a singular keyword.
-  For has-many associations, `attribute` should be a plural keyword."
-  [base attribute]
-  (def base
-    base)
-  (def attribute
-    attribute)
-  (or (has-one? base attribute) (has-many? base attribute)))
-
+(defn has-explicit-association? [model attribute]
+  (or (has-one? model attribute) (has-many? model attribute)))
 
 (m/defmethod t2/model-for-automagic-hydration [:default :default]
-  [model k]
-  (def model
-    model)
-  (def k
-    k)
-  (let [has-association (has-explicit-association? model k)
-        alias-model     (get-in @*associations* [model :has-one k])]
+  [model attribute]
+  (let [has-association (has-explicit-association? model attribute)
+        alias-model     (get-in @*associations* [model :has-one attribute])]
     (if has-association
       nil
       (or alias-model
-          (lang/modelize k)))))
-
+          (lang/modelize attribute)))))
 
 (m/defmethod t2/simple-hydrate [:default :default]
-  [model k instance]
-  (def model
-    model)
-  (def k
-    k)
-  (def instance
-    instance)
-  (let [join-table (get-in @*associations* [model :has-many k :join-table])]
+  [model attribute instance]
+  (let [join-table (get-in @*associations* [model :has-many attribute :join-table])]
     (cond
       (some? join-table)
       (let [fk-for-instance (lang/table-name->foreign-key-id model)
-            fk-for-other    (lang/table-name->foreign-key-id k)
+            fk-for-other    (lang/table-name->foreign-key-id attribute)
             join-clause     [join-table
                              [:=
-                              (keyword (str (name k) ".id"))
+                              (keyword (str (name attribute) ".id"))
                               (keyword (str (name join-table)
                                             "."
                                             (name fk-for-other)))]]
@@ -148,23 +118,23 @@
                                            (name fk-for-instance)))
                              (:id instance)]]
         (assoc instance
-          k
-          (t2/select (keyword "models" (name k))
-                     {:join  join-clause
-                      :where where-clause})))
+               attribute
+               (t2/select (keyword "models" (name attribute))
+                          {:join  join-clause
+                           :where where-clause})))
 
-      (some? (get-in @*associations* [model :has-many k :model]))
-      (let [entry (get-in @*associations* [model :has-many k])]
+      (some? (get-in @*associations* [model :has-many attribute :model]))
+      (let [entry (get-in @*associations* [model :has-many attribute])]
         (assoc instance
-          k (t2/select (:model entry) (:foreign-key entry) (:id instance))))
+               attribute (t2/select (:model entry) (:foreign-key entry) (:id instance))))
 
-      (has-one? model k)
-      (let [entry     (get-in @*associations* [model :has-one k])
+      (has-one? model attribute)
+      (let [entry     (get-in @*associations* [model :has-one attribute])
             fk        (:foreign-key entry)
             one-model (:model entry)]
         (assoc instance
-          k (t2/select-one one-model fk (:id instance))))
+               attribute (t2/select-one one-model fk (:id instance))))
 
       :else
-      (t2/select (keyword "models" (dc/pluralize (name k)))
-                 (get instance (keyword (str (name k) "-id")))))))
+      (t2/select (keyword "models" (dc/pluralize (name attribute)))
+                 (get instance (keyword (str (name attribute) "-id")))))))
