@@ -211,6 +211,3 @@
                "\n\n" '(defn down [_] nil)))
     (zpc/zprint-file migration-filename migration-filename migration-filename)
     (zpc/zprint-file seeder-filename seeder-filename seeder-filename)))
-
-(defn seed []
-  (migratus.core/migrate (tram.config/get-seed-config)))

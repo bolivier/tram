@@ -34,6 +34,12 @@
         nil
         (throw e)))))
 
+(defn belongs-to! [model attribute opts]
+  (swap! *associations* (fn [associations]
+                          (assoc-in associations
+                            [model :belongs-to attribute :model]
+                            (:model opts)))))
+
 (defn has-one!
   "Creates a has-one association.
 
@@ -52,8 +58,8 @@
   ([model attribute opts]
    (swap! *associations* (fn [associations]
                            (assoc-in associations
-                                     [model :has-one attribute]
-                                     opts)))))
+                             [model :has-one attribute]
+                             opts)))))
 
 (defn has-many!
   "Creates a has-many association.
@@ -74,15 +80,15 @@
    (has-many! model attribute {:foreign-key (lang/model->foreign-key model)}))
   ([owner attribute opts]
    (swap! *associations*
-          (fn [associations]
-            (let [attribute-model (lang/modelize attribute {:plural? false})
-                  entry {:model       attribute-model
-                         :foreign-key (:foreign-key opts)
-                         :join-table  (lookup-join-table owner attribute)}]
-              (assoc-in associations [owner :has-many attribute] entry))))))
+     (fn [associations]
+       (let [attribute-model (lang/modelize attribute {:plural? false})
+             entry {:model       attribute-model
+                    :foreign-key (:foreign-key opts)
+                    :join-table  (lookup-join-table owner attribute)}]
+         (assoc-in associations [owner :has-many attribute] entry))))))
 
 (defn has-many? [model attribute]
-  (some? (get-in @*associations* [model :has-many attribute])))
+  (some? (get-in @*associations* [model :has-many attribute :model])))
 
 (defn has-one? [model attribute]
   (some? (get-in @*associations* [model :has-one attribute :model])))
@@ -93,7 +99,10 @@
 (m/defmethod t2/model-for-automagic-hydration [:default :default]
   [model attribute]
   (let [has-association (has-explicit-association? model attribute)
-        alias-model     (get-in @*associations* [model :has-one attribute])]
+        alias-model     (or (get-in @*associations*
+                                    [model :has-one attribute :model])
+                            (get-in @*associations*
+                                    [model :belongs-to attribute :model]))]
     (if has-association
       nil
       (or alias-model
@@ -101,7 +110,8 @@
 
 (m/defmethod t2/simple-hydrate [:default :default]
   [model attribute instance]
-  (let [join-table (get-in @*associations* [model :has-many attribute :join-table])]
+  (let [join-table (get-in @*associations*
+                           [model :has-many attribute :join-table])]
     (cond
       (some? join-table)
       (let [fk-for-instance (lang/table-name->foreign-key-id model)
@@ -118,22 +128,23 @@
                                            (name fk-for-instance)))
                              (:id instance)]]
         (assoc instance
-               attribute
-               (t2/select (keyword "models" (name attribute))
-                          {:join  join-clause
-                           :where where-clause})))
+          attribute
+          (t2/select (keyword "models" (name attribute))
+                     {:join  join-clause
+                      :where where-clause})))
 
       (some? (get-in @*associations* [model :has-many attribute :model]))
       (let [entry (get-in @*associations* [model :has-many attribute])]
         (assoc instance
-               attribute (t2/select (:model entry) (:foreign-key entry) (:id instance))))
+          attribute
+          (t2/select (:model entry) (:foreign-key entry) (:id instance))))
 
       (has-one? model attribute)
       (let [entry     (get-in @*associations* [model :has-one attribute])
             fk        (:foreign-key entry)
             one-model (:model entry)]
         (assoc instance
-               attribute (t2/select-one one-model fk (:id instance))))
+          attribute (t2/select-one one-model fk (:id instance))))
 
       :else
       (t2/select (keyword "models" (dc/pluralize (name attribute)))

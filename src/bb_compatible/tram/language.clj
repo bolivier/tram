@@ -10,10 +10,16 @@
 ;; databaes lang utils ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn model->foreign-key [s]
+(defn model->foreign-key
+  "Converts a model keyword, `:models/users` to a foreign key, `:user-id`."
+  [s]
   (keyword (str (dc/singularize (name s)) "-id")))
 
-(defn name->foreign-key [s]
+(defn name->foreign-key
+  "Converts a named string to a foreign-key.  Intended for singular words.
+
+  Does not modify input."
+  [s]
   (keyword (str (name s) "-id")))
 
 (defn table-name->foreign-key-id [table-name]
@@ -96,7 +102,7 @@
        (str ".clj"))))
 
 (defn filename->ns
-  "Takes a string filename and converts it to a string representation of a namespacee with `tram.language/file-ize`.
+  "Takes a string filename and converts it to a string representation of a namespace with `tram.language/file-ize`.
 
   Has a multi-arity version that will join filename partials with \"/\" before calling back to itself.
 
@@ -131,12 +137,13 @@
 (defn ordinal
   "Gets the ordinal suffix of a number, `n`"
   [n]
-  (let [ones-digit (mod n 10)]
-    (case ones-digit
-      1 "st"
-      2 "nd"
-      3 "rd"
-      "th")))
+  (let [one     (mod n 10)
+        hundred (mod n 100)]
+    (cond
+      (and (= 1 one) (not= 11 hundred)) "st"
+      (and (= 2 one) (not= 12 hundred)) "nd"
+      (and (= 3 one) (not= 13 hundred)) "rd"
+      :else                             "th")))
 
 (defn with-ordinal
   "Convert number `n` to a string and append the result of

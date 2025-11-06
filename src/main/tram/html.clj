@@ -23,8 +23,15 @@
    (:path (r/match-by-name router route-name route-params))))
 
 (defn make-route
+  "Marks a route name as something that the
+   hiccup interceptor should convert into a route.
+
+  Ignores strings."
   ([route-name]
-   (make-route route-name nil))
+   (if (string? route-name)
+     route-name
+     (make-route route-name
+                 nil)))
   ([route-name params]
    [::make route-name params]))
 

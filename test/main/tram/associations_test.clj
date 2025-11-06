@@ -107,9 +107,6 @@
 
 (deftest has-many-with-join-test
   (let [hydrated-user (t2/hydrate (brandon) :settings)]
-    (prn hydrated-user)
-    (prn (t2/select :models/settings))
-    (prn (t2/select :models/settings-users))
     (is (= 1
            (-> hydrated-user
                :settings
@@ -131,26 +128,7 @@
   (let [account (t2/select-one :models/accounts)]
     (is (match? account (:account (t2/hydrate (brandon) :account))))))
 
-;; belongs-to many
-
-;; belongs-to alias
-
-;; has-one
-
-;; has-one alias
-
-;; has-one (join table)
-
-;; has-one (join table) alias
-
-;; has-many (opposite belongs-to)
-
-;; has-many alias (opposite belongs-to)
-
-;; has-many (join table)
-
-;; has-many (join table) alias
-
-;; has-and-belongs-to-many
-
-;; has-and-belongs-to-many alias
+(deftest belongs-to-with-alias
+  (sut/belongs-to! :models/addresses :homeowner {:model :models/users})
+  (let [address (t2/select-one :models/addresses)]
+    (is (match? (brandon) (:homeowner (t2/hydrate address :homeowner))))))

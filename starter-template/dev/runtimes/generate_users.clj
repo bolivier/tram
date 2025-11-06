@@ -1,5 +1,5 @@
 (ns runtimes.generate-users
-  (:require [tram.db :refer [write-to-migration-files]]))
+  (:require [tram.db :refer [migrate write-to-migration-files]]))
 
 
 (def blueprint
@@ -20,7 +20,7 @@
                                    :required? true
                                    :name      :password}
                                   {:type      :text
-                                   :reuqired? true
+                                   :required? true
                                    :unique?   true
                                    :index?    true
                                    :name      :username}]}]})
@@ -28,4 +28,5 @@
 (comment
   ;; run this to re/write the migration file
   (write-to-migration-files blueprint)
+  (migrate)
   nil)

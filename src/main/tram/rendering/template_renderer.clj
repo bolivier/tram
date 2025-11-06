@@ -78,7 +78,6 @@
   [ctx]
   (let [{:keys [request response]} ctx
         {:keys [locals template]} response
-        template (get-in ctx [:response :template])
         view-fn (if-let [body (:body response)]
                   (constantly body)
                   (get-view-fn template ctx))]

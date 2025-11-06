@@ -150,22 +150,6 @@
                    :name
                    (keyword n))))))))
 
-
-(def id-field
-  {:name :id
-   :type :primary-key})
-
-(def default-attributes
-  [{:name      :created-at
-    :type      :timestamptz
-    :required? true
-    :default   :fn/now}
-   {:name      :updated-at
-    :type      :timestamptz
-    :required? true
-    :default   :fn/now
-    :trigger   :update-updated-at}])
-
 (defn parse
   "Parse a blueprint from the cli args"
   [migration-name cli-args]
@@ -178,19 +162,15 @@
                                      (.format fmt (Date.)))
                    :actions        [{:type       :create-table
                                      :table      table
-                                     :attributes [id-field]}]}]
+                                     :timestamps true
+                                     :attributes []}]}]
     (loop [blueprint blueprint
            args      (rest cli-args)]
-      (if (empty? args)
-        (update-in blueprint
-                   [:actions 0 :attributes]
-                   into
-                   default-attributes)
-        (recur (update-in blueprint
-                          [:actions 0 :attributes]
-                          conj
-                          (parse-attribute (first args)))
-               (rest args))))))
+      (recur (update-in blueprint
+                        [:actions 0 :attributes]
+                        conj
+                        (parse-attribute (first args)))
+             (rest args)))))
 
 (def runtime-defaults
   {:root "runtimes"

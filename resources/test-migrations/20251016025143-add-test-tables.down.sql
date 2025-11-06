@@ -1,4 +1,4 @@
-DROP TABLE accounts  CASCADE;
+DROP TABLE accounts  CASCADE
 
 --;;
 
