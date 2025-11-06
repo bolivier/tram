@@ -84,7 +84,7 @@
         (.setObject stmt idx (.createArrayOf conn String (to-array v)))
         (.setObject stmt idx (clj->jsonb v))))))
 
-(import-vars [tram.associations belongs-to! has-many! has-one!]
+(import-vars [tram.associations has-many! has-one!]
              [tram.generators.sql-migration write-to-migration-files])
 
 ;; toucan2.core

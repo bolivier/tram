@@ -16,7 +16,12 @@
 (defn setup-db []
   (alter-var-root #'sut/*associations* (constantly (atom {})))
   (sut/has-many! :models/accounts :users)
-  (sut/has-many! :models/users :settings :many-to-many)
+  (sut/has-many! :models/users :settings)
+  (sut/has-one! :models/birds :user)
+  (sut/has-one! :models/users
+                :home
+                {:model       :models/addresses
+                 :foreign-key :homeowner-id})
   (let [account-id  (t2/insert-returning-pk! :models/accounts {})
         settings-id (t2/insert-returning-pk! :models/settings {})
         bird-id     (t2/insert-returning-pk! :models/birds {})
@@ -103,11 +108,10 @@
                :settings
                count)))))
 
-#_(deftest has-one-test
-    (sut/has-one! :models/birds :models/users) ;; birds have one user
-    (let [bird (t2/select-one :models/birds :id (:bird-id brandon))
-          hydrated-bird (t2/hydrate bird :user)]
-      (is (= map? (:user hydrated-bird)))))
+(deftest has-one-test
+  (let [bird (t2/select-one :models/birds :id (:bird-id (brandon)))
+        hydrated-bird (t2/hydrate bird :user)]
+    (is (= (brandon) (:user hydrated-bird)))))
 
 (deftest belongs-to-single-test
   (let [account (t2/select-one :models/accounts)]

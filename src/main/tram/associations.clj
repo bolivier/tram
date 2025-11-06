@@ -45,53 +45,36 @@
         nil
         (throw e)))))
 
-(defn has-one! [owner belonger {:keys [as]}]
-  (swap! *associations*
-    (fn [associations] (assoc-in associations [owner :has-one as] belonger))))
+(defn has-one!
+  ([owner attribute]
+   (has-one! owner
+             attribute
+             {:model       (lang/modelize attribute)
+              :foreign-key (lang/model->foreign-key owner)}))
+  ([owner attribute opts]
+   (swap! *associations* (fn [associations]
+                           (update-in associations
+                                      [owner :has-one attribute]
+                                      (fn [entry]
+                                        (-> entry
+                                            (assoc :model (:model opts))
+                                            (assoc
+                                              :foreign-key (:foreign-key
+                                                             opts)))))))))
 
 (defn has-many!
   "Create a association where `owner` has many `belonger`s.
 
   This is the inverse of a `belongs-to!` relationship so that the keys can be
   filled into a set."
-  ([owner belonger]
-   (has-many! owner belonger :one-to-many))
-  ([owner belonger type]
-   (def from
-     from)
-   (swap! *associations* (fn [associations]
-                           (assoc-in associations
-                             [owner :has-many belonger]
-                             {:model      (lang/modelize belonger
-                                                         {:plural? false})
-                              :join-table (if (= :many-to-many type)
-                                            (lang/join-table owner
-                                                             belonger)
-                                            nil)})))))
-
-(defn belongs-to!
-  "Creates a belongs-to association between `owner` and `belonger`.
-
-  `belonger` has a foreign key to `owner`.
-
-  This implemented with the term \"owns\" instead of \"belongs-to\" because of
-  the direction of lookup in the general case."
-  ([belonger owner _opts]
-   (belongs-to! belonger owner))
-  ([belonger owner]
-   (swap! *associations* (fn [associations]
-                           (->
-                             associations
-                             (update-in [belonger :belongs-to] set)
-                             (update-in [belonger :belongs-to] conj owner))))))
-
-(defn belongs-to?
-  "Checks if `belonger` belongs-to `owner`.
-
-  Expects both args to be fully qualified keywords with the
-  ns :models/<some-model>."
-  [belonger owner]
-  (contains? (get-in @*associations* [belonger :belongs-to]) owner))
+  ([owner attribute]
+   (swap! *associations*
+     (fn [associations]
+       (let [attribute-model (lang/modelize attribute {:plural? false})
+             entry {:model      attribute-model
+                    :type       :many-to-many
+                    :join-table (lookup-join-table owner attribute)}]
+         (assoc-in associations [owner :has-many attribute] entry))))))
 
 (defn has-many?
   "Checks if `model` has-many `attibute-model`s.
@@ -105,6 +88,9 @@
     attribute)
   (some? (get-in @*associations* [model :has-many attribute])))
 
+(defn has-one? [model attribute]
+  (some? (get-in @*associations* [model :has-one attribute :model])))
+
 (defn has-explicit-association?
   "Checks for an explicitly defined association between `base`, a fully qualified
   model keyword, and `attribute` a non-namespaced keyword representing the
@@ -117,7 +103,8 @@
     base)
   (def attribute
     attribute)
-  (has-many? base attribute))
+  (or (has-one? base attribute) (has-many? base attribute)))
+
 
 (m/defmethod t2/model-for-automagic-hydration [:default :default]
   [model k]
@@ -171,11 +158,12 @@
                        (keyword (lang/table-name->foreign-key-id (name model))))
                    (:id instance)))
 
-      (contains? (get-in @*associations* [model :belongs-to]) (lang/modelize k))
-      (assoc instance
-        k
-        (t2/select-one (lang/modelize k)
-                       (get instance (lang/table-name->foreign-key-id k))))
+      (has-one? model k)
+      (let [entry     (get-in @*associations* [model :has-one k])
+            fk        (:foreign-key entry)
+            one-model (:model entry)]
+        (assoc instance
+          k (t2/select-one one-model fk (:id instance))))
 
       :else
       (t2/select (keyword "models" (dc/pluralize (name k)))
