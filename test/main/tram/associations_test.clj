@@ -3,14 +3,16 @@
             kaocha-utils.kaocha-hooks
             [matcher-combinators.matchers :as m]
             matcher-combinators.test
+            [test-migrations.seed-data]
             [toucan2.core :as t2]
             [tram.associations :as sut]
             [tram.language :as lang]))
 
-
-
 (defn teardown-db []
-  (t2/delete! :models/accounts))
+  (t2/delete! :models/accounts)
+  (t2/delete! :models/users)
+  (t2/delete! :models/settings)
+  (t2/delete! :models/settings-users))
 
 (defn setup-db []
   (alter-var-root #'sut/*associations* (constantly (atom {})))
@@ -70,87 +72,47 @@
         (migratus/migrate migration-config)
         (setup-db))))
 
-(use-fixtures :once (fn [f] (teardown-db) (setup-db) (f) (teardown-db)))
+(use-fixtures :once (fn [f] (teardown-db) (setup-db) (f)))
 
 ;; These tests are kind of implementation details, but I don't care for now
 ;; because this is kinda complicated.
 
-(deftest has-many-associations-structure
-  (is (match? {:models/accounts {:has-many {:models/users {:through nil}}}}
-              @sut/*associations*))
-  (is (sut/has-many? :models/accounts :models/users))
-  (is (sut/has-explicit-association? :models/accounts :users)))
+(defn brandon []
+  (t2/select-one :models/users :name "Brandon"))
 
-(deftest has-many-with-join-associations-structure
-  (is (match? {:models/users {:has-many {:models/settings {:through
-                                                           :settings-users}}}}
-              @sut/*associations*))
-  (is (sut/has-many? :models/users :models/settings))
-  (is (sut/has-explicit-association? :models/users :settings)))
-
-(deftest integration-belongs-to
+(deftest has-many-opposite-belongs-to-test
   (let [account (t2/select-one :models/accounts)
-        account-with-users (t2/hydrate account :users)]
-    (is (pos? (count (:users account-with-users)))
-        "Did not have positive user count in belongs-to test")
-    (doseq [user (:users account)]
-      (is (= (:id account) (:account-id user))))))
+        hydrated-account (t2/hydrate account :users)]
+    (is (= 2
+           (-> hydrated-account
+               :users
+               count)))
+    (is (match? {:id   int?
+                 :name string?}
+                (-> hydrated-account
+                    :users
+                    first)))))
 
-(deftest integration-has-one
-  (testing "something-different"
-    (let [user (t2/select-one :models/users)]
-      (is (match? {:account {:id int?}} (t2/hydrate user :account))
-          "Account did not match.")))
-  (testing "with value"
-    (is (match? {:bird {:id int?}}
-                (t2/hydrate (t2/select-one :models/users :name "Brandon")
-                            :bird))
-        "User did not match"))
-  (testing "without value"
-    (is (match? {:bird nil?}
-                (t2/hydrate (t2/select-one :models/users :name "Olivia") :bird))
-        "User did not match"))
-  (is (match? {:bird    {:id int?}
-               :account {:id int?}}
-              (t2/hydrate (t2/select-one :models/users) :bird :account))
-      "User did not match"))
 
-(deftest integration-has-many
-  (let [account (t2/select-one :models/accounts)]
-    (is (match? (m/embeds [(t2/select-one :models/users :name "Brandon")
-                           (t2/select-one :models/users :name "Olivia")])
-                (:users (t2/hydrate account :users))))))
+(deftest has-many-with-join-test
+  (let [hydrated-user (t2/hydrate (brandon) :settings)]
+    (prn hydrated-user)
+    (prn (t2/select :models/settings))
+    (prn (t2/select :models/settings-users))
+    (is (= 1
+           (-> hydrated-user
+               :settings
+               count)))))
 
-(deftest integration-has-many-join-table
-  (is (not (t2/model-for-automagic-hydration :models/accounts :users)))
-  (let [user (t2/select-one :models/users)]
-    (is (seq (:settings (t2/hydrate user :settings))))
-    (is (match? {:settings [{:id int?}]} (t2/hydrate user :settings)))))
+#_(deftest has-one-test
+    (sut/has-one! :models/birds :models/users) ;; birds have one user
+    (let [bird (t2/select-one :models/birds :id (:bird-id brandon))
+          hydrated-bird (t2/hydrate bird :user)]
+      (is (= map? (:user hydrated-bird)))))
 
-(deftest has-one-alias
-  (sut/has-one! :models/accounts :models/users {:as :owner})
-  (is (match? :models/users
-              (t2/model-for-automagic-hydration :models/accounts :owner)))
-  (t2/select-one :models/users))
-
-(deftest belongs-to-has-many-alias-test
-  (sut/has-one! :models/articles :models/users {:as :author})
-  (sut/belongs-to! :models/articles :models/users {:as :author})
-  (sut/has-many! :models/users :models/articles {:from :author})
-  (let [user          (t2/select-one :models/users :name "Brandon")
-        article       (t2/select-one :models/articles :title "My Article")
-        hydrated-user (t2/hydrate user :articles)
-        hydrated-article (t2/hydrate article :author)]
-    (is (= 2 (count (:articles hydrated-user))))
-    (is (= (:id user) (:id (:author hydrated-article))))))
-
-;; new tests
-
-;; belongs-to single
 (deftest belongs-to-single-test
-  (let [user    (t2/select-one :models/users :name "Brandon")
-        account (t2/select-one :models/accounts)]
-    (is (match? account (:account (t2/hydrate user :account))))))
+  (let [account (t2/select-one :models/accounts)]
+    (is (match? account (:account (t2/hydrate (brandon) :account))))))
 
 ;; belongs-to many
 

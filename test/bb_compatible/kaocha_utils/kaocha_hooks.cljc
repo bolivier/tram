@@ -35,10 +35,7 @@
                  nil))
              (do
                (migratus/init migration-config)
-               (migratus/migrate migration-config))
-             (comment
-               (migratus/reset migration-config)
-                nil)
+               (migratus/reset migration-config))
              (reset! seeded? true)))
          test)]))
 
