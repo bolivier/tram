@@ -7,7 +7,6 @@
             [toucan2.core :as t2]
             [tram.associations :as sut]
             [tram.language :as lang]))
-
 (defn teardown-db []
   (t2/delete! :models/accounts)
   (t2/delete! :models/users)
@@ -16,8 +15,8 @@
 
 (defn setup-db []
   (alter-var-root #'sut/*associations* (constantly (atom {})))
-  (sut/has-many! :models/accounts :models/users)
-  (sut/has-many! :models/users :models/settings)
+  (sut/has-many! :models/accounts :users)
+  (sut/has-many! :models/users :settings :many-to-many)
   (let [account-id  (t2/insert-returning-pk! :models/accounts {})
         settings-id (t2/insert-returning-pk! :models/settings {})
         bird-id     (t2/insert-returning-pk! :models/birds {})
