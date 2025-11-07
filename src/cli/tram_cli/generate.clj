@@ -166,11 +166,13 @@
                                      :attributes []}]}]
     (loop [blueprint blueprint
            args      (rest cli-args)]
-      (recur (update-in blueprint
-                        [:actions 0 :attributes]
-                        conj
-                        (parse-attribute (first args)))
-             (rest args)))))
+      (if (empty? args)
+        blueprint
+        (recur (update-in blueprint
+                          [:actions 0 :attributes]
+                          conj
+                          (parse-attribute (first args)))
+               (rest args))))))
 
 (def runtime-defaults
   {:root "runtimes"
@@ -226,6 +228,7 @@
     "add-projects")
   (def args
     (list "^!slug" "!title" "!description" "!body" "references(users)")))
+
 (defn generate-migration-runtime [[name & args]]
   (let [blueprint (parse name args)]
     (write blueprint)))

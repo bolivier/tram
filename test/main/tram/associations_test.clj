@@ -30,6 +30,12 @@
                                                    {:bird-id    bird-id
                                                     :name       "Brandon"
                                                     :account-id account-id})
+        olivia      (t2/insert-returning-instance! :models/users
+                                                   {:name       "Olivia"
+                                                    :account-id account-id})
+        _ (t2/insert! :models/follows
+                      {:follower-id (:id olivia)
+                       :followee-id (:id user)})
         _ (t2/insert! :models/computers
                       {:developer-id (:id user)
                        :name         "Thinkpad"})
@@ -50,10 +56,7 @@
                                     :homeowner-id (:id user)})
         _ (t2/insert-returning-pk! :models/addresses
                                    {:full_address "742 Evergreen Terrace"
-                                    :homeowner-id (:id user)})
-        _ (t2/insert-returning-instance! :models/users
-                                         {:name       "Olivia"
-                                          :account-id account-id})]))
+                                    :homeowner-id (:id user)})]))
 
 (comment
   (do (teardown-db)
@@ -90,6 +93,8 @@
 
 (defn brandon []
   (t2/select-one :models/users :name "Brandon"))
+(defn olivia []
+  (t2/select-one :models/users :name "Olivia"))
 
 (deftest has-many-opposite-belongs-to-test
   (let [account (t2/select-one :models/accounts)
@@ -132,3 +137,21 @@
   (sut/belongs-to! :models/addresses :homeowner {:model :models/users})
   (let [address (t2/select-one :models/addresses)]
     (is (match? (brandon) (:homeowner (t2/hydrate address :homeowner))))))
+
+(deftest has-many-followers-test
+  (sut/has-many! :models/users
+                 :followers
+                 {:join-table  :follows
+                  :model-key   :follower-id
+                  :foreign-key :followee-id
+                  :model       :models/users})
+  (is (match? (olivia) (first (:followers (t2/hydrate (brandon) :followers))))))
+
+(deftest has-many-follows-test
+  (sut/has-many! :models/users
+                 :follows
+                 {:join-table  :follows
+                  :model-key   :followee-id
+                  :foreign-key :follower-id
+                  :model       :models/users})
+  (is (match? (brandon) (first (:follows (t2/hydrate (olivia) :follows))))))

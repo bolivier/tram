@@ -82,9 +82,9 @@
    (swap! *associations*
      (fn [associations]
        (let [attribute-model (lang/modelize attribute {:plural? false})
-             entry {:model       attribute-model
-                    :foreign-key (:foreign-key opts)
-                    :join-table  (lookup-join-table owner attribute)}]
+             entry (merge {:model      attribute-model
+                           :join-table (lookup-join-table owner attribute)}
+                          opts)]
          (assoc-in associations [owner :has-many attribute] entry))))))
 
 (defn has-many? [model attribute]
@@ -108,28 +108,33 @@
       (or alias-model
           (lang/modelize attribute)))))
 
+(defn qualified-column [table column]
+  (keyword (str (name table) "." (name column))))
+
 (m/defmethod t2/simple-hydrate [:default :default]
   [model attribute instance]
   (let [join-table (get-in @*associations*
                            [model :has-many attribute :join-table])]
     (cond
       (some? join-table)
-      (let [fk-for-instance (lang/table-name->foreign-key-id model)
-            fk-for-other    (lang/table-name->foreign-key-id attribute)
+      (let [entry           (get-in @*associations* [model :has-many attribute])
+            fk-for-instance (or (:foreign-key entry)
+                                (lang/model->foreign-key model))
+            fk-for-other    (or (:model-key entry)
+                                (lang/model->foreign-key attribute))
+            other-model     (:model entry)
             join-clause     [join-table
                              [:=
-                              (keyword (str (name attribute) ".id"))
-                              (keyword (str (name join-table)
-                                            "."
-                                            (name fk-for-other)))]]
+                              (qualified-column join-table fk-for-other)
+                              (qualified-column other-model
+                                                (first (t2/primary-keys
+                                                         other-model)))]]
             where-clause    [:=
-                             (keyword (str (name join-table)
-                                           "."
-                                           (name fk-for-instance)))
+                             (qualified-column join-table fk-for-instance)
                              (:id instance)]]
         (assoc instance
           attribute
-          (t2/select (keyword "models" (name attribute))
+          (t2/select other-model
                      {:join  join-clause
                       :where where-clause})))
 

@@ -54,3 +54,11 @@ CREATE TABLE computers (
   name TEXT NOT NULL,
   developer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
 )
+
+--;;
+
+CREATE TABLE follows (
+  id SERIAL PRIMARY KEY,
+  follower_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  followee_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+)
