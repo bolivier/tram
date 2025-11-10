@@ -135,8 +135,9 @@
         (assoc instance
           attribute
           (t2/select other-model
-                     {:join  join-clause
-                      :where where-clause})))
+                     {:select (qualified-column other-model :*)
+                      :join   join-clause
+                      :where  where-clause})))
 
       (some? (get-in @*associations* [model :has-many attribute :model]))
       (let [entry (get-in @*associations* [model :has-many attribute])]

@@ -23,6 +23,19 @@
                 :home
                 {:model       :models/addresses
                  :foreign-key :homeowner-id})
+  (sut/has-many! :models/users
+                 :followers
+                 {:join-table  :follows
+                  :model-key   :follower-id
+                  :foreign-key :followee-id
+                  :model       :models/users})
+  (sut/has-many! :models/users
+                 :follows
+                 {:join-table  :follows
+                  :model-key   :followee-id
+                  :foreign-key :follower-id
+                  :model       :models/users})
+  (sut/belongs-to! :models/addresses :homeowner {:model :models/users})
   (let [account-id  (t2/insert-returning-pk! :models/accounts {})
         settings-id (t2/insert-returning-pk! :models/settings {})
         bird-id     (t2/insert-returning-pk! :models/birds {})
@@ -134,24 +147,13 @@
     (is (match? account (:account (t2/hydrate (brandon) :account))))))
 
 (deftest belongs-to-with-alias
-  (sut/belongs-to! :models/addresses :homeowner {:model :models/users})
   (let [address (t2/select-one :models/addresses)]
     (is (match? (brandon) (:homeowner (t2/hydrate address :homeowner))))))
 
 (deftest has-many-followers-test
-  (sut/has-many! :models/users
-                 :followers
-                 {:join-table  :follows
-                  :model-key   :follower-id
-                  :foreign-key :followee-id
-                  :model       :models/users})
-  (is (match? (olivia) (first (:followers (t2/hydrate (brandon) :followers))))))
+  (let [follower (first (:followers (t2/hydrate (brandon) :followers)))]
+    (is (match? (olivia) follower))
+    (is (not (:follower-id follower)))))
 
 (deftest has-many-follows-test
-  (sut/has-many! :models/users
-                 :follows
-                 {:join-table  :follows
-                  :model-key   :followee-id
-                  :foreign-key :follower-id
-                  :model       :models/users})
   (is (match? (brandon) (first (:follows (t2/hydrate (olivia) :follows))))))
