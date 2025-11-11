@@ -37,8 +37,8 @@
 (defn belongs-to! [model attribute opts]
   (swap! *associations* (fn [associations]
                           (assoc-in associations
-                            [model :belongs-to attribute :model]
-                            (:model opts)))))
+                            [model :belongs-to attribute]
+                            opts))))
 
 (defn has-one!
   "Creates a has-one association.
