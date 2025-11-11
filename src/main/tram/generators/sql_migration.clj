@@ -1,6 +1,6 @@
 (ns tram.generators.sql-migration
   "This namespace is for writing migration blueprints into migration files."
-  (:require [camel-snake-kebab.core :refer [->snake_case_string]]
+  (:require [camel-snake-kebab.core :as csk]
             [clojure.string :as str]
             [honey.sql :as sql]
             [honey.sql.helpers :as hh]
@@ -10,32 +10,12 @@
             [tram.tram-config :as tram.config])
   (:import (com.github.vertical_blank.sqlformatter SqlFormatter)))
 
-(def AttributeSchema
-  [:map
-   [:type :keyword]
-   [:name :keyword]
-   [:required :boolean]
-   [:unique? :boolean]
-   [:default :any]
-   [:trigger [:literal [:update-updated-at]]]])
-
-(def ActionSchema
-  [:map
-   [:attributes AttributeSchema]
-   [:action-type :keyword] ;; only :create-table for now
-  ])
-
-(def MigrationBlueprintSchema
-  [:map
-   [:model :string]     ;; singular
-   [:timestamp :string] ;; "20250628192301"
-   [:migration-name :string]
-   [:actions [:vector ActionSchema]]])
-
 (defn format-sql [sql]
   (SqlFormatter/format sql))
 
 (m/defmulti serialize-attribute
+  "Returns a version of the attribute as a vector ready to go to a honeysql
+  helper."
   (fn [{:keys [name type]}] [name type]))
 
 (m/defmethod serialize-attribute [:id :primary-key]
@@ -70,13 +50,9 @@
          (or (:table-name attr) (lang/foreign-key-id->table-name (:name attr)))
          :id]))
 
-(defn serialize-blueprint [blueprint]
-  (-> (hh/create-table (symbol (:table blueprint)))
-      (hh/with-columns (mapv serialize-attribute (:attributes blueprint)))))
-
 (sql/register-fn! :on
                   (fn on-formatter [f args]
-                    [(str "ON " (->snake_case_string (first args)))]))
+                    [(str "ON " (csk/->snake_case_string (first args)))]))
 
 (defn generic-formatter [clause x]
   (let [[sql & params] (if (or (vector? x)
@@ -87,7 +63,8 @@
 
 (sql/register-clause!
   :execute-function
-  (fn [clause x] [(str (sql/sql-kw clause) " " (->snake_case_string x) "()")])
+  (fn [clause x]
+    [(str (sql/sql-kw clause) " " (csk/->snake_case_string x) "()")])
   nil)
 (sql/register-clause! :for-each #'generic-formatter :execute-function)
 
@@ -106,11 +83,11 @@
   (fn [attr _] (:trigger attr)))
 
 (defmethod render-trigger :update-updated-at
-  [_ blueprint]
+  [_ action]
   (format-sql (first (sql/format
                        {:create-trigger   (keyword (str "set-updated-at-on-"
-                                                        (:table blueprint)))
-                        :before-update    [:on (:table blueprint)]
+                                                        (:table action)))
+                        :before-update    [:on (:table action)]
                         :for-each         :row
                         :execute-function :update-updated-at-column}))))
 
@@ -118,18 +95,67 @@
   [_ _]
   nil)
 
-(defn serialize-to-trigger-sqls
-  "Finds any references to triggers that need to be added to the migration file."
-  [blueprint]
+(defn render-index [attr action]
+  (when (:index? attr)
+    (let [col-name (csk/->snake_case_string (:name attr))]
+      (str "CREATE INDEX "
+           (lang/index-name (:table action)
+                            (:name attr))
+           " ON "
+           (:table action)
+           "("
+           (lang/as-column col-name)
+           ")"))))
+
+(defn render-down-trigger [attr action]
+  (when (:trigger attr)
+    (let [trigger-name (csk/->snake_case_string (:trigger attr))
+          table-name   (name (:table action))]
+      (str "DROP TRIGGER " trigger-name
+           " ON " table-name))))
+
+(defn render-down-index [attr action]
+  (when (:index? attr)
+    (str "DROP INDEX "
+         (lang/index-name (:table action)
+                          (:name attr)))))
+
+(defn serialize-to-extra-statements
+  "Creates extra sql statements for indexes and triggers."
+  [action]
   (remove nil?
-    (map (fn [attr] (render-trigger attr blueprint))
-      (filter :trigger (:attributes blueprint)))))
+    (let [attrs    (conj (:attributes action) (:column action))
+          triggers (map #(render-trigger % action) attrs)
+          indexes  (map #(render-index % action) attrs)]
+      (concat triggers indexes))))
 
-(defn serialize-to-sql [blueprint]
-  (format-sql (first (sql/format (serialize-blueprint blueprint)))))
+(defn serialize-to-extra-down-statements
+  "Creates down sql for indexes and triggers."
+  [action]
+  (remove nil?
+    (let [attrs    (conj (:attributes action) (:column action))
+          triggers (map #(render-down-trigger % action) attrs)
+          indexes  (map #(render-down-index % action) attrs)]
+      (concat triggers indexes))))
 
-(defn serialize-to-down-sql [blueprint]
-  (format-sql (first (sql/format (hh/drop-table (symbol (:table blueprint)))))))
+(m/defmulti to-down-sql-string
+  :type)
+
+(m/defmethod to-down-sql-string :default
+  [action]
+  (throw (ex-info "Tried to generate down sql for unsupported type"
+                  {:action action
+                   :possible-solution (str "Implement `to-down-sql-string` for "
+                                           (:type action))})))
+
+(m/defmethod to-down-sql-string :create-table
+  [action]
+  (first (sql/format (hh/drop-table (symbol (:table action))))))
+
+(m/defmethod to-down-sql-string :add-column
+  [action]
+  (first (sql/format {:drop-column [(:name (:column action))]
+                      :alter-table (:table action)})))
 
 (defn generate-migration-filename
   "Generate the path, filename included, for an up migration."
@@ -152,27 +178,28 @@
   "Generate the path, filename included, for an up migration."
   (partial generate-migration-filename :up))
 
-(defn validate! [blueprint]
-  nil)
-
 (def updated-at
   {:name      :updated-at
    :type      :timestamptz
    :required? true
    :default   :fn/now
    :trigger   :update-updated-at})
+
 (def created-at
   {:name      :created-at
    :type      :timestamptz
    :required? true
    :default   :fn/now})
 
-(m/defmulti to-sql-string
-  (fn [action] (:type action)))
+(def sql-joiner
+  "\n\n--;;\n\n")
+
+(m/defmulti to-up-sql-string
+  :type)
 
 ;; Before going to create the tble assoc in the timestamps if the key is
 ;; present
-(m/defmethod to-sql-string :before
+(m/defmethod to-up-sql-string :before
   :create-table
   [action]
   (let [original-attributes (:attributes action)
@@ -183,25 +210,45 @@
                              [updated-at created-at]))]
     (assoc action :attributes attributes)))
 
-(m/defmethod to-sql-string :create-table
+(m/defmethod to-up-sql-string :create-table
   [action]
-  (let [primary-migration (serialize-to-sql action)
-        triggers (serialize-to-trigger-sqls action)]
-    (str/join "\n\n--;;\n\n" (into [primary-migration] triggers))))
+  (let [primary-migration
+        (format-sql (first (sql/format
+                             (-> (hh/create-table (symbol (:table action)))
+                                 (hh/with-columns (mapv serialize-attribute
+                                                    (:attributes action)))))))
 
-(defn write-to-migration-file [blueprint]
-  (let [migration-strings (map to-sql-string (:actions blueprint))
-        sql-string        (str/join "\n\n--;;\n\n" migration-strings)]
+        triggers (serialize-to-extra-statements action)]
+    (str/join sql-joiner (into [primary-migration] triggers))))
+
+(m/defmethod to-up-sql-string :add-column
+  [action]
+  action
+  (let [col-data (serialize-attribute (:column action))
+        primary  (first (sql/format (-> (apply hh/add-column col-data)
+                                        (hh/alter-table (:table action)))))
+        triggers (serialize-to-extra-statements action)]
+    (str/join sql-joiner (into [primary] triggers))))
+
+(m/defmethod to-up-sql-string :default
+  [action]
+  (throw (ex-info "Tried to create a sql-string from an invalid type"
+                  {:error  :no-matching-method-type
+                   :action action})))
+
+(defn write-to-migration-up [blueprint]
+  (let [migration-strings (map to-up-sql-string (:actions blueprint))
+        sql-string        (str/join sql-joiner migration-strings)]
     (spit (generate-migration-up-filename blueprint) sql-string)))
 
+
 (defn write-to-migration-down [blueprint]
-  (let [sql-string (map #(serialize-to-down-sql %)
-                     (reverse (:actions blueprint)))
-        sql-string (str/join "\n\n--;;\n\n" sql-string)]
+  (let [actions    (reverse (:actions blueprint))
+        sql-string (map to-down-sql-string actions)
+        sql-string (str/join sql-joiner sql-string)]
     (spit (generate-migration-down-filename blueprint) sql-string)))
 
 (defn write-to-migration-files [blueprint]
-  (validate! blueprint)
   (write-to-migration-down blueprint)
-  (write-to-migration-file blueprint)
+  (write-to-migration-up blueprint)
   nil)

@@ -37,6 +37,12 @@
               html-request?
               full-redirect
               redirect]
+             [reitit.http.interceptors.multipart multipart-interceptor]
+             [reitit.http.interceptors.parameters parameters-interceptor]
+             [reitit.http.coercion
+              coerce-exceptions-interceptor
+              coerce-request-interceptor
+              coerce-response-interceptor]
              [tram.html make-route])
 
 (def expand-hiccup-interceptor
@@ -90,7 +96,6 @@
                          [:response :body]
                          (fn [body]
                            (cond
-                             (nil? body) ""
                              needs-full-page?
                              (let [f full-page-renderer]
                                (f body))
@@ -140,41 +145,27 @@
 
                 :else ctx)))})
 
-;; TODO combine into single interceptor
-(def default-coercion-interceptors
-  [(coerce-request-interceptor)
-   (coerce-response-interceptor)
-   (coerce-exceptions-interceptor)
-   (rhip/parameters-interceptor)])
-
-(def default-interceptors
-  (concat [(multipart-interceptor)
-           expand-hiccup-interceptor
-           format-json-body-interceptors]
-          default-coercion-interceptors
-          [render-template-interceptor]))
-
 (defn default-error-handler
   "Default error handler for `tram.routes/exception-interceptor`."
-  [message exception request]
+  [exception request]
   (log/event! ::uncaught-exception
               {:data {:request   request
-                      :exception exception
-                      :message   message}})
-  {:status 500
+                      :exception exception}})
+  {:status 504
    :body   "An unknown error occurred"})
 
 ;; This is to support catching reitit coercion requests with a tram keyword.
 ;; It's not strictly necessary, but you would have to update the usage of the
 ;; keyword below in the exception interceptor.
 (derive :tram.req/coercion :reitit.coercion/request-coercion)
+(derive ::default ::exception/exception)
 
 (defn exception-interceptor
   ([]
    (exception-interceptor {}))
   ([config]
    (exception/exception-interceptor
-     (merge {:default (partial default-error-handler "error")
+     (merge {::default default-error-handler
              :tram.req/coercion
              (fn [e req]
                (let [method (get-in req [:request-method])

@@ -1,5 +1,5 @@
 (ns sample-app.views.authentication-views
-  (:require [tram.routes :refer [*current-user* make-route]]))
+  (:require [tram.routes :refer [*current-user*]]))
 
 (defn sign-up [_ctx]
   [:div {:class "max-w-md mx-auto mb-1 mt-10"}
@@ -9,7 +9,7 @@
     [:h1 {:class "text-2xl"}
      "Create an Account"]
     [:div#error]
-    [:form {:hx-post   (make-route :route/sign-up)
+    [:form {:hx-post   :route/sign-up
             :hx-target "#error"
             :class     "space-y-4"}
      [:div {:class "flex flex-col space-y-1"}
@@ -44,7 +44,7 @@
     [:h1 {:class "text-2xl"}
      "Sign In"]
     [:div#error]
-    [:form {:hx-post   "/sign-in"
+    [:form {:hx-post   :route/sign-in
             :hx-target "#error"
             :class     "space-y-4"}
      [:div {:class "flex flex-col space-y-1"}
@@ -82,5 +82,5 @@
   [:div
    "Welcome to Tram, "
    (:email *current-user*)
-   [:a.border.rounded.p-1 {:href (make-route :route/log-out)}
+   [:a.border.rounded.p-1 {:href :route/log-out}
     "Log out"]])

@@ -150,22 +150,6 @@
                    :name
                    (keyword n))))))))
 
-
-(def id-field
-  {:name :id
-   :type :primary-key})
-
-(def default-attributes
-  [{:name      :created-at
-    :type      :timestamptz
-    :required? true
-    :default   :fn/now}
-   {:name      :updated-at
-    :type      :timestamptz
-    :required? true
-    :default   :fn/now
-    :trigger   :update-updated-at}])
-
 (defn parse
   "Parse a blueprint from the cli args"
   [migration-name cli-args]
@@ -178,14 +162,12 @@
                                      (.format fmt (Date.)))
                    :actions        [{:type       :create-table
                                      :table      table
-                                     :attributes [id-field]}]}]
+                                     :timestamps true
+                                     :attributes []}]}]
     (loop [blueprint blueprint
            args      (rest cli-args)]
       (if (empty? args)
-        (update-in blueprint
-                   [:actions 0 :attributes]
-                   into
-                   default-attributes)
+        blueprint
         (recur (update-in blueprint
                           [:actions 0 :attributes]
                           conj
@@ -246,6 +228,7 @@
     "add-projects")
   (def args
     (list "^!slug" "!title" "!description" "!body" "references(users)")))
+
 (defn generate-migration-runtime [[name & args]]
   (let [blueprint (parse name args)]
     (write blueprint)))

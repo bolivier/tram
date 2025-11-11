@@ -86,7 +86,8 @@
                                    (str/replace #"^:" "")
                                    (str ".snapshot")))
         snapshot-contents (try
-                            (slurp snapshot-filename)
+                            (str/trimr ;; newlines in files
+                              (slurp snapshot-filename))
                             (catch Exception e
                               (println "Could not find snapshot"
                                        snapshot-name

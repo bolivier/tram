@@ -4,7 +4,8 @@
             [toucan2.core :as t2]
             [toucan2.jdbc.options :as jdbc.options]
             [toucan2.pipeline :as pipeline]
-            [tram.core :as tram]))
+            [tram.core :as tram]
+            [tram.db :as db]))
 
 ;; This is for doing default kebab-case transforms of our model keys.
 (m/defmethod pipeline/transduce-query :around

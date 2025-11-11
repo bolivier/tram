@@ -54,7 +54,7 @@
     (rt/with-stub [_ {:fn      tram.config/get-migration-config
                       :returns (:database/development tram-config)}
                    calls spit]
-      (sut/write-to-migration-file blueprint)
+      (sut/write-to-migration-up blueprint)
       (is (match? #"^resources/migrations/\d+-create-table-users.up.sql"
                   (first (:args (first @calls)))))
       (reset! output (second (:args (first @calls)))))
@@ -70,6 +70,15 @@
                                                  [{:type      :text
                                                    :required? true
                                                    :name      :cc-number}
+                                                  {:type      :reference
+                                                   :required? true
+                                                   :index?    true
+                                                   :name      :user-id}
+                                                  {:type      :text
+                                                   :required? true
+                                                   :unique?   true
+                                                   :index?    true
+                                                   :name      :username}
                                                   {:type    :timestamptz
                                                    :name    :updated-at
                                                    :trigger :update-updated-at
@@ -78,7 +87,7 @@
     (rt/with-stub [_ {:fn      tram.config/get-migration-config
                       :returns (:database/development tram-config)}
                    calls spit]
-      (sut/write-to-migration-file blueprint-with-multiple-actions)
+      (sut/write-to-migration-up blueprint-with-multiple-actions)
       (is (match? #"^resources/migrations/\d+-create-table-users.up.sql"
                   (first (:args (first @calls)))))
       (reset! output (second (:args (first @calls)))))
@@ -118,6 +127,82 @@
                   (first (:args (first @calls)))))
       (reset! output (second (:args (first @calls)))))
     (rt/match-snapshot @output ::sql-down-multiple-tables-test)))
+
+(deftest add-column-to-up-sql-string
+  (is (match? "ALTER TABLE \"users\" ADD COLUMN name TEXT"
+              (sut/to-up-sql-string {:type   :add-column
+                                     :table  "users"
+                                     :column {:name      "name"
+                                              :type      :text
+                                              :required? false}})))
+  (is (match? "ALTER TABLE \"users\" ADD COLUMN name TEXT NOT NULL UNIQUE"
+              (sut/to-up-sql-string {:type   :add-column
+                                     :table  "users"
+                                     :column {:name    "name"
+                                              :type    :text
+                                              :unique? true}})))
+  (rt/match-snapshot (sut/to-up-sql-string {:type   :add-column
+                                            :table  "users"
+                                            :column {:name      "name"
+                                                     :type      :text
+                                                     :index?    true
+                                                     :required? true
+                                                     :unique?   true}})
+                     ::add-column-sql-string))
+
+(deftest create-table-to-sql-string-down-test
+  (is (match? "DROP TABLE birds"
+              (sut/to-down-sql-string {:type  :create-table
+                                       :table "birds"}))))
+
+(deftest add-column-to-sql-string-down
+  (is (match? "ALTER TABLE users DROP COLUMN name"
+              (sut/to-down-sql-string {:type   :add-column
+                                       :table  :users
+                                       :column {:name      :name
+                                                :type      :text
+                                                :required? false}})))
+  (is (match? "ALTER TABLE users DROP COLUMN name"
+              (sut/to-down-sql-string {:type   :add-column
+                                       :table  :users
+                                       :column {:name    :name
+                                                :type    :text
+                                                :unique? true}})))
+  #_(rt/match-snapshot (sut/to-down-sql-string {:type   :add-column
+                                                :table  :users
+                                                :column {:name      :name
+                                                         :type      :text
+                                                         :index?    true
+                                                         :required? true
+                                                         :unique?   true}})
+                       ::add-column-sql-string))
+
+(deftest empty-down-indexes-test
+  (is (match? []
+              (sut/serialize-to-extra-down-statements {:type   :add-column
+                                                       :table  :users
+                                                       :column {:name :name
+                                                                :type :text
+                                                                :required?
+                                                                false}}))))
+
+(deftest down-indexes-test
+  (is (match? ["DROP INDEX idx_users_name"]
+              (sut/serialize-to-extra-down-statements {:type   :add-column
+                                                       :table  :users
+                                                       :column {:name :name
+                                                                :type :text
+                                                                :index?
+                                                                true}}))))
+
+(deftest down-triggers-test
+  (is (match? ["DROP TRIGGER update_my_column ON users"]
+              (sut/serialize-to-extra-down-statements
+                {:type   :add-column
+                 :table  :users
+                 :column {:name    :name
+                          :type    :text
+                          :trigger :update-my-column}}))))
 
 (def blueprint
   {:migration-name "create-table-users"

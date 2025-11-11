@@ -37,3 +37,6 @@
              (migratus/reset migration-config)
              (reset! seeded? true)))
          test)]))
+
+(comment
+  (set-up-test-database nil))

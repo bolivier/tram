@@ -18,6 +18,8 @@ UPDATE
 CREATE TABLE accounts (
   id SERIAL PRIMARY KEY,
   cc_number TEXT NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  username TEXT NOT NULL UNIQUE,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
 
@@ -26,3 +28,11 @@ CREATE TABLE accounts (
 CREATE TRIGGER set_updated_at_on_accounts BEFORE
 UPDATE
   ON accounts FOR EACH row EXECUTE FUNCTION update_updated_at_column()
+
+--;;
+
+CREATE INDEX idx_accounts_user_id ON accounts(user_id)
+
+--;;
+
+CREATE INDEX idx_accounts_username ON accounts(username)

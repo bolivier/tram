@@ -1,6 +1,6 @@
 (ns {{namespace}}
   (:require
-   [tram.migrations :refer [write-to-migration-files]]))
+   [tram.db :refer [migrate write-to-migration-files]]))
 
 
 (def blueprint
@@ -14,5 +14,5 @@
 
   ;; run this to re/write the migration file
   (write-to-migration-files blueprint)
-
+  (migrate)
   nil)

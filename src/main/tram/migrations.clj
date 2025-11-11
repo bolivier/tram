@@ -1,9 +1,12 @@
 (ns tram.migrations
   "This namespace is a convenience namesapce for tram users who want access to
   migratus functions."
-  (:require [migratus.core]
+  (:require [clojure.java.io :as io]
+            [migratus.core]
             [taoensso.telemere :as t]
-            [tram.core :as tram]))
+            [tram.core :as tram]
+            [tram.language :as lang]
+            [zprint.core :as zpc]))
 
 (defn init []
   (migratus.core/init (tram/get-migration-config)))

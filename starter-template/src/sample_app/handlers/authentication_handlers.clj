@@ -11,25 +11,23 @@
             [tram.db :as db]
             [tram.routes :refer [redirect]]))
 
-(defn sign-up-post-handler [{:keys [body-params]}]
-  (if-let [user (register-new-account body-params)]
+(defn sign-up-post-handler [req]
+  (if-let [user (register-new-account (get-in req [:parameters :body]))]
     (let [session (db/insert-returning-instance! :models/sessions
                                                  {:user-id (:id user)})]
       (set-session-cookie (redirect {:session {:identity (:id user)}}
-                                    :route/projects)
+                                    :route/dashboard)
                           (:id session)))
     {:status 422
      :body   (views/sign-up-form-error)}))
 
 (defn submit-sign-in-form-handler [req]
-  (let [{:keys [body-params]}    req
-        {:keys [email password]} body-params]
+  (let [{:keys [email password]} (get-in req [:parameters :body])]
     (if-let [user (get-authenticated-user email password)]
       (let [session (db/insert-returning-instance! :models/sessions
                                                    {:user-id (:id user)})]
-        (set-session-cookie {:status  200
-                             :headers {"Hx-Redirect" "/dashboard"}
-                             :body    ""}
+        (set-session-cookie (redirect {:session {:identity (:id user)}}
+                                      :route/dashboard)
                             (:id session)))
       {:status 422
        :body   (views/sign-in-form-error)})))
@@ -49,11 +47,13 @@
   [["/sign-up"
     {:name :route/sign-up
      :get  :view/sign-up
-     :post sign-up-post-handler}]
+     :post {:handler    sign-up-post-handler
+            :parameters {:body [:map [:email :string] [:password :string]]}}}]
    ["/sign-in"
     {:name :route/sign-in
      :get  sign-in
-     :post submit-sign-in-form-handler}]
+     :post {:handler    submit-sign-in-form-handler
+            :parameters {:body [:map [:email :string] [:password :string]]}}}]
    ["/log-out"
     {:name :route/log-out
      :get  log-out-handler}]])
