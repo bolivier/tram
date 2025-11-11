@@ -1,7 +1,8 @@
 (ns tram.html
   "Functions for dealing with html and hiccup."
   (:require [clojure.java.io :as io]
-            [huff.core :as h]
+            [clojure.walk]
+            [huff2.core :as h]
             [muuntaja.core :as m]
             [muuntaja.format.core :as mfc]
             [reitit.core :as r]
@@ -41,47 +42,39 @@
   [v]
   (and (vector? v) (= ::make (first v))))
 
-(defn hiccup-component-expander
-  "Given a hiccup vector where the first element is a component fn, invoke that
-  with the args to expand it into its result."
-  [_ node]
-  (if (and (vector? node)
-           (fn? (first node)))
-    (let [f    (first node)
-          args (rest node)]
-      (apply f
-        args))
-    node))
+(defn route-name-expander [router node]
+  (cond
+    (expandable-route-ref? node)
+    (let [[_ route-name route-params] node]
+      (make-path router route-name route-params))
 
-(defn route-name-expander [req node]
-  (let [router (:reitit.core/router req)]
-    (cond
-      (expandable-route-ref? node)
-      (let [[_ route-name route-params] node]
-        (make-path router route-name route-params))
+    (and (keyword? node) (= "route" (namespace node)))
+    (make-path router node nil)
 
-      (and (keyword? node) (= "route" (namespace node)))
-      (make-path router node nil)
+    :else node))
 
-      :else node)))
+(defn huff-html-encoder [{:keys [router]}]
+  (let [expander (partial route-name-expander router)
+        mapper   (fn [[k v]] [k
+                              (if (coll? v)
+                                (clojure.walk/prewalk expander
+                                                      v)
+                                (expander v))])]
+    (reify
+      mfc/EncodeToBytes
+      (encode-to-bytes [_ data charset]
+        (.getBytes (str (h/html {:allow-raw   true
+                                 :attr-mapper mapper}
+                                data))
+                   ^String charset))
 
-(def expanders
-  "List of functions that take a req and a node and return an expanded node, for
-  whatever expanded means."
-  [hiccup-component-expander route-name-expander])
-
-(defn huff-html-encoder [_]
-  (reify
-    mfc/EncodeToBytes
-    (encode-to-bytes [_ data charset]
-      (.getBytes (h/html {:allow-raw true} data) ^String charset))
-
-    mfc/EncodeToOutputStream
-    (encode-to-output-stream [_ data _charset]
-      (fn [^OutputStream output-stream]
-        (spit output-stream
-              (io/input-stream (.getBytes (h/html {:allow-raw true} data))))
-        (.flush output-stream)))))
+      mfc/EncodeToOutputStream
+      (encode-to-output-stream [_ data _charset]
+        (fn [^OutputStream output-stream]
+          (spit output-stream
+                (io/input-stream (.getBytes (str (h/html {:allow-raw true}
+                                                         data)))))
+          (.flush output-stream))))))
 
 (defn form-decoder [_]
   (reify
@@ -92,14 +85,16 @@
                  (form-decode (slurp data) charset)))))
 
 
-(def html-formatter
+(defn make-html-formatter
   "Muuntaja formatter for html content.
 
   These are (slightly changed) maps with encoder/decoder fields.
 
   `encoder` here is wrapped in brackets because muuntaja evaluates a normal fn there."
+  [routes]
   (mfc/map->Format {:name    "text/html"
-                    :encoder [huff-html-encoder]
+                    :encoder [huff-html-encoder {:router (reitit.core/router
+                                                           routes)}]
                     :return  nil
                     :matches nil}))
 
