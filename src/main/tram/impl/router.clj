@@ -67,17 +67,18 @@
   #{:get :put :patch :post :delete})
 
 (defn has-verb? [node]
-  (set/intersection verbs (into #{} (keys node))))
+  (some #(contains? node %) verbs))
 
 (defn route? [node]
-  ;; TODO this feels like a hack. Need a real concept for what this is.
-  (cond
-    (and (map? node) (not (:name node)) (not (:layout node)) (has-verb? node))
-    (throw (ex-info "broke"
-                    {:issue "Route is missing name key"
-                     :node  node}))
+  (when (and (map? node)
+             (has-verb? node)
+             (nil? (:name node)))
+    (throw (ex-info "Route is missing name key"
+                    {:node  node})))
 
-    :else (and (map? node) (or (:name node) (:layout node)))))
+  (and (map? node)
+       (some #{:name  :layout :parameters}
+             node)))
 
 (defn default-handler
   "Default handler for endpoints.  Simply return a 200 status code.
@@ -123,7 +124,7 @@
     (throw (ex-info "Tried to coerce handler-spec without a :handler keyword."
                     {:handler-spec handler-entry})))
   (assoc handler-entry
-    :template (get-automagic-template-symbol (name (:handler handler-entry)))))
+         :template (get-automagic-template-symbol (name (:handler handler-entry)))))
 
 (m/defmethod ->handler-spec :list
   [handler-entry]
@@ -164,9 +165,9 @@
 
               (verb? k) (update route k ->handler-spec)
               :else route))
-    ;; This makes sure that namespace can be overridden by a user.
-    (update route :namespace (fn [v] (or v (str *ns*))))
-    (filter route (conj verbs :layout))))
+          ;; This makes sure that namespace can be overridden by a user.
+          (update route :namespace (fn [v] (or v (str *ns*))))
+          (filter route (conj verbs :layout))))
 
 (defn map-routes
   "Walk a routing tree and apply `f` to the route maps."
