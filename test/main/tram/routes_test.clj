@@ -9,7 +9,7 @@
   [:a {:href :route/dashboard}])
 
 (deftest expanding-hiccup
-  (let [expander (:leave sut/expand-hiccup-interceptor)]
+  (let [expander (:leave sut/expand-header-routes-interceptor)]
     (is (match? {:request  {::r/router sample-router}
                  :response {:headers {"hx-redirect" "/dashboard"}}}
                 (expander {:request  {::r/router sample-router}

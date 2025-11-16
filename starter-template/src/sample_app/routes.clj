@@ -31,11 +31,19 @@
 
 (defmethod ig/init-key ::sys/router
   [_ {:keys [routes]}]
-  (tram-router
-    routes
-    {:data {:muuntaja     muuntaja-instance
-            :coercion     rcm/coercion
-            :interceptors (concat [(tr/format-interceptor muuntaja-instance)
-                                   (tr/wrap-page-interceptor as-full-page)]
-                                  tr/default-interceptors
-                                  [authentication-interceptor])}}))
+  (tram-router routes
+               {:data {:muuntaja     muuntaja-instance
+                       :coercion     rcm/coercion
+                       :interceptors [(tr/format-interceptor muuntaja-instance)
+                                      (tr/multipart-interceptor)
+                                      (tr/exception-interceptor {Exception
+                                                                 error-handler})
+                                      tr/expand-header-routes-interceptor
+                                      tr/format-json-body-interceptors
+                                      (tr/coerce-request-interceptor)
+                                      (tr/coerce-exceptions-interceptor)
+                                      (tr/coerce-response-interceptor)
+                                      (tr/parameters-interceptor)
+                                      (tr/wrap-page-interceptor as-full-page)
+                                      tr/render-template-interceptor
+                                      authentication-interceptor]}}))

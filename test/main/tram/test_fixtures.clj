@@ -37,6 +37,11 @@
                :get  (fn [] nil)}]
              ["/dashboard"
               ["" {:name :route/dashboard}]
+              ["/articles"
+               {:name :route/articles
+                :get {:handler :views/articles-pages
+                      :parameters {:query [:map
+                                           [:status [:enum :official :unofficial]]]}}}]
               ["/users/:user-id" {:name :route/user}]]]))
 
 (def blueprint
