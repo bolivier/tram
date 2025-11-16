@@ -38,7 +38,7 @@
                            {:route-name route-name
                             :route-params route-params
                             :path path
-                            :match match})))
+                               :match match})))
 
          (let [url-param-string (->> (m/coerce query-param-schema
                                                query-params
