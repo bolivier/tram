@@ -143,14 +143,19 @@
       (let [entry (get-in @*associations* [model :has-many attribute])]
         (assoc instance
           attribute
-          (t2/select (:model entry) (:foreign-key entry) (:id instance))))
+          (t2/select (:model entry)
+                     (or (:foreign-key entry) (lang/model->foreign-key model))
+                     (get instance (first (t2/primary-keys instance))))))
 
       (has-one? model attribute)
       (let [entry     (get-in @*associations* [model :has-one attribute])
             fk        (:foreign-key entry)
             one-model (:model entry)]
         (assoc instance
-          attribute (t2/select-one one-model fk (:id instance))))
+          attribute
+          (t2/select-one one-model
+                         fk
+                         (get instance (first (t2/primary-keys instance))))))
 
       :else
       (t2/select (keyword "models" (dc/pluralize (name attribute)))

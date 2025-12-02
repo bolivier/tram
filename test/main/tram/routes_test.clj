@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is]]
             [matcher-combinators.test]
             [reitit.core :as r]
+            test-app.handlers.authentication-handlers
             [tram.routes :as sut]
             [tram.test-fixtures :refer [sample-router]]))
 
@@ -9,20 +10,14 @@
   [:a {:href :route/dashboard}])
 
 (deftest expanding-hiccup
-  (let [expander (:leave sut/expand-hiccup-interceptor)]
-    (is (match? {:request  {::r/router sample-router}
-                 :response {:headers {"hx-redirect" "/dashboard"}}}
-                (expander {:request  {::r/router sample-router}
-                           :response {:headers {"hx-redirect" :route/dashboard}
-                                      :body    [component]}})))
-    (is (match? {:response {:body [:a {:href "/dashboard"}]}}
-                (expander {:request  {::r/router sample-router}
-                           :response {:body [component]}})))
-    (is (match? {:response {:body [:a {:href "/dashboard"}]}}
-                (expander {:request  {::r/router sample-router}
-                           :response {:body [:a {:href
-                                                 (sut/make-route
-                                                   :route/dashboard)}]}})))))
+  (let [expander (:leave sut/expand-header-routes-interceptor)
+        expanded (expander {:request  {::r/router sample-router}
+                            :response {:headers {"hx-redirect" :route/dashboard}
+                                       :body    [component]}})]
+    (is (match? "/dashboard"
+                (get-in expanded [:response :headers "hx-redirect"])))
+    (is (match? [fn?] ;; body not expanded
+                (get-in expanded [:response :body])))))
 
 (deftest forgot-password-adding-template-to-root
   (let

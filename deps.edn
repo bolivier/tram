@@ -40,8 +40,8 @@
   integrant/integrant {:mvn/version "0.8.0"}
   integrant/repl {:mvn/version "0.4.0"}
   ;; html -- using my own version unti malli is upgraded upstream
-  io.github.bolivier/huff {:git/sha "71f883c3f8eddecc7e3657f8459b158232d39473"
-                           :git/tag "malli-upgrade"}
+  io.github.bolivier/huff {:git/sha "3675dcc219e7e0155e49bdd36bc2fa9ff1b472b5"
+                           :git/tag "attr-mapper"}
   ;; http
   metosin/reitit {:mvn/version "0.9.1"}
   metosin/malli {:mvn/version "0.18.0"}

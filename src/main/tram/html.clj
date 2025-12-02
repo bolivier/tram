@@ -1,11 +1,12 @@
 (ns tram.html
   "Functions for dealing with html and hiccup."
   (:require [clojure.java.io :as io]
-            [huff.core :as h]
-            [muuntaja.core :as m]
+            [clojure.walk :refer [prewalk]]
+            [huff2.core :as h]
             [muuntaja.format.core :as mfc]
             [reitit.core :as r]
-            [ring.util.codec :refer [form-decode url-encode]])
+            [ring.util.codec :refer [form-decode url-encode]]
+            [tram.vars :refer [*req*]])
   (:import (java.io OutputStream)))
 
 (defn ->query
@@ -67,47 +68,51 @@
   [v]
   (and (vector? v) (= ::make (first v))))
 
-(defn hiccup-component-expander
-  "Given a hiccup vector where the first element is a component fn, invoke that
-  with the args to expand it into its result."
-  [_ node]
-  (if (and (vector? node)
-           (fn? (first node)))
-    (let [f    (first node)
-          args (rest node)]
-      (apply f
-        args))
-    node))
+(defn route-name-expander [router node]
+  (cond
+    (expandable-route-ref? node)
+    (let [[_ route-name route-params] node]
+      (make-path router route-name route-params))
 
-(defn route-name-expander [req node]
-  (let [router (:reitit.core/router req)]
-    (cond
-      (expandable-route-ref? node)
-      (let [[_ route-name route-params] node]
-        (make-path router route-name route-params))
+    (and (keyword? node) (= "route" (namespace node)))
+    (make-path router node nil)
 
-      (and (keyword? node) (= "route" (namespace node)))
-      (make-path router node nil)
-
-      :else node)))
-
-(def expanders
-  "List of functions that take a req and a node and return an expanded node, for
-  whatever expanded means."
-  [hiccup-component-expander route-name-expander])
+    :else node))
 
 (defn huff-html-encoder [_]
   (reify
     mfc/EncodeToBytes
     (encode-to-bytes [_ data charset]
-      (.getBytes (h/html {:allow-raw true} data) ^String charset))
+      (assert *req* "*req* MUST be bound in encoder")
+      (let [router   (:reitit.core/router *req*)
+            _ (assert router "router is required in encoder")
+            expander (partial route-name-expander router)
+            mapper   (fn [[k v]] [k
+                                  (if (coll? v)
+                                    (prewalk expander
+                                             v)
+                                    (expander v))])]
+        (.getBytes (str (h/html {:allow-raw   true
+                                 :attr-mapper mapper}
+                                data))
+                   ^String charset)))
 
     mfc/EncodeToOutputStream
     (encode-to-output-stream [_ data _charset]
       (fn [^OutputStream output-stream]
-        (spit output-stream
-              (io/input-stream (.getBytes (h/html {:allow-raw true} data))))
-        (.flush output-stream)))))
+        (let [router   (:retit.core/router *req*)
+              _ (assert router "router is required in encoder")
+              expander (partial route-name-expander router)
+              mapper   (fn [[k v]] [k
+                                    (if (coll? v)
+                                      (prewalk expander
+                                               v)
+                                      (expander v))])]
+          (spit output-stream
+                (io/input-stream (.getBytes (str (h/html {:allow-raw   true
+                                                          :attr-mapper mapper}
+                                                         data)))))
+          (.flush output-stream))))))
 
 (defn form-decoder [_]
   (reify

@@ -5,24 +5,18 @@
   (:require [camel-snake-kebab.core :as csk]
             [camel-snake-kebab.extras :refer [transform-keys]]
             [clojure.string :as str]
-            [clojure.walk :refer [prewalk]]
             [malli.error :as me]
             [malli.util :as mu]
             [muuntaja.core :as muuntaja]
             [potemkin :refer [import-vars]]
             [reitit.core :as r]
             [reitit.http :as http]
-            [reitit.http.coercion
-             :refer
-             [coerce-exceptions-interceptor
-              coerce-request-interceptor
-              coerce-response-interceptor]]
+            [reitit.http.coercion]
             [reitit.http.interceptors.exception :as exception]
-            [reitit.http.interceptors.multipart :refer [multipart-interceptor]]
-            [reitit.http.interceptors.muuntaja :as rhim]
+            [reitit.http.interceptors.multipart]
             [reitit.http.interceptors.parameters :as rhip]
             [reitit.ring]
-            [tram.html :refer [expanders] :as tram.html]
+            [tram.html :as tram.html]
             [tram.impl.http]
             [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
             [tram.logging :as log]
@@ -39,36 +33,21 @@
               coerce-response-interceptor]
              [tram.html make-route])
 
-(def expand-hiccup-interceptor
-  "Walks your hiccup tree to find any customizations that need to be expanded.
-
-  By deault, this is only used to expand vectors like:
-
-  [:tram.http.routing/make :route/name route-params] into a string route. This
-  applies to keys in headers and the body of the response.
-
-  The keyword is specific there.
-
-  This expands hiccup vectors where the first element is a function.
-
-  TODO: Update this to be extensible."
-  {:name  ::expand-hiccup-interceptor
+(def expand-header-routes-interceptor
+  "Expands route references in response headers."
+  {:name  ::expand-header-routes
    :leave (fn [ctx]
-            (let [req      (:request ctx)
-                  router   (::r/router req)
-                  expander (reduce comp (map #(partial % req) expanders))]
-              (when-not router
-                (throw (ex-info
-                         "Cannot expand hiccup without router in request."
-                         {:source ::expand-hiccup-interceptor})))
-              (binding [*current-user* (:current-user req)
+            (let [router (get-in ctx [:request ::r/router])]
+              (assert router "expand-header-routes-interceptor requires router")
+              (binding [*current-user* (get-in ctx [:request :current-user])
                         *req*          (:request ctx)
                         *res*          (:response ctx)]
                 (-> ctx
-                    (update-in [:response :body]
-                               (fn [body] (prewalk expander body)))
-                    (update-in [:response :headers]
-                               (fn [headers] (map-vals expander headers)))))))})
+                    (update-in
+                      [:response :headers]
+                      (fn [headers]
+                        (map-vals (partial tram.html/route-name-expander router)
+                                  headers)))))))})
 
 (defn wrap-page-interceptor
   "Wraps the returned html in a full html page (if it should).
@@ -231,7 +210,52 @@
        (merge options)
        (muuntaja/create))))
 
-(import-vars [rhim format-interceptor])
+(defn format-interceptor
+  "Interceptor for content-negotiation, request and response formatting.
+
+  Negotiates a request body based on `Content-Type` header and response body based on
+  `Accept`, `Accept-Charset` headers. Publishes the negotiation results as `:muuntaja/request`
+  and `:muuntaja/response` keys into the request.
+
+  Decodes the request body into `:body-params` using the `:muuntaja/request` key in request
+  if the `:body-params` doesn't already exist.
+
+  Encodes the response body using the `:muuntaja/response` key in request if the response
+  doesn't have `Content-Type` header already set.
+
+  Optionally takes a default muuntaja instance as argument.
+
+  | key          | description |
+  | -------------|-------------|
+  | `:muuntaja`  | `muuntaja.core/Muuntaja` instance, does not mount if not set."
+  ([]
+   (format-interceptor nil))
+  ([default-muuntaja]
+   {:name    ::format
+    :spec    ::spec
+    :compile (fn [{:keys [muuntaja]} _]
+               (when-let [prototype (or muuntaja
+                                        default-muuntaja
+                                        (make-muuntaja-instance))]
+                 (let [m (muuntaja/create prototype)]
+                   {:name  ::format
+                    :enter (fn [ctx]
+                             (let [request (:request ctx)]
+                               (assoc ctx
+                                 :request (muuntaja/negotiate-and-format-request
+                                            m
+                                            request))))
+                    :leave (fn [ctx]
+                             (let [request  (:request ctx)
+                                   response (:response ctx)]
+                               (binding [*current-user* (:current-user request)
+                                         *req*          request
+                                         *res*          response]
+                                 (assoc ctx
+                                   :response (muuntaja/format-response
+                                               m
+                                               request
+                                               response)))))})))}))
 
 (defmacro defroutes
   "Define routes in Tram.
