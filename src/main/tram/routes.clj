@@ -27,16 +27,10 @@
             [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
             [tram.logging :as log]
             [tram.rendering.template-renderer :as renderer]
-            [tram.utils :refer [map-vals]]))
+            [tram.utils :refer [map-vals]]
+            [tram.vars :refer [*current-user* *req* *res*]]))
 
-(import-vars [tram.impl.http
-              *current-user*
-              *req*
-              *res*
-              htmx-request?
-              html-request?
-              full-redirect
-              redirect]
+(import-vars [tram.impl.http htmx-request? html-request? full-redirect redirect]
              [reitit.http.interceptors.multipart multipart-interceptor]
              [reitit.http.interceptors.parameters parameters-interceptor]
              [reitit.http.coercion

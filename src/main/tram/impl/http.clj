@@ -6,22 +6,6 @@
   (:require [clojure.string :as str]
             [tram.html :refer [make-route]]))
 
-(def ^:dynamic *current-user*
-  "The currently authenticated user.
-
-  Automatically populated in views for a request."
-  nil)
-(def ^:dynamic *req*
-  "The current request.
-
-  Automatically populated in views for a request."
-  nil)
-(def ^:dynamic *res*
-  "The current response.
-
-  Automatically populated in views for a request."
-  nil)
-
 (defn htmx-request? [req]
   (some? (get-in req [:headers "hx-request"])))
 
