@@ -5,8 +5,30 @@
             [muuntaja.core :as m]
             [muuntaja.format.core :as mfc]
             [reitit.core :as r]
-            [ring.util.codec :refer [form-decode]])
+            [ring.util.codec :refer [form-decode url-encode]])
   (:import (java.io OutputStream)))
+
+(defn ->query
+  "`q` is a scalar to be prepared for a query string.
+
+  Strip"
+  [q]
+  (url-encode (cond
+                (keyword? q) (name q)
+                :else        (str q))))
+
+(defn make-query-string
+  "Convert map `m` into a url query-string.
+
+  Interposes ampersands and escapes keys and vals. Only supports scalar values."
+  [m]
+  (when m
+    (->> (for [[k v] m]
+           (str (->query k)
+                "="
+                (->query v)))
+         (interpose "&")
+         (apply str))))
 
 (defn make-path
   "Convert a keyword name of a route into the route name.
@@ -20,7 +42,11 @@
   ([router route-name]
    (make-path router route-name {}))
   ([router route-name route-params]
-   (:path (r/match-by-name router route-name route-params))))
+   (let [base-path (:path (r/match-by-name router route-name route-params))]
+     (if-let [query-string (make-query-string (:tram.routes/query
+                                                route-params))]
+       (str base-path "?" query-string)
+       base-path))))
 
 (defn make-route
   "Marks a route name as something that the
