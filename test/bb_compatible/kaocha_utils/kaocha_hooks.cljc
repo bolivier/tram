@@ -20,18 +20,26 @@
 
 (defn set-up-test-database [test]
   #?@(:bb
-      [test]                                ; no-op on babashka
+      [test]                            ; no-op on babashka
       :default
       [(do
          (when-not @seeded?
            (let [migration-config (tram.config/get-migration-config "test")
                  config           (:db migration-config)]
+
              (try
                ;; Ensure we run CREATE DATABASE against a management DB.
                (jdbc/execute! (jdbc/get-datasource (assoc config :dbname "postgres"))
                               ["CREATE DATABASE tram_test"])
                (catch org.postgresql.util.PSQLException _
                  ;; most likely already exists
+                 nil))
+             (try
+               (let [ds (jdbc/get-datasource (assoc config :dbname "tram_test"))]
+                 (jdbc/execute! ds ["DROP SCHEMA public CASCADE"])
+                 (jdbc/execute! ds ["CREATE SCHEMA public"]))
+               (catch Exception e
+                 (println "Could not drop public schema.")
                  nil))
              (migratus/init migration-config)
              (migratus/reset migration-config)
