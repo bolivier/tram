@@ -67,7 +67,12 @@ tram help               print this menu
 
 (defn do-html-conversion [{:keys [args]}]
   (let [html (or (second args)
-                 (str/trim (:out (p/shell {:out :string} "wl-paste"))))]
+                 (str/trim (:out (p/shell {:out :string}
+                                          (if (= "Darwin\n"
+                                                 (:out (p/shell {:out :string}
+                                                                "uname")))
+                                            "pbpaste"
+                                            "wl-paste")))))]
     (try
       (-> html
           hc/parse-fragment
