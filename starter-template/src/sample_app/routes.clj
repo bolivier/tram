@@ -10,9 +10,6 @@
     [sample-app.views.authentication-views]
     [tram.routes :refer [tram-router] :as tr]))
 
-(def muuntaja-instance
-  (tr/make-muuntaja-instance))
-
 (defmethod ig/init-key ::sys/routes
   [_ _]
   [""
@@ -31,11 +28,18 @@
 
 (defmethod ig/init-key ::sys/router
   [_ {:keys [routes]}]
-  (tram-router
-    routes
-    {:data {:muuntaja     muuntaja-instance
-            :coercion     rcm/coercion
-            :interceptors (concat [(tr/format-interceptor muuntaja-instance)
-                                   (tr/wrap-page-interceptor as-full-page)]
-                                  tr/default-interceptors
-                                  [authentication-interceptor])}}))
+  (tram-router routes
+               {:data {:coercion     rcm/coercion
+                       :interceptors [(tr/format-interceptor)
+                                      (tr/exception-interceptor {Exception
+                                                                 error-handler})
+                                      authentication-interceptor
+                                      (tr/parameters-interceptor)
+                                      (tr/multipart-interceptor)
+                                      tr/expand-header-routes-interceptor
+                                      tr/format-json-body-interceptors
+                                      (tr/coerce-request-interceptor)
+                                      (tr/coerce-exceptions-interceptor)
+                                      (tr/coerce-response-interceptor)
+                                      (tr/wrap-page-interceptor as-full-page)
+                                      tr/render-template-interceptor]}}))
