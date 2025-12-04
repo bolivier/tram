@@ -18,6 +18,7 @@
   (:require [declensia.core :as dc]
             [methodical.core :as m]
             [toucan2.core :as t2]
+            [toucan2.tools.hydrate :as t2.hydrate]
             [tram.language :as lang]))
 
 (defonce ^:dynamic *associations*
@@ -34,7 +35,16 @@
         nil
         (throw e)))))
 
-(defn belongs-to! [model attribute opts]
+(defn belongs-to!
+  "Creates a belongs-to association.
+
+  You should not need to use this fn unless you deviate from convention.
+
+  `opts` are required.
+
+  `:model`       - model to use for hydration
+  `:foreign-key` - foreign key on `model` that you want to hydrate from with `attribute`"
+  [model attribute opts]
   (swap! *associations* (fn [associations]
                           (assoc-in associations
                             [model :belongs-to attribute]
@@ -104,12 +114,18 @@
                             (get-in @*associations*
                                     [model :belongs-to attribute :model]))]
     (if has-association
-      nil
+      nil ;; handled in simple hydrate
       (or alias-model
           (lang/modelize attribute)))))
 
 (defn qualified-column [table column]
   (keyword (str (name table) "." (name column))))
+
+(m/defmethod t2.hydrate/fk-keys-for-automagic-hydration :default
+  [original-model dest-key _hydrated-key]
+  [(get-in @*associations*
+           [original-model :belongs-to dest-key :foreign-key]
+           (lang/name->foreign-key dest-key))])
 
 (m/defmethod t2/simple-hydrate [:default :default]
   [model attribute instance]

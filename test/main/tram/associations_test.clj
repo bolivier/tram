@@ -36,6 +36,10 @@
                   :foreign-key :follower-id
                   :model       :models/users})
   (sut/belongs-to! :models/addresses :homeowner {:model :models/users})
+  (sut/belongs-to! :models/addresses
+                   :owner
+                   {:model       :models/users
+                    :foreign-key :homeowner-id})
   (let [account-id  (t2/insert-returning-pk! :models/accounts {})
         settings-id (t2/insert-returning-pk! :models/settings {})
         bird-id     (t2/insert-returning-pk! :models/birds {})
@@ -148,7 +152,8 @@
 
 (deftest belongs-to-with-alias
   (let [address (t2/select-one :models/addresses)]
-    (is (match? (brandon) (:homeowner (t2/hydrate address :homeowner))))))
+    (is (match? (brandon) (:homeowner (t2/hydrate address :homeowner))))
+    (is (match? (brandon) (:owner (t2/hydrate address :owner))))))
 
 (deftest has-many-followers-test
   (let [follower (first (:followers (t2/hydrate (brandon) :followers)))]
