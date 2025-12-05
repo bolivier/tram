@@ -13,7 +13,6 @@
        (map #(fs/relativize "starter-template" %))
        (map str)))
 
-
 (def called-from-dir
   (io/file (System/getenv "TRAM_CLI_CALLED_FROM")))
 
@@ -45,15 +44,17 @@
   TODO: cache this"
   []
   (println "Cloning Tram git repo")
-  (let [download-dir (io/file (str (fs/temp-dir)))]
-    (fs/delete-tree (io/file download-dir "tram"))
-    (try
-      (p/shell {:dir download-dir}
-               "git clone https://github.com/bolivier/tram.git")
-      (catch Exception _
-        (println "Could not download Tram starter template.")
-        (System/exit 1)))
-    (io/file download-dir "tram" "starter-template")))
+  (if (= "true" (System/getenv "TRAM_DEVELOPMENT_MODE"))
+    (io/file "starter-template")
+    (let [download-dir (io/file (str (fs/temp-dir)))]
+      (fs/delete-tree (io/file download-dir "tram"))
+      (try
+        (p/shell {:dir download-dir}
+                 "git clone https://github.com/bolivier/tram.git")
+        (catch Exception _
+          (println "Could not download Tram starter template.")
+          (System/exit 1)))
+      (io/file download-dir "tram" "starter-template"))))
 
 (defn render-new-project-template [project-name]
   (validate-project-name! project-name)
@@ -61,8 +62,8 @@
   (let [project-root  (io/file called-from-dir project-name)
         template-root (download-starter-template)]
     (binding [p/*defaults* (assoc p/*defaults*
-                             :dir      project-root
-                             :continue true)]
+                                  :dir      project-root
+                                  :continue true)]
       (println "Creating project dir")
       (try
         (fs/create-dir project-root)

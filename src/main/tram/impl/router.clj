@@ -71,13 +71,7 @@
 
 (defn route? [node]
   ;; TODO this feels like a hack. Need a real concept for what this is.
-  (cond
-    (and (map? node) (not (:name node)) (not (:layout node)) (has-verb? node))
-    (throw (ex-info "broke"
-                    {:issue "Route is missing name key"
-                     :node  node}))
-
-    :else (and (map? node) (or (:name node) (:layout node)))))
+  (and (map? node) (or (:name node) (:layout node))))
 
 (defn default-handler
   "Default handler for endpoints.  Simply return a 200 status code.

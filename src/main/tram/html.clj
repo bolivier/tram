@@ -45,7 +45,7 @@
   ([router route-name route-params]
    (let [base-path (:path (r/match-by-name router route-name route-params))]
      (if-let [query-string (make-query-string (:tram.routes/query
-                                                route-params))]
+                                               route-params))]
        (str base-path "?" query-string)
        base-path))))
 
@@ -87,11 +87,13 @@
       (let [router   (:reitit.core/router *req*)
             _ (assert router "router is required in encoder")
             expander (partial route-name-expander router)
-            mapper   (fn [[k v]] [k
-                                  (if (coll? v)
-                                    (prewalk expander
-                                             v)
-                                    (expander v))])]
+            mapper   (fn [[k v]]
+                       [k
+                        (if (coll? v)
+                          (prewalk expander
+                                   v)
+                          (expander v))])]
+
         (.getBytes (str (h/html {:allow-raw   true
                                  :attr-mapper mapper}
                                 data))
@@ -121,7 +123,6 @@
       (reduce-kv (fn [coll k v] (assoc coll (keyword k) v))
                  {}
                  (form-decode (slurp data) charset)))))
-
 
 (def html-formatter
   "Muuntaja formatter for html content.
