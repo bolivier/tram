@@ -8,6 +8,3 @@
 
 ;; Then:
 (refresh)
-
-
-                                        ;

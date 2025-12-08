@@ -1,11 +1,13 @@
 (ns tram.html
   "Functions for dealing with html and hiccup."
   (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.walk :refer [prewalk]]
             [huff2.core :as h]
             [muuntaja.format.core :as mfc]
             [reitit.core :as r]
             [ring.util.codec :refer [form-decode url-encode]]
+            [tram.logging :as log]
             [tram.vars :refer [*req*]])
   (:import (java.io OutputStream)))
 
@@ -44,8 +46,13 @@
    (make-path router route-name {}))
   ([router route-name route-params]
    (let [base-path (:path (r/match-by-name router route-name route-params))]
+     (when (not base-path)
+       (log/event! ::route-not-found
+                   {:data {:message      "Could not create path from route"
+                           :route-name   route-name
+                           :route-params route-params}}))
      (if-let [query-string (make-query-string (:tram.routes/query
-                                               route-params))]
+                                                route-params))]
        (str base-path "?" query-string)
        base-path))))
 
@@ -74,7 +81,8 @@
     (let [[_ route-name route-params] node]
       (make-path router route-name route-params))
 
-    (and (keyword? node) (= "route" (namespace node)))
+    ;; recognize routes like `:route.section/foo` as a route keyword.
+    (and (keyword? node) (= "route" (first (str/split (namespace node) #"\."))))
     (make-path router node nil)
 
     :else node))
@@ -87,13 +95,11 @@
       (let [router   (:reitit.core/router *req*)
             _ (assert router "router is required in encoder")
             expander (partial route-name-expander router)
-            mapper   (fn [[k v]]
-                       [k
-                        (if (coll? v)
-                          (prewalk expander
-                                   v)
-                          (expander v))])]
-
+            mapper   (fn [[k v]] [k
+                                  (if (coll? v)
+                                    (prewalk expander
+                                             v)
+                                    (expander v))])]
         (.getBytes (str (h/html {:allow-raw   true
                                  :attr-mapper mapper}
                                 data))

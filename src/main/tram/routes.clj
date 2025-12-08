@@ -5,6 +5,7 @@
   (:require [camel-snake-kebab.core :as csk]
             [camel-snake-kebab.extras :refer [transform-keys]]
             [clojure.string :as str]
+            [malli.dev.pretty :as pretty]
             [malli.error :as me]
             [malli.util :as mu]
             [muuntaja.core :as muuntaja]
@@ -31,7 +32,7 @@
               coerce-exceptions-interceptor
               coerce-request-interceptor
               coerce-response-interceptor]
-             [tram.html make-route])
+             [tram.html make-route make-path])
 
 (def expand-header-routes-interceptor
   "Expands route references in response headers."
@@ -43,11 +44,11 @@
                         *req*          (:request ctx)
                         *res*          (:response ctx)]
                 (-> ctx
-                    (update-in
-                      [:response :headers]
-                      (fn [headers]
-                        (map-vals (partial tram.html/route-name-expander router)
-                                  headers)))))))})
+                    (update-in [:response :headers]
+                               (fn [headers]
+                                 (clojure.walk/prewalk
+                                   #(tram.html/route-name-expander router %)
+                                   headers)))))))})
 
 (defn wrap-page-interceptor
   "Wraps the returned html in a full html page (if it should).
@@ -147,6 +148,7 @@
                      error-handler-fn (get-in req
                                               [::r/match :data method :error]
                                               default-error-handler)]
+                 (pretty/explain schema body)
                  (error-handler-fn schema (assoc req :body body))))}
             config))))
 

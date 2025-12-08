@@ -4,6 +4,8 @@
             [babashka.process :as p]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [clojure.walk :refer [prewalk]]
+            [com.rpl.specter :as sp]
             [hickory.core :as hc]
             [tram-cli.generate :refer [do-generate]]
             [tram-cli.generator.new :refer [render-new-project-template]]))
@@ -65,6 +67,18 @@ tram help               print this menu
       (println "Running tests..."))
     (p/shell [cmd])))
 
+(defn empty-coll? [x]
+  (and (coll? x) (empty? x)))
+
+(defn remove-empty-from-hiccup [hiccup]
+  (prewalk (fn [x]
+             (if (vector? x)
+               (into []
+                     (remove empty-coll?
+                       x))
+               x))
+           hiccup))
+
 (defn do-html-conversion [{:keys [args]}]
   (let [html (or (second args)
                  (str/trim (:out (p/shell {:out :string}
@@ -75,11 +89,13 @@ tram help               print this menu
                                             "wl-paste")))))]
     (try
       (-> html
+          (str/replace #">\s+<" "><")
           hc/parse-fragment
           first
           hc/as-hiccup
+          remove-empty-from-hiccup
           prn)
-      (catch Exception _
+      (catch Exception e
         (println "Could not convert into html: ")
         (prn html)))))
 
