@@ -82,7 +82,12 @@
       (make-path router route-name route-params))
 
     ;; recognize routes like `:route.section/foo` as a route keyword.
-    (and (keyword? node) (= "route" (first (str/split (namespace node) #"\."))))
+    (and (keyword? node)
+         (= "route"
+            (some-> node
+                    namespace
+                    (str/split #"\.")
+                    first)))
     (make-path router node nil)
 
     :else node))
