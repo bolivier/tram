@@ -80,3 +80,23 @@
     (if (vector? coll)
       coll
       [coll])))
+
+(defn omit-by
+  "Omit elements from `m` where `(f val)` is true.
+
+  Think of this like `remove-vals` a la `map-vals`"
+  [f m]
+  (reduce-kv (fn [acc k v]
+               (if (f v)
+                 acc
+                 (assoc acc
+                   k v)))
+             (empty m)
+             m))
+
+(defn pick-by
+  "Pick elements from `m` where `(f val)` is true.
+
+  Think of this like `filter-vals` a la `map-vals`"
+  [f m]
+  (omit-by (complement f) m))

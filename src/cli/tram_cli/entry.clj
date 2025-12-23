@@ -8,7 +8,8 @@
             [com.rpl.specter :as sp]
             [hickory.core :as hc]
             [tram-cli.generate :refer [do-generate]]
-            [tram-cli.generator.new :refer [render-new-project-template]]))
+            [tram-cli.generator.new :refer [render-new-project-template]]
+            [tram.tram-config :refer [get-tram-config]]))
 
 (def user-project-dir
   (io/file (System/getenv "TRAM_CLI_CALLED_FROM")))
@@ -137,6 +138,10 @@ tram help               print this menu
       "Did you know you can run migrations from the dev/migrations.clj namespace?")
     @p))
 
+(defn do-start [_]
+  (p/shell (format "clojure -M:tram -m %s.core"
+                   (name (:project/name (get-tram-config user-project-dir))))))
+
 (def cmd-table
   [{:cmds       ["new"]
     :fn         do-new-project
@@ -157,6 +162,8 @@ tram help               print this menu
     :fn   do-db-migrate}
    {:cmds ["dev"]
     :fn   do-dev}
+   {:cmds ["start"]
+    :fn   do-start}
    {:cmds []
     :fn   (fn [{:keys [args]}]
             (if (empty? args)

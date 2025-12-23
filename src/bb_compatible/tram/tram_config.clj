@@ -15,8 +15,11 @@
                       {:error   "No TRAM_ENV set."
                        :options #{"development" "test" "production"}}))))
 
-(defn get-tram-config []
-  (read-config "tram.edn"))
+(defn get-tram-config
+  ([path]
+   (read-config (io/file path "tram.edn")))
+  ([]
+   (get-tram-config nil)))
 
 (defn get-migration-config
   ([]
