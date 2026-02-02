@@ -12,9 +12,7 @@
   (:import (java.io OutputStream)))
 
 (defn ->query
-  "`q` is a scalar to be prepared for a query string.
-
-  Strip"
+  "`q` is a scalar to be prepared for a query string."
   [q]
   (url-encode (cond
                 (keyword? q) (name q)
@@ -46,15 +44,15 @@
    (make-path router route-name {}))
   ([router route-name route-params]
    (let [base-path (:path (r/match-by-name router route-name route-params))]
-     (when (not base-path)
+     (if-not base-path
        (log/event! ::route-not-found
                    {:data {:message      "Could not create path from route"
                            :route-name   route-name
-                           :route-params route-params}}))
-     (if-let [query-string (make-query-string (:tram.routes/query
-                                                route-params))]
-       (str base-path "?" query-string)
-       base-path))))
+                           :route-params route-params}})
+       (if-let [query-string (make-query-string (:tram.routes/query
+                                                  route-params))]
+         (str base-path "?" query-string)
+         base-path)))))
 
 (defn make-route
   "Marks a route name as something that the
@@ -113,7 +111,7 @@
     mfc/EncodeToOutputStream
     (encode-to-output-stream [_ data _charset]
       (fn [^OutputStream output-stream]
-        (let [router   (:retit.core/router *req*)
+        (let [router   (:reitit.core/router *req*)
               _ (assert router "router is required in encoder")
               expander (partial route-name-expander router)
               mapper   (fn [[k v]] [k

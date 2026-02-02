@@ -47,8 +47,8 @@
   [model attribute opts]
   (swap! *associations* (fn [associations]
                           (assoc-in associations
-                                    [model :belongs-to attribute]
-                                    opts))))
+                            [model :belongs-to attribute]
+                            opts))))
 
 (defn has-one!
   "Creates a has-one association.
@@ -68,8 +68,8 @@
   ([model attribute opts]
    (swap! *associations* (fn [associations]
                            (assoc-in associations
-                                     [model :has-one attribute]
-                                     opts)))))
+                             [model :has-one attribute]
+                             opts)))))
 
 (defn has-many!
   "Creates a has-many association.
@@ -90,12 +90,12 @@
    (has-many! model attribute {:foreign-key (lang/model->foreign-key model)}))
   ([owner attribute opts]
    (swap! *associations*
-          (fn [associations]
-            (let [attribute-model (lang/modelize attribute {:plural? false})
-                  entry (merge {:model      attribute-model
-                                :join-table (lookup-join-table owner attribute)}
-                               opts)]
-              (assoc-in associations [owner :has-many attribute] entry))))))
+     (fn [associations]
+       (let [attribute-model (lang/modelize attribute {:plural? false})
+             entry (merge {:model      attribute-model
+                           :join-table (lookup-join-table owner attribute)}
+                          opts)]
+         (assoc-in associations [owner :has-many attribute] entry))))))
 
 (defn has-many? [model attribute]
   (some? (get-in @*associations* [model :has-many attribute :model])))
@@ -144,35 +144,36 @@
                               (qualified-column join-table fk-for-other)
                               (qualified-column other-model
                                                 (first (t2/primary-keys
-                                                        other-model)))]]
+                                                         other-model)))]]
             where-clause    [:=
                              (qualified-column join-table fk-for-instance)
                              (:id instance)]]
         (assoc instance
-               attribute
-               (t2/select other-model
-                          {:select (qualified-column other-model :*)
-                           :join   join-clause
-                           :where  where-clause})))
+          attribute
+          (t2/select other-model
+                     {:select (qualified-column other-model :*)
+                      :join   join-clause
+                      :where  where-clause})))
 
       (some? (get-in @*associations* [model :has-many attribute :model]))
       (let [entry (get-in @*associations* [model :has-many attribute])]
         (assoc instance
-               attribute
-               (t2/select (:model entry)
-                          (or (:foreign-key entry) (lang/model->foreign-key model))
-                          (get instance (first
-                                         (t2/primary-keys (t2/model instance)))))))
+          attribute
+          (t2/select (:model entry)
+                     (or (:foreign-key entry) (lang/model->foreign-key model))
+                     (get instance
+                          (first (t2/primary-keys (t2/model instance)))))))
 
       (has-one? model attribute)
       (let [entry     (get-in @*associations* [model :has-one attribute])
             fk        (:foreign-key entry)
             one-model (:model entry)]
         (assoc instance
-               attribute
-               (t2/select-one one-model
-                              fk
-                              (get instance (first (t2/primary-keys instance))))))
+          attribute
+          (t2/select-one one-model
+                         fk
+                         (get instance
+                              (first (t2/primary-keys (t2/model instance)))))))
 
       :else
       (t2/select (keyword "models" (dc/pluralize (name attribute)))

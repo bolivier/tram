@@ -31,8 +31,7 @@
   (tram-router routes
                {:data {:coercion     rcm/coercion
                        :interceptors [(tr/format-interceptor)
-                                      (tr/exception-interceptor {Exception
-                                                                 error-handler})
+                                      (tr/exception-interceptor)
                                       authentication-interceptor
                                       (tr/parameters-interceptor)
                                       (tr/multipart-interceptor)

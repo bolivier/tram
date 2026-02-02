@@ -54,7 +54,7 @@ tram help               print this menu
                     :kaocha
                     :clojure)
         cmd       (case test-type
-                    :kaocha  "bin/kaocha"
+                    :kaocha  "bin/test"
                     :clojure "clojure -X:test")
         watch-cmd (case test-type
                     :kaocha  " --watch"

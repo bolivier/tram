@@ -234,7 +234,6 @@
    (format-interceptor nil))
   ([default-muuntaja]
    {:name    ::format
-    :spec    ::spec
     :compile (fn [{:keys [muuntaja]} _]
                (when-let [prototype (or muuntaja
                                         default-muuntaja

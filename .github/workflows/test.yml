@@ -75,10 +75,7 @@ jobs:
           sudo mv zprint /usr/local/bin/zprint
 
       - name: Check formatting
-        run: |
-          shopt -s extglob
-          shopt -s globstar
-          zprint -c src/**/*.clj
+        run: zprint '{:search-config? true}' -c *.clj
 
       - name: Run tests
         env:
