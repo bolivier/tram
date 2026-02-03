@@ -42,8 +42,6 @@
         column-name (as-column col)]
     (str "idx_" table-name "_" column-name)))
 
-
-
 (defn modelize
   "Convert a keyword into the same keyword, but representing the model of that
   term.

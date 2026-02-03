@@ -1,5 +1,5 @@
 (ns sample-app.views.authentication-views
-  (:require [tram.routes :refer [*current-user*]]))
+  (:require [tram.vars :refer [*current-user*]]))
 
 (defn sign-up [_ctx]
   [:div {:class "max-w-md mx-auto mb-1 mt-10"}

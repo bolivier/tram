@@ -3,6 +3,7 @@
 
                                 :sha "f183486b491b24dd4f8a7e87022ced475df39b11"}
          camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
+         com.rpl/specter {:mvn/version "1.1.6"}
          io.github.bolivier/declensia
          {:git/branch "main"
           :git/sha    "fc3b72da03002d464d69639a4e8e2b2b003339a6"}
