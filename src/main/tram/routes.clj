@@ -229,7 +229,7 @@
 
   | key          | description |
   | -------------|-------------|
-  | `:muuntaja`  | `muuntaja.core/Muuntaja` instance, does not mount if not set."
+  | `:muuntaja`  | `muuntaja.core/Muuntaja` instance. If not set, a default instance is created."
   ([]
    (format-interceptor nil))
   ([default-muuntaja]
