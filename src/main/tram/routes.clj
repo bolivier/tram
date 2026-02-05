@@ -10,6 +10,7 @@
             [malli.util :as mu]
             [muuntaja.core :as muuntaja]
             [potemkin :refer [import-vars]]
+            [reitit.coercion.malli :as rcm]
             [reitit.core :as r]
             [reitit.http :as http]
             [reitit.http.coercion]
@@ -22,7 +23,6 @@
             [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
             [tram.logging :as log]
             [tram.rendering.template-renderer :as renderer]
-            [tram.utils :refer [map-vals]]
             [tram.vars :refer [*current-user* *req* *res*]]))
 
 (import-vars [tram.impl.http htmx-request? html-request? full-redirect redirect]
@@ -211,6 +211,16 @@
        (assoc :default-format "text/html")
        (merge options)
        (muuntaja/create))))
+
+(def coercion
+  "Adds coercion to the default coercion object from `reitit.coercion.malli`. 
+
+  Note, this assumes that the router is also constructed with the muuntaja
+  formatter that converts form data into body-params."
+  (rcm/create
+    (assoc-in rcm/default-options
+      [:transformers :body :formats "application/x-www-form-urlencoded"]
+      rcm/string-transformer-provider)))
 
 (defn format-interceptor
   "Interceptor for content-negotiation, request and response formatting.
