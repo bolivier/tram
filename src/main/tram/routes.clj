@@ -123,8 +123,9 @@
   "Default error handler for `tram.routes/exception-interceptor`."
   [exception request]
   (log/event! ::uncaught-exception
-              {:data {:request   request
-                      :exception exception}})
+              {:data {:request        (:uri request)
+                      :exception      exception
+                      :exception-type (ex-data exception)}})
   {:status 504
    :body   "An unknown error occurred"})
 
@@ -139,8 +140,9 @@
    (exception-interceptor {}))
   ([config]
    (exception/exception-interceptor
-     (merge {::default default-error-handler
-             :tram.req/coercion
+     (merge exception/default-handlers
+            {::exception/default default-error-handler
+             :reitit.coercion/request-coercion
              (fn [e req]
                (let [method (get-in req [:request-method])
                      schema (get (ex-data e) :schema)
@@ -166,10 +168,7 @@
   Capitalize the key, swap dashes for spaces, and concat the key with the
   message."
   [schema k err]
-  (str (or (:tram.ui/label (second (mu/find schema k)))
-           (str/capitalize (name k)))
-       " "
-       err))
+  (str (or (:tram.ui/label (second (mu/find schema k))) (name k)) ": " err))
 
 (defn easy-error-handler
   "Easy handling for request coercion errors.
@@ -181,18 +180,32 @@
   schema. They use the default format.  It defaults to `clojure.core/identity`.
 
   `status` is an http status code to use.  It defaults to 400."
-  [{:keys [status handler]
-    :or   {status  400
-           handler identity}}]
-  (fn error-handler [schema req]
-    (let [body (get-in req [:body])
-          coercion-errors (me/humanize (mu/explain-data schema body))
-          error-messages (mapcat (fn [[k errs]]
-                                   (map (fn [err] (get-ui-label schema k err))
-                                     errs))
-                           coercion-errors)]
-      {:status status
-       :body   (handler error-messages)})))
+  ([]
+   (easy-error-handler {}))
+  ([{:keys [status formatter]
+     :or   {status    400
+            formatter identity}}]
+   (fn error-handler [schema req]
+     (let [body (get-in req [:body])
+           coercion-errors (mu/explain-data (malli.util/assoc schema :foo :int)
+                                            (assoc body :foo "hello"))
+           error-messages (update coercion-errors
+                                  :errors
+                                  (fn [errors humanized]
+                                    (mapv (fn [error]
+                                            (prn error)
+                                            (case (:type error)
+                                              :malli.core/missing-key
+                                              (format "%s is missing"
+                                                      (name (first (:path
+                                                                     error))))
+
+                                              (get-in humanized (:path error))))
+                                      errors))
+                                  (me/humanize coercion-errors))]
+       (me/humanize coercion-errors)
+       {:status status
+        :body   (formatter error-messages)}))))
 
 (defn make-muuntaja-instance
   "make a muuntaja instance with default options.
