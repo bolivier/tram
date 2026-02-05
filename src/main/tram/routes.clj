@@ -85,7 +85,7 @@
               ctx
 
               (re-find #"application/json"
-                       (get-in ctx [:request :headers "accept"]))
+                       (get-in ctx [:request :headers "accept"] ""))
               (update ctx
                       :response
                       (fn [res]
