@@ -1,7 +1,6 @@
 (ns sample-app.routes
   (:require
     [integrant.core :as ig]
-    [reitit.coercion.malli :as rcm]
     [reitit.ring :as ring]
     [sample-app.concerns.authentication :refer [authentication-interceptor]]
     [sample-app.concerns.http :refer [as-full-page]]
@@ -29,7 +28,7 @@
 (defmethod ig/init-key ::sys/router
   [_ {:keys [routes]}]
   (tram-router routes
-               {:data {:coercion     rcm/coercion
+               {:data {:coercion     tr/coercion
                        :interceptors [(tr/format-interceptor)
                                       (tr/exception-interceptor)
                                       authentication-interceptor
