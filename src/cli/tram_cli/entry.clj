@@ -72,14 +72,50 @@ tram help               print this menu
 (defn empty-coll? [x]
   (and (coll? x) (empty? x)))
 
-(defn remove-empty-from-hiccup [hiccup]
-  (prewalk (fn [x]
-             (if (vector? x)
-               (into []
-                     (remove empty-coll?
-                       x))
-               x))
-           hiccup))
+
+(defn hiccup-has-prop? [node prop]
+  (and (vector? node) (map? (second node)) (some? (get-in node [1 prop]))))
+
+(defn convert-id-to-hash-notation [node]
+  (if (hiccup-has-prop? node
+                        :id)
+    (let [tag      (first node)
+          props    (second node)
+          new-tag  (keyword (str (name tag)
+                                 "#"
+                                 (:id props)))
+          children (drop 2
+                         node)]
+      (into [new-tag
+             (dissoc props
+               :id)]
+            children))
+    node))
+
+(defn convert-classes-to-dot-notation [node]
+  (if (hiccup-has-prop? node
+                        :class)
+    (let [tag      (first node)
+          props    (second node)
+          new-tag  (keyword (str (name tag)
+                                 "."
+                                 (str/replace (:class props)
+                                              #" "
+                                              ".")))
+          children (drop 2
+                         node)]
+      (into [new-tag
+             (dissoc props
+               :class)]
+            children))
+    node))
+
+(defn remove-empty-from-hiccup [node]
+  (if (vector? node)
+    (into []
+          (remove empty-coll?
+            node))
+    node))
 
 (defn do-html-conversion [{:keys [args]}]
   (let [html (or (second args)
@@ -88,17 +124,22 @@ tram help               print this menu
                                                  (:out (p/shell {:out :string}
                                                                 "uname")))
                                             "pbpaste"
-                                            "wl-paste")))))]
+                                            "wl-paste")))))
+        remove-html-whitespace #(str/replace % #">\s*[\r\n]+\s*<" "><")]
     (try
-      (-> html
-          (str/replace #">\s*[\r\n]+\s*<" "><")
-          hc/parse-fragment
-          first
-          hc/as-hiccup
-          remove-empty-from-hiccup
-          prn)
+      (->> html
+           str/trim
+           remove-html-whitespace
+           hc/parse-fragment
+           first
+           hc/as-hiccup
+           (prewalk (comp remove-empty-from-hiccup
+                          convert-id-to-hash-notation
+                          convert-classes-to-dot-notation))
+           prn)
       (catch Exception e
         (println "Could not convert into html: ")
+        (prn e)
         (prn html)))))
 
 (defn task-file->ns

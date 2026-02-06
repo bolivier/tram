@@ -235,6 +235,15 @@
       [:transformers :body :formats "application/x-www-form-urlencoded"]
       rcm/string-transformer-provider)))
 
+(defn early-response
+  "Helper for early returns in interceptors.  
+
+  Clears the queue of interceptors and adds a response."
+  [ctx resp]
+  (assoc ctx
+    :response resp
+    :queue    []))
+
 (defn format-interceptor
   "Interceptor for content-negotiation, request and response formatting.
 
