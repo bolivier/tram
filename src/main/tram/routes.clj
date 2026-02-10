@@ -10,6 +10,7 @@
             [malli.util :as mu]
             [muuntaja.core :as muuntaja]
             [potemkin :refer [import-vars]]
+            [reitit.coercion.malli :as rcm]
             [reitit.core :as r]
             [reitit.http :as http]
             [reitit.http.coercion]
@@ -22,7 +23,6 @@
             [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
             [tram.logging :as log]
             [tram.rendering.template-renderer :as renderer]
-            [tram.utils :refer [map-vals]]
             [tram.vars :refer [*current-user* *req* *res*]]))
 
 (import-vars [tram.impl.http htmx-request? html-request? full-redirect redirect]
@@ -85,7 +85,7 @@
               ctx
 
               (re-find #"application/json"
-                       (get-in ctx [:request :headers "accept"]))
+                       (get-in ctx [:request :headers "accept"] ""))
               (update ctx
                       :response
                       (fn [res]
@@ -123,8 +123,9 @@
   "Default error handler for `tram.routes/exception-interceptor`."
   [exception request]
   (log/event! ::uncaught-exception
-              {:data {:request   request
-                      :exception exception}})
+              {:data {:request        (:uri request)
+                      :exception      exception
+                      :exception-type (ex-data exception)}})
   {:status 504
    :body   "An unknown error occurred"})
 
@@ -139,8 +140,9 @@
    (exception-interceptor {}))
   ([config]
    (exception/exception-interceptor
-     (merge {::default default-error-handler
-             :tram.req/coercion
+     (merge exception/default-handlers
+            {::exception/default default-error-handler
+             :reitit.coercion/request-coercion
              (fn [e req]
                (let [method (get-in req [:request-method])
                      schema (get (ex-data e) :schema)
@@ -151,48 +153,6 @@
                  (pretty/explain schema body)
                  (error-handler-fn schema (assoc req :body body))))}
             config))))
-
-(defn- get-ui-label
-  "Default way to generate hiccup for an error.
-
-  Errors from malli are in the form {:key-with-error [\"human-readable-error-message-without-subject\"]
-
-  eg
-
-  {:title [\"should not be empty\"]}
-
-  By default the above error will transalte to \"Title should not be empty\".
-
-  Capitalize the key, swap dashes for spaces, and concat the key with the
-  message."
-  [schema k err]
-  (str (or (:tram.ui/label (second (mu/find schema k)))
-           (str/capitalize (name k)))
-       " "
-       err))
-
-(defn easy-error-handler
-  "Easy handling for request coercion errors.
-
-  Add this handler to a route spec, after handler, to the key `:error` in your
-  route data to use it. Coercion errors will be caught.
-
-  `handler` is a fn that receives a vector of error message strings based on the
-  schema. They use the default format.  It defaults to `clojure.core/identity`.
-
-  `status` is an http status code to use.  It defaults to 400."
-  [{:keys [status handler]
-    :or   {status  400
-           handler identity}}]
-  (fn error-handler [schema req]
-    (let [body (get-in req [:body])
-          coercion-errors (me/humanize (mu/explain-data schema body))
-          error-messages (mapcat (fn [[k errs]]
-                                   (map (fn [err] (get-ui-label schema k err))
-                                     errs))
-                           coercion-errors)]
-      {:status status
-       :body   (handler error-messages)})))
 
 (defn make-muuntaja-instance
   "make a muuntaja instance with default options.
@@ -211,6 +171,25 @@
        (assoc :default-format "text/html")
        (merge options)
        (muuntaja/create))))
+
+(def coercion
+  "Adds coercion to the default coercion object from `reitit.coercion.malli`. 
+
+  Note, this assumes that the router is also constructed with the muuntaja
+  formatter that converts form data into body-params."
+  (rcm/create
+    (assoc-in rcm/default-options
+      [:transformers :body :formats "application/x-www-form-urlencoded"]
+      rcm/string-transformer-provider)))
+
+(defn early-response
+  "Helper for early returns in interceptors.  
+
+  Clears the queue of interceptors and adds a response."
+  [ctx resp]
+  (assoc ctx
+    :response resp
+    :queue    []))
 
 (defn format-interceptor
   "Interceptor for content-negotiation, request and response formatting.

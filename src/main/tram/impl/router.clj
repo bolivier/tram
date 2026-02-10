@@ -31,7 +31,8 @@
             [clojure.zip :as zip]
             [methodical.core :as m]
             [reitit.ring]
-            [tram.language :as lang]))
+            [tram.language :as lang]
+            [tram.logging :as log]))
 
 (def HandlerSpecSchema
   [:map [:handler fn?]])
@@ -82,9 +83,17 @@
 
 (defn get-automagic-template-symbol [sym]
   (let [template-symbol (symbol (lang/convert-ns *ns* :view) (str sym))]
-    (if (requiring-resolve template-symbol)
-      template-symbol
-      nil)))
+    (try
+      (when (requiring-resolve template-symbol)
+        template-symbol)
+      (catch Exception _
+        (log/event! ::could-not-find-template-ns
+                    {:data {:message         (format "Could not find var %s."
+                                                     template-symbol)
+                            :handler-name    sym
+                            :handler-ns      (symbol (str *ns*))
+                            :template-symbol template-symbol}})
+        nil))))
 
 (m/defmulti ->handler-spec
   (fn [handler-entry]

@@ -5,11 +5,11 @@
 
 (comment
   ;; initialize the database using the 'init.sql' script
-  (db/init)
+  (db/init-migrations)
   ;; Create a new migration
-  (db/create "migration-name")
+  (db/create-migration "migration-name")
   ;; apply pending migrations
   (db/migrate)
   ;; rollback the migration with the latest timestamp
-  (db/rollback)
+  (db/rollback-migration)
   nil)

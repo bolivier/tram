@@ -11,18 +11,20 @@
             [tram-cli.generator.new :refer [render-new-project-template]]
             [tram.tram-config :refer [get-tram-config]]))
 
-(def user-project-dir (io/file (System/getenv "TRAM_CLI_CALLED_FROM")))
+(def user-project-dir
+  (io/file (System/getenv "TRAM_CLI_CALLED_FROM")))
 
 (alter-var-root #'p/*defaults*
                 #(assoc %
                    :continue true
-                   :dir user-project-dir))
+                   :dir      user-project-dir))
 (def cmd-spec
-  {:spec {:help {:coerce :boolean, :alias :h, :desc "Print this help menu."}},
+  {:spec     {:help {:coerce :boolean
+                     :alias  :h
+                     :desc   "Print this help menu."}}
    :restrict true})
 
-(defn do-show-help
-  [_]
+(defn do-show-help [_]
   (println
     (str/trim
       "
@@ -39,87 +41,138 @@ tram generate           tram generators subcommand (run with -h to see more)
 tram help               print this menu
 ")))
 
-(defn do-new-project
-  [{:keys [opts]}]
+(defn do-new-project [{:keys [opts]}]
   (let [{:keys [new-project-name]} opts]
     (render-new-project-template new-project-name)))
 
-(defn do-generate-here
-  [{:keys [args]}]
+(defn do-generate-here [{:keys [args]}]
   (println "generating")
   (do-generate args))
 
-(defn do-test
-  [{:keys [opts]}]
-  (let [watch (:watch opts)
-        test-type (if (fs/exists? (io/resource "bin/test")) :kaocha :clojure)
-        cmd (case test-type
-              :kaocha "bin/test"
-              :clojure "clojure -X:test")
+(defn do-test [{:keys [opts]}]
+  (let [watch     (:watch opts)
+        test-type (if (fs/exists? (io/resource "bin/test"))
+                    :kaocha
+                    :clojure)
+        cmd       (case test-type
+                    :kaocha  "bin/test"
+                    :clojure "clojure -X:test")
         watch-cmd (case test-type
-                    :kaocha " --watch"
+                    :kaocha  " --watch"
                     :clojure ":watch")
-        cmd (if watch (str cmd watch-cmd) cmd)]
-    (if watch (println "Watching tests...") (println "Running tests..."))
+        cmd       (if watch
+                    (str cmd
+                         watch-cmd)
+                    cmd)]
+    (if watch
+      (println "Watching tests...")
+      (println "Running tests..."))
     (p/shell [cmd])))
 
-(defn empty-coll? [x] (and (coll? x) (empty? x)))
+(defn empty-coll? [x]
+  (and (coll? x) (empty? x)))
 
-(defn remove-empty-from-hiccup
-  [hiccup]
-  (prewalk (fn [x] (if (vector? x) (into [] (remove empty-coll? x)) x)) hiccup))
 
-(defn do-html-conversion
-  [{:keys [args]}]
+(defn hiccup-has-prop? [node prop]
+  (and (vector? node) (map? (second node)) (some? (get-in node [1 prop]))))
+
+(defn convert-id-to-hash-notation [node]
+  (if (hiccup-has-prop? node
+                        :id)
+    (let [tag      (first node)
+          props    (second node)
+          new-tag  (keyword (str (name tag)
+                                 "#"
+                                 (:id props)))
+          children (drop 2
+                         node)]
+      (into [new-tag
+             (dissoc props
+               :id)]
+            children))
+    node))
+
+(defn convert-classes-to-dot-notation [node]
+  (if (hiccup-has-prop? node
+                        :class)
+    (let [tag      (first node)
+          props    (second node)
+          new-tag  (keyword (str (name tag)
+                                 "."
+                                 (str/replace (:class props)
+                                              #" "
+                                              ".")))
+          children (drop 2
+                         node)]
+      (into [new-tag
+             (dissoc props
+               :class)]
+            children))
+    node))
+
+(defn remove-empty-from-hiccup [node]
+  (if (vector? node)
+    (into []
+          (remove empty-coll?
+            node))
+    node))
+
+(defn do-html-conversion [{:keys [args]}]
   (let [html (or (second args)
                  (str/trim (:out (p/shell {:out :string}
                                           (if (= "Darwin\n"
                                                  (:out (p/shell {:out :string}
                                                                 "uname")))
                                             "pbpaste"
-                                            "wl-paste")))))]
-    (try (-> html
-             (str/replace #">\s*[\r\n]+\s*<" "><")
-             hc/parse-fragment
-             first
-             hc/as-hiccup
-             remove-empty-from-hiccup
-             prn)
-         (catch Exception e
-           (println "Could not convert into html: ")
-           (prn html)))))
+                                            "wl-paste")))))
+        remove-html-whitespace #(str/replace % #">\s*[\r\n]+\s*<" "><")]
+    (try
+      (->> html
+           str/trim
+           remove-html-whitespace
+           hc/parse-fragment
+           first
+           hc/as-hiccup
+           (prewalk (comp remove-empty-from-hiccup
+                          convert-id-to-hash-notation
+                          convert-classes-to-dot-notation))
+           prn)
+      (catch Exception e
+        (println "Could not convert into html: ")
+        (prn e)
+        (prn html)))))
 
 (defn task-file->ns
   "Convert an io/file into a namespace that is compatible with bb -m."
   [file]
-  (let [rev-path (reverse (str/split (str file) #"/"))
-        filename (first rev-path)
+  (let [rev-path  (reverse (str/split (str file) #"/"))
+        filename  (first rev-path)
         ns-suffix (-> filename
                       (str/replace #"\.clj$" "")
                       (str/replace "_" "-"))]
     (loop [rev-path (rest rev-path)
-           path (list ns-suffix)]
-      (cond (or (empty? rev-path) (= "tasks" (first rev-path))) (str/join "."
-                                                                          path)
-            (empty? (first rev-path)) (recur (rest rev-path) (first rev-path))
-            :else (recur (rest rev-path) (conj path (first rev-path)))))))
+           path     (list ns-suffix)]
+      (cond
+        (or (empty? rev-path) (= "tasks" (first rev-path))) (str/join "." path)
+        (empty? (first rev-path)) (recur (rest rev-path) (first rev-path))
+        :else (recur (rest rev-path) (conj path (first rev-path)))))))
 
-(defn do-dev
-  [_]
+(defn do-dev [_]
   (println "Starting development environment...")
   (let [task-files (map task-file->ns
                      (fs/list-dir (io/file user-project-dir "tasks" "dev")))
-        processes (mapv (fn [task]
-                          (p/process {:dir user-project-dir,
-                                      :err :inherit,
-                                      :out :inherit}
-                                     (str "bb -cp 'tasks' -m " task)))
-                    task-files)]
-    (doseq [process processes] (deref process))))
+        processes  (mapv (fn [task]
+                           (p/process {:dir user-project-dir
+                                       :err :inherit
+                                       :out :inherit}
+                                      (str "bb -cp 'tasks' -m " task)))
+                     task-files)]
+    (doseq [process processes]
+      (deref process))))
 
-(defn do-db-migrate
-  [_]
-  (let [p (p/process {:out :inherit, :err :inherit}
+(defn do-db-migrate [_]
+  (let [p (p/process {:out :inherit
+                      :err :inherit}
                      "clojure -X tram.db/migrate-from-cli")]
     (println "Migrating database.")
     (println "Starting JVM...")
@@ -127,25 +180,39 @@ tram help               print this menu
       "Did you know you can run migrations from the dev/migrations.clj namespace?")
     @p))
 
-(defn do-start
-  [_]
+(defn do-start [_]
   (p/shell (format "clojure -M:tram -m %s.core"
                    (name (:project/name (get-tram-config user-project-dir))))))
 
 (def cmd-table
-  [{:cmds ["new"], :fn do-new-project, :args->opts [:new-project-name]}
-   {:cmds ["g"], :fn do-generate-here}
-   {:cmds ["generate"], :fn do-generate-here} {:cmds ["test"], :fn do-test}
-   {:cmds ["help"], :fn do-show-help} {:cmds ["hiccup"], :fn do-html-conversion}
-   {:cmds ["html"], :fn do-html-conversion}
-   {:cmds ["db:migrate"], :fn do-db-migrate} {:cmds ["dev"], :fn do-dev}
-   {:cmds ["start"], :fn do-start}
-   {:cmds [],
-    :fn (fn [{:keys [args]}]
-          (if (empty? args)
-            (do-show-help args)
-            (p/shell (str "clojure -M:tram " (str/join " " args)))))}])
+  [{:cmds       ["new"]
+    :fn         do-new-project
+    :args->opts [:new-project-name]}
+   {:cmds ["g"]
+    :fn   do-generate-here}
+   {:cmds ["generate"]
+    :fn   do-generate-here}
+   {:cmds ["test"]
+    :fn   do-test}
+   {:cmds ["help"]
+    :fn   do-show-help}
+   {:cmds ["hiccup"]
+    :fn   do-html-conversion}
+   {:cmds ["html"]
+    :fn   do-html-conversion}
+   {:cmds ["db:migrate"]
+    :fn   do-db-migrate}
+   {:cmds ["dev"]
+    :fn   do-dev}
+   {:cmds ["start"]
+    :fn   do-start}
+   {:cmds []
+    :fn   (fn [{:keys [args]}]
+            (if (empty? args)
+              (do-show-help args)
+              (p/shell (str "clojure -M:tram "
+                            (str/join " "
+                                      args)))))}])
 
-(defn -main
-  [& cli-args]
+(defn -main [& cli-args]
   (cli/dispatch cmd-table cli-args {:aliases {:g :generate}}))
