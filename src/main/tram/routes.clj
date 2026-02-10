@@ -154,59 +154,6 @@
                  (error-handler-fn schema (assoc req :body body))))}
             config))))
 
-(defn- get-ui-label
-  "Default way to generate hiccup for an error.
-
-  Errors from malli are in the form {:key-with-error [\"human-readable-error-message-without-subject\"]
-
-  eg
-
-  {:title [\"should not be empty\"]}
-
-  By default the above error will transalte to \"Title should not be empty\".
-
-  Capitalize the key, swap dashes for spaces, and concat the key with the
-  message."
-  [schema k err]
-  (str (or (:tram.ui/label (second (mu/find schema k))) (name k)) ": " err))
-
-(defn easy-error-handler
-  "Easy handling for request coercion errors.
-
-  Add this handler to a route spec, after handler, to the key `:error` in your
-  route data to use it. Coercion errors will be caught.
-
-  `handler` is a fn that receives a vector of error message strings based on the
-  schema. They use the default format.  It defaults to `clojure.core/identity`.
-
-  `status` is an http status code to use.  It defaults to 400."
-  ([]
-   (easy-error-handler {}))
-  ([{:keys [status formatter]
-     :or   {status    400
-            formatter identity}}]
-   (fn error-handler [schema req]
-     (let [body (get-in req [:body])
-           coercion-errors (mu/explain-data (malli.util/assoc schema :foo :int)
-                                            (assoc body :foo "hello"))
-           error-messages (update coercion-errors
-                                  :errors
-                                  (fn [errors humanized]
-                                    (mapv (fn [error]
-                                            (prn error)
-                                            (case (:type error)
-                                              :malli.core/missing-key
-                                              (format "%s is missing"
-                                                      (name (first (:path
-                                                                     error))))
-
-                                              (get-in humanized (:path error))))
-                                      errors))
-                                  (me/humanize coercion-errors))]
-       (me/humanize coercion-errors)
-       {:status status
-        :body   (formatter error-messages)}))))
-
 (defn make-muuntaja-instance
   "make a muuntaja instance with default options.
 
