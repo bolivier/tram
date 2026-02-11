@@ -85,6 +85,26 @@
        (recur sb
               (zip/next hzip))))))
 
+(defn find-by-id
+  "Traverse the hiccup tree to find the element with a matching :id attribute."
+  [id root]
+  (loop [hzip (hiccup-zipper root)]
+    (if (zip/end? hzip)
+      nil
+      (let [node (zip/node hzip)]
+        (if (and (not (string? node))
+                 (let [node-id (get-attribute node :id)]
+                   (and node-id (= (name id) (name node-id)))))
+          node
+          (recur (zip/next hzip)))))))
+
+(defn text-match?
+  "Compare text; supports both exact string and regex pattern."
+  [pattern text]
+  (if (instance? java.util.regex.Pattern pattern)
+    (boolean (re-find pattern (or text "")))
+    (= pattern text)))
+
 (defn get-accessible-name [hiccup]
   (or (get-attribute hiccup :aria-label) (get-text hiccup)))
 
@@ -105,13 +125,7 @@
 (defn matches-options? [hiccup opts]
   (let [{:keys [name level]} opts]
     (and (if name
-           (let [accessible-name (get-accessible-name hiccup)]
-             (if (instance? java.util.regex.Pattern
-                            name)
-               (boolean (re-find name
-                                 (or accessible-name
-                                     "")))
-               (= name accessible-name)))
+           (text-match? name (get-accessible-name hiccup))
            true)
          (if level
            (= level (get-heading-level hiccup))

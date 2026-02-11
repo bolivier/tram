@@ -234,3 +234,52 @@
   (testing "2-arity"
     (is (= [[:h1 "A"] [:h2 "B"]]
            (sut/get-all-by-role :heading [:div [:h1 "A"] [:h2 "B"]])))))
+
+(deftest get-by-label-test
+  (testing "label with for attribute"
+    (is (= [:input {:id "username"}]
+           (sut/get-by-label "Username"
+                             [:div
+                              [:label {:for "username"} "Username"]
+                              [:input {:id "username"}]]))))
+  (testing "label with keyword id"
+    (is (= [:input#my-id]
+           (sut/get-by-label "Username"
+                             [:div
+                              [:label {:for :my-id} "Username"]
+                              [:input#my-id]]))))
+  (testing "wrapping label"
+    (is (= [:input]
+           (sut/get-by-label "Username"
+                             [:div
+                              [:label "Username" [:input]]]))))
+  (testing "aria-label"
+    (is (= [:button {:aria-label "Close"} "X"]
+           (sut/get-by-label "Close"
+                             [:div
+                              [:button {:aria-label "Close"} "X"]]))))
+  (testing "aria-labelledby"
+    (is (= [:input {:aria-labelledby "name-label"}]
+           (sut/get-by-label "Full Name"
+                             [:div
+                              [:span {:id "name-label"} "Full Name"]
+                              [:input {:aria-labelledby "name-label"}]]))))
+  (testing "returns nil when no label matches"
+    (is (nil? (sut/get-by-label "Username"
+                                [:div [:input {:id "username"}]]))))
+  (testing "returns nil when label text doesn't match"
+    (is (nil? (sut/get-by-label "Password"
+                                [:div
+                                 [:label {:for "username"} "Username"]
+                                 [:input {:id "username"}]])))))
+
+(deftest get-all-by-label-test
+  (testing "returns all elements with matching label"
+    (is (= [[:input {:id "first"}] [:input {:id "second" :aria-label "Name"}]]
+           (sut/get-all-by-label "Name"
+                                 [:div
+                                  [:label {:for "first"} "Name"]
+                                  [:input {:id "first"}]
+                                  [:input {:id "second" :aria-label "Name"}]]))))
+  (testing "returns empty vector when no matches"
+    (is (= [] (sut/get-all-by-label "Username" [:div [:input]])))))
