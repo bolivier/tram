@@ -7,6 +7,7 @@
             [clojure.string :as str]
             [malli.dev.pretty :as pretty]
             [malli.error :as me]
+            [malli.transform :as mt]
             [malli.util :as mu]
             [muuntaja.core :as muuntaja]
             [potemkin :refer [import-vars]]
@@ -151,7 +152,7 @@
                                               [::r/match :data method :error]
                                               default-error-handler)]
                  (pretty/explain schema body)
-                 (error-handler-fn schema (assoc req :body body))))}
+                 (error-handler-fn e (assoc req :body body))))}
             config))))
 
 (defn make-muuntaja-instance
@@ -172,15 +173,36 @@
        (merge options)
        (muuntaja/create))))
 
+(def ^:private form-transformer-provider
+  "Like `rcm/string-transformer-provider`, but also coerces a single string
+  value into a vector when the schema expects a vector. This handles the case
+  where HTML forms with repeated field names submit only one value, causing the
+  browser to send a plain string instead of a collection."
+  (let [string->vector (mt/transformer {:name     :string->vector
+                                        :decoders {:vector (fn [x]
+                                                             (if (string? x)
+                                                               [x]
+                                                               x))}})]
+    (reify
+      rcm/TransformationProvider
+      (-transformer [_ {:keys [strip-extra-keys default-values]}]
+        (mt/transformer (when strip-extra-keys
+                          (mt/strip-extra-keys-transformer))
+                        string->vector
+                        (mt/string-transformer)
+                        (when default-values
+                          (mt/default-value-transformer)))))))
+
 (def coercion
-  "Adds coercion to the default coercion object from `reitit.coercion.malli`. 
+  "Adds coercion to the default coercion object from `reitit.coercion.malli`.
 
   Note, this assumes that the router is also constructed with the muuntaja
   formatter that converts form data into body-params."
   (rcm/create
-    (assoc-in rcm/default-options
-      [:transformers :body :formats "application/x-www-form-urlencoded"]
-      rcm/string-transformer-provider)))
+    (-> rcm/default-options
+        (assoc-in
+          [:transformers :body :formats "application/x-www-form-urlencoded"]
+          form-transformer-provider))))
 
 (defn early-response
   "Helper for early returns in interceptors.  
