@@ -7,6 +7,7 @@
             [clojure.string :as str]
             [malli.dev.pretty :as pretty]
             [malli.error :as me]
+            [malli.transform :as mt]
             [malli.util :as mu]
             [muuntaja.core :as muuntaja]
             [potemkin :refer [import-vars]]
@@ -172,18 +173,36 @@
        (merge options)
        (muuntaja/create))))
 
+(defn string->vector-transformer []
+  (mt/transformer
+    {:name     :string->vector
+     :decoders {:vector {:compile (fn [_schema _]
+                                    (fn [value]
+                                      (if (string? value)
+                                        [value]
+                                        value)))}}}))
+
+(def ^:private string->vector-transformer-provider
+  (reify rcm/TransformationProvider
+    (-transformer [_ {:keys [strip-extra-keys default-values]}]
+      (mt/transformer
+        (when strip-extra-keys (mt/strip-extra-keys-transformer))
+        (string->vector-transformer)
+        (mt/string-transformer)
+        (when default-values (mt/default-value-transformer))))))
+
 (def coercion
-  "Adds coercion to the default coercion object from `reitit.coercion.malli`. 
+  "Adds coercion to the default coercion object from `reitit.coercion.malli`.
 
   Note, this assumes that the router is also constructed with the muuntaja
   formatter that converts form data into body-params."
   (rcm/create
     (assoc-in rcm/default-options
       [:transformers :body :formats "application/x-www-form-urlencoded"]
-      rcm/string-transformer-provider)))
+      string->vector-transformer-provider)))
 
 (defn early-response
-  "Helper for early returns in interceptors.  
+  "Helper for early returns in interceptors.
 
   Clears the queue of interceptors and adds a response."
   [ctx resp]

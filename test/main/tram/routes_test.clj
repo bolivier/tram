@@ -1,5 +1,7 @@
 (ns tram.routes-test
   (:require [clojure.test :refer [deftest is]]
+            [malli.core :as m]
+            [malli.transform :as mt]
             [matcher-combinators.test]
             [reitit.core :as r]
             test-app.handlers.authentication-handlers
@@ -35,6 +37,16 @@
                          'test-app.views.authentication-views/forgot-password}
                   :name keyword?}]
                 route-data))))
+
+(deftest string-to-vector-coercion
+  (let [schema    [:map [:tags [:vector :string]]]
+        transform (mt/transformer
+                    (sut/string->vector-transformer)
+                    (mt/string-transformer))]
+    (is (= {:tags ["foo"]}
+           (m/decode schema {:tags "foo"} transform)))
+    (is (= {:tags ["foo" "bar"]}
+           (m/decode schema {:tags ["foo" "bar"]} transform)))))
 
 (deftest expand-healthcheck-entries
   (let
