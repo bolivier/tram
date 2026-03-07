@@ -5,3 +5,4 @@
 /tram-daemon.log
 .postgres
 /target
+resources/test.db

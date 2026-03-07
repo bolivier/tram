@@ -1,30 +1,33 @@
-DROP TABLE accounts  CASCADE
+DROP TABLE IF EXISTS follows;
 
 --;;
 
-drop table computers  cascade
+DROP TABLE IF EXISTS computers;
 
 --;;
 
-DROP TABLE settings_users cascade
+DROP TABLE IF EXISTS settings_users;
 
 --;;
 
-
-DROP TABLE addresses cascade
-
---;;
-
-DROP TABLE articles cascade
+DROP TABLE IF EXISTS addresses;
 
 --;;
 
-DROP TABLE users cascade
+DROP TABLE IF EXISTS articles;
 
 --;;
 
-DROP TABLE birds cascade
+DROP TABLE IF EXISTS users;
 
 --;;
 
-DROP TABLE settings cascade
+DROP TABLE IF EXISTS birds;
+
+--;;
+
+DROP TABLE IF EXISTS settings;
+
+--;;
+
+DROP TABLE IF EXISTS accounts;

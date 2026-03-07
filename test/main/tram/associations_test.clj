@@ -81,20 +81,8 @@
 
 (comment
   (do (require '[migratus.core :as migratus]
-               '[next.jdbc :as jdbc]
                '[tram.tram-config :as tram.config])
-      ;; On BB, splice in nothing. On JVM Clojure, pull in
-      ;; jdbc/migratus/tram.
-      (let [migration-config (tram.config/get-migration-config "test")
-            config (:db migration-config)]
-        (try
-          ;; Ensure we run CREATE DATABASE against a management DB.
-          (jdbc/execute! (jdbc/get-datasource (assoc config
-                                                :dbname "postgres"))
-                         ["CREATE DATABASE tram_test"])
-          (catch org.postgresql.util.PSQLException _
-            ;; most likely already exists
-            nil))
+      (let [migration-config (tram.config/get-migration-config "test")]
         (migratus/init migration-config)
         (migratus/reset migration-config)
         (migratus/migrate migration-config)

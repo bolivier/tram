@@ -1,9 +1,5 @@
-{:database/test {:db            {:dbname   "tram_test"
-                                 :dbtype   "postgresql"
-                                 :host     "localhost"
-                                 :password #env PG_PASSWORD
-                                 :port     5433
-                                 :user     #env PG_USER}
+{:database/test {:db            {:dbname   "resources/test.db"
+                                 :dbtype   "sqlite"}
                  :init-script   "init.sql"
                  :migration-dir "test-migrations/"
                  :migration-table-name "migrations"

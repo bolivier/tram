@@ -15,11 +15,8 @@
                           :migration-dir "migrations/"
                           :migration-table-name "migrations"
                           :store :database}
-   :database/test        {:db {:dbname "tram_sample_test"
-                               :dbtype "postgresql"
-                               :host   "localhost"
-                               :port   5432
-                               :user   "brandon"}
+   :database/test        {:db {:dbname "resources/test.db"
+                               :dbtype "sqlite"}
                           :migration-dir "migrations/"
                           :migration-table-name "migrations"
                           :store :database}
