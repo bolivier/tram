@@ -67,7 +67,8 @@ tram help               print this menu
     (if watch
       (println "Watching tests...")
       (println "Running tests..."))
-    (p/shell [cmd])))
+    (let [result (p/shell {:continue true} [cmd])]
+      (System/exit (:exit result)))))
 
 (defn empty-coll? [x]
   (and (coll? x) (empty? x)))
