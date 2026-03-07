@@ -5,235 +5,235 @@
 (deftest get-by-role-test
   (testing "list role"
     (is (= [:ul#error-list [:li "Something went wrong!"]]
-           (sut/get-by-role :list
-                            [:div
+           (sut/get-by-role [:div
                              [:span "errors: "]
-                             [:ul#error-list [:li "Something went wrong!"]]]))))
+                             [:ul#error-list [:li "Something went wrong!"]]]
+                            :list))))
   (testing "list item role"
     (is (= nil
-           (sut/get-by-role :listitem [:li "Incorrect email or password."])))
+           (sut/get-by-role [:li "Incorrect email or password."] :listitem)))
     (is (= [:li "Incorrect email or password."]
-           (sut/get-by-role :listitem
-                            [:ul#errors.error-messages {:hx-swap-oob true}
-                             '([:li "Incorrect email or password."])]))))
+           (sut/get-by-role [:ul#errors.error-messages {:hx-swap-oob true}
+                             '([:li "Incorrect email or password."])]
+                            :listitem))))
   (testing "simple role mappings"
     (testing "heading"
-      (is (= [:h1 "Title"] (sut/get-by-role :heading [:div [:h1 "Title"]])))
-      (is (= [:h3 "Sub"] (sut/get-by-role :heading [:div [:h3 "Sub"]]))))
+      (is (= [:h1 "Title"] (sut/get-by-role [:div [:h1 "Title"]] :heading)))
+      (is (= [:h3 "Sub"] (sut/get-by-role [:div [:h3 "Sub"]] :heading))))
     (testing "img"
       (is (= [:img {:src "a.png"
                     :alt "pic"}]
-             (sut/get-by-role :img
-                              [:div
+             (sut/get-by-role [:div
                                [:img {:src "a.png"
-                                      :alt "pic"}]]))))
+                                      :alt "pic"}]]
+                              :img))))
     (testing "table / row / cell / columnheader"
       (let [html [:table [:tr [:th "Name"] [:td "Alice"]]]]
-        (is (= html (sut/get-by-role :table [:div html])))
+        (is (= html (sut/get-by-role [:div html] :table)))
         (is (= [:tr [:th "Name"] [:td "Alice"]]
-               (sut/get-by-role :row [:div html])))
-        (is (= [:td "Alice"] (sut/get-by-role :cell [:div html])))
-        (is (= [:th "Name"] (sut/get-by-role :columnheader [:div html])))))
+               (sut/get-by-role [:div html] :row)))
+        (is (= [:td "Alice"] (sut/get-by-role [:div html] :cell)))
+        (is (= [:th "Name"] (sut/get-by-role [:div html] :columnheader)))))
     (testing "separator"
-      (is (= [:hr] (sut/get-by-role :separator [:div [:hr]]))))
+      (is (= [:hr] (sut/get-by-role [:div [:hr]] :separator))))
     (testing "article"
       (is (= [:article "Post"]
-             (sut/get-by-role :article [:div [:article "Post"]]))))
+             (sut/get-by-role [:div [:article "Post"]] :article))))
     (testing "figure"
       (is (= [:figure [:img {:src "x"}]]
-             (sut/get-by-role :figure
-                              [:div [:figure [:img {:src "x"}]]]))))
+             (sut/get-by-role [:div [:figure [:img {:src "x"}]]]
+                              :figure))))
     (testing "navigation"
       (is (= [:nav
               [:a {:href "/"}
                "Home"]]
-             (sut/get-by-role :navigation
-                              [:div
+             (sut/get-by-role [:div
                                [:nav
                                 [:a {:href "/"}
-                                 "Home"]]]))))
+                                 "Home"]]]
+                              :navigation))))
     (testing "main"
       (is (= [:main "Content"]
-             (sut/get-by-role :main [:div [:main "Content"]]))))
+             (sut/get-by-role [:div [:main "Content"]] :main))))
     (testing "complementary"
       (is (= [:aside "Sidebar"]
-             (sut/get-by-role :complementary [:div [:aside "Sidebar"]]))))
+             (sut/get-by-role [:div [:aside "Sidebar"]] :complementary))))
     (testing "dialog"
       (is (= [:dialog "Modal"]
-             (sut/get-by-role :dialog [:div [:dialog "Modal"]]))))
+             (sut/get-by-role [:div [:dialog "Modal"]] :dialog))))
     (testing "form"
-      (is (= [:form [:input]] (sut/get-by-role :form [:div [:form [:input]]]))))
+      (is (= [:form [:input]] (sut/get-by-role [:div [:form [:input]]] :form))))
     (testing "region"
       (is (= [:section "Area"]
-             (sut/get-by-role :region [:div [:section "Area"]]))))
+             (sut/get-by-role [:div [:section "Area"]] :region))))
     (testing "meter"
       (is (= [:meter {:value 5}]
-             (sut/get-by-role :meter
-                              [:div [:meter {:value 5}]]))))
+             (sut/get-by-role [:div [:meter {:value 5}]]
+                              :meter))))
     (testing "progressbar"
       (is (= [:progress {:value 50}]
-             (sut/get-by-role :progressbar
-                              [:div [:progress {:value 50}]]))))
+             (sut/get-by-role [:div [:progress {:value 50}]]
+                              :progressbar))))
     (testing "option"
       (is (= [:option "A"]
-             (sut/get-by-role :option [:select [:option "A"] [:option "B"]]))))
+             (sut/get-by-role [:select [:option "A"] [:option "B"]] :option))))
     (testing "search"
       (is (= [:search [:input]]
-             (sut/get-by-role :search [:div [:search [:input]]])))))
+             (sut/get-by-role [:div [:search [:input]]] :search)))))
   (testing "input-type dispatch"
     (testing "button"
-      (is (some? (sut/get-by-role :button [:div [:button "Click"]])))
-      (is (some? (sut/get-by-role :button
-                                  [:div [:input {:type "submit"}]])))
-      (is (some? (sut/get-by-role :button
-                                  [:div [:input {:type "reset"}]])))
-      (is (some? (sut/get-by-role :button
-                                  [:div [:input {:type "button"}]]))))
+      (is (some? (sut/get-by-role [:div [:button "Click"]] :button)))
+      (is (some? (sut/get-by-role [:div [:input {:type "submit"}]]
+                                  :button)))
+      (is (some? (sut/get-by-role [:div [:input {:type "reset"}]]
+                                  :button)))
+      (is (some? (sut/get-by-role [:div [:input {:type "button"}]]
+                                  :button))))
     (testing "textbox"
-      (is (some? (sut/get-by-role :textbox [:div [:textarea]])))
-      (is (some? (sut/get-by-role :textbox
-                                  [:div [:input {:type "text"}]])))
-      (is (some? (sut/get-by-role :textbox [:div [:input]])))
-      (is (nil? (sut/get-by-role :textbox
-                                 [:div [:input {:type "email"}]]))))
+      (is (some? (sut/get-by-role [:div [:textarea]] :textbox)))
+      (is (some? (sut/get-by-role [:div [:input {:type "text"}]]
+                                  :textbox)))
+      (is (some? (sut/get-by-role [:div [:input]] :textbox)))
+      (is (nil? (sut/get-by-role [:div [:input {:type "email"}]]
+                                 :textbox))))
     (testing "checkbox"
-      (is (some? (sut/get-by-role :checkbox
-                                  [:div [:input {:type "checkbox"}]]))))
+      (is (some? (sut/get-by-role [:div [:input {:type "checkbox"}]]
+                                  :checkbox))))
     (testing "radio"
-      (is (some? (sut/get-by-role :radio
-                                  [:div [:input {:type "radio"}]]))))
+      (is (some? (sut/get-by-role [:div [:input {:type "radio"}]]
+                                  :radio))))
     (testing "searchbox"
-      (is (some? (sut/get-by-role :searchbox
-                                  [:div [:input {:type "search"}]]))))
+      (is (some? (sut/get-by-role [:div [:input {:type "search"}]]
+                                  :searchbox))))
     (testing "slider"
-      (is (some? (sut/get-by-role :slider
-                                  [:div [:input {:type "range"}]]))))
+      (is (some? (sut/get-by-role [:div [:input {:type "range"}]]
+                                  :slider))))
     (testing "spinbutton"
-      (is (some? (sut/get-by-role :spinbutton
-                                  [:div [:input {:type "number"}]])))))
+      (is (some? (sut/get-by-role [:div [:input {:type "number"}]]
+                                  :spinbutton)))))
   (testing "conditional roles"
     (testing "link"
-      (is (some? (sut/get-by-role :link
-                                  [:div
+      (is (some? (sut/get-by-role [:div
                                    [:a {:href "/page"}
-                                    "Link"]])))
-      (is (nil? (sut/get-by-role :link [:div [:a "No href"]]))))
+                                    "Link"]]
+                                  :link)))
+      (is (nil? (sut/get-by-role [:div [:a "No href"]] :link))))
     (testing "banner"
-      (is (some? (sut/get-by-role :banner [:div [:header "Site Header"]])))
-      (is (nil? (sut/get-by-role :banner
-                                 [:div
-                                  [:article [:header "Article Header"]]]))))
+      (is (some? (sut/get-by-role [:div [:header "Site Header"]] :banner)))
+      (is (nil? (sut/get-by-role [:div
+                                  [:article [:header "Article Header"]]]
+                                 :banner))))
     (testing "contentinfo"
-      (is (some? (sut/get-by-role :contentinfo [:div [:footer "Site Footer"]])))
-      (is (nil? (sut/get-by-role :contentinfo
-                                 [:div [:nav [:footer "Nav Footer"]]]))))
+      (is (some? (sut/get-by-role [:div [:footer "Site Footer"]] :contentinfo)))
+      (is (nil? (sut/get-by-role [:div [:nav [:footer "Nav Footer"]]]
+                                 :contentinfo))))
     (testing "rowheader"
-      (is (some? (sut/get-by-role :rowheader
-                                  [:table
+      (is (some? (sut/get-by-role [:table
                                    [:tr
                                     [:th {:scope "row"}
-                                     "Name"]]])))
-      (is (nil? (sut/get-by-role :rowheader [:table [:tr [:th "Name"]]]))))
+                                     "Name"]]]
+                                  :rowheader)))
+      (is (nil? (sut/get-by-role [:table [:tr [:th "Name"]]] :rowheader))))
     (testing "combobox"
-      (is (some? (sut/get-by-role :combobox [:div [:select [:option "A"]]])))
-      (is (some? (sut/get-by-role :combobox
-                                  [:div
+      (is (some? (sut/get-by-role [:div [:select [:option "A"]]] :combobox)))
+      (is (some? (sut/get-by-role [:div
                                    [:select {:size 0}
-                                    [:option "A"]]])))
-      (is (some? (sut/get-by-role :combobox
-                                  [:div
+                                    [:option "A"]]]
+                                  :combobox)))
+      (is (some? (sut/get-by-role [:div
                                    [:select {:size "1"}
-                                    [:option "A"]]])))
-      (is (nil? (sut/get-by-role :combobox
-                                 [:div
+                                    [:option "A"]]]
+                                  :combobox)))
+      (is (nil? (sut/get-by-role [:div
                                   [:select {:size 3}
-                                   [:option "A"]]])))
-      (is (nil? (sut/get-by-role :combobox
-                                 [:div
+                                   [:option "A"]]]
+                                 :combobox)))
+      (is (nil? (sut/get-by-role [:div
                                   [:select {:size "4"}
-                                   [:option "A"]]])))
-      (is (nil? (sut/get-by-role :combobox
-                                 [:div
+                                   [:option "A"]]]
+                                 :combobox)))
+      (is (nil? (sut/get-by-role [:div
                                   [:select {:multiple true}
-                                   [:option "A"]]])))))
+                                   [:option "A"]]]
+                                 :combobox)))))
   (testing "explicit role attribute fallback"
-    (is (some? (sut/get-by-role :alert
-                                [:div
+    (is (some? (sut/get-by-role [:div
                                  [:div {:role "alert"}
-                                  "Error!"]])))
-    (is (some? (sut/get-by-role :status
-                                [:div
+                                  "Error!"]]
+                                :alert)))
+    (is (some? (sut/get-by-role [:div
                                  [:div {:role "status"}
-                                  "OK"]])))
-    (is (some? (sut/get-by-role :switch
-                                [:div
+                                  "OK"]]
+                                :status)))
+    (is (some? (sut/get-by-role [:div
                                  [:span {:role "switch"}
-                                  "Toggle"]])))
-    (is (nil? (sut/get-by-role :alert [:div [:span "No role here"]]))))
+                                  "Toggle"]]
+                                :switch)))
+    (is (nil? (sut/get-by-role [:div [:span "No role here"]] :alert))))
   (testing "2-arity backward compatibility"
-    (is (= [:h1 "Title"] (sut/get-by-role :heading [:div [:h1 "Title"]]))))
+    (is (= [:h1 "Title"] (sut/get-by-role [:div [:h1 "Title"]] :heading))))
   (testing "returns nil for no match"
-    (is (nil? (sut/get-by-role :button [:div [:span "Not a button"]])))))
+    (is (nil? (sut/get-by-role [:div [:span "Not a button"]] :button)))))
 
 (deftest get-by-role-options-test
   (testing "name option - exact string match"
     (is (= [:button "Save"]
-           (sut/get-by-role :button
-                            [:div [:button "Cancel"] [:button "Save"]]
+           (sut/get-by-role [:div [:button "Cancel"] [:button "Save"]]
+                            :button
                             {:name "Save"}))))
   (testing "name option - aria-label takes precedence"
     (is (= [:button {:aria-label "Close dialog"}
             "X"]
-           (sut/get-by-role :button
-                            [:div
+           (sut/get-by-role [:div
                              [:button {:aria-label "Close dialog"}
                               "X"]]
+                            :button
                             {:name "Close dialog"}))))
   (testing "name option - regex"
     (is (= [:button "Save changes"]
-           (sut/get-by-role :button
-                            [:div [:button "Cancel"] [:button "Save changes"]]
+           (sut/get-by-role [:div [:button "Cancel"] [:button "Save changes"]]
+                            :button
                             {:name #"Save"}))))
   (testing "level option - tag-derived"
     (is (= [:h2 "Subtitle"]
-           (sut/get-by-role :heading
-                            [:div [:h1 "Title"] [:h2 "Subtitle"]]
+           (sut/get-by-role [:div [:h1 "Title"] [:h2 "Subtitle"]]
+                            :heading
                             {:level 2}))))
   (testing "level option - aria-level"
     (is (= [:div {:role       "heading"
                   :aria-level 3}
             "Custom"]
-           (sut/get-by-role :heading
-                            [:div
+           (sut/get-by-role [:div
                              [:h1 "Title"]
                              [:div {:role       "heading"
                                     :aria-level 3}
                               "Custom"]]
+                            :heading
                             {:level 3}))))
   (testing "name and level combined"
     (is (= [:h2 "Features"]
            (sut/get-by-role
-             :heading
              [:div [:h2 "About"] [:h2 "Features"] [:h3 "Details"]]
+             :heading
              {:name  "Features"
               :level 2})))))
 
 (deftest get-all-by-role-test
   (testing "returns all matches"
     (is (= [[:li "A"] [:li "B"] [:li "C"]]
-           (sut/get-all-by-role :listitem
-                                [:ul [:li "A"] [:li "B"] [:li "C"]]))))
+           (sut/get-all-by-role [:ul [:li "A"] [:li "B"] [:li "C"]]
+                                :listitem))))
   (testing "returns empty vector when no matches"
-    (is (= [] (sut/get-all-by-role :button [:div [:span "No buttons"]]))))
+    (is (= [] (sut/get-all-by-role [:div [:span "No buttons"]] :button))))
   (testing "with options"
     (is (= [[:h2 "One"] [:h2 "Two"]]
            (sut/get-all-by-role
-             :heading
              [:div [:h1 "Title"] [:h2 "One"] [:h2 "Two"] [:h3 "Three"]]
+             :heading
              {:level 2}))))
   (testing "2-arity"
     (is (= [[:h1 "A"] [:h2 "B"]]
-           (sut/get-all-by-role :heading [:div [:h1 "A"] [:h2 "B"]])))))
+           (sut/get-all-by-role [:div [:h1 "A"] [:h2 "B"]] :heading)))))
 
 (deftest get-by-label-test
   (testing "label with for attribute"

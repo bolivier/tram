@@ -30,7 +30,7 @@
       (t2/select-one (lang/join-table a b))
       table-name)
     (catch Exception e
-      (if (re-find #"relation \".*\" does not exist"
+      (if (re-find #"relation \".*\" does not exist|no such table"
                    (.getMessage e))
         nil
         (throw e)))))

@@ -138,7 +138,8 @@
     (or (and (= :select (util/get-base-tag hiccup))
              (not (util/get-attribute hiccup :multiple))
              (let [size (util/get-attribute hiccup :size)]
-               (or (nil? size) (<= (long (cond-> size (string? size) parse-long)) 1))))
+               (or (nil? size)
+                   (<= (long (cond-> size (string? size) parse-long)) 1))))
         (explicit-role? hiccup :combobox))))
 
 (m/defmethod role-match? :default
@@ -149,9 +150,9 @@
         (explicit-role? hiccup role))))
 
 (defn get-by-role
-  ([role hiccup]
-   (get-by-role role hiccup {}))
-  ([role hiccup opts]
+  ([hiccup role]
+   (get-by-role hiccup role {}))
+  ([hiccup role opts]
    (loop [hzip (hiccup-zipper hiccup)]
      (if (zip/end? hzip)
        nil
@@ -165,9 +166,9 @@
            (recur (zip/next hzip))))))))
 
 (defn get-all-by-role
-  ([role hiccup]
-   (get-all-by-role role hiccup {}))
-  ([role hiccup opts]
+  ([hiccup role]
+   (get-all-by-role hiccup role {}))
+  ([hiccup role opts]
    (loop [hzip    (hiccup-zipper hiccup)
           results []]
      (if (zip/end? hzip)
