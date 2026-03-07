@@ -1,20 +1,20 @@
 {:lint-as
- {;; Tram-specific macros
-  tram.core/defroutes   clojure.core/def
-  tram.routes/defroutes clojure.core/def
+ {tram.core/defroutes        clojure.core/def
+  tram.routes/defroutes      clojure.core/def
   tram.utils/with-same-output clojure.core/let
+  tram.db/with-call-count    clojure.core/let
+  tram.db/deftransforms      clojure.core/def}
 
-  ;; Re-exported toucan2 macros from tram.db
-  tram.db/with-connection   clojure.core/let
-  tram.db/with-transaction  clojure.core/let
-  tram.db/with-call-count   clojure.core/let
-  tram.db/define-after-insert   clojure.core/def
-  tram.db/define-after-select   clojure.core/def
-  tram.db/define-after-update   clojure.core/def
-  tram.db/define-before-delete  clojure.core/def
-  tram.db/define-before-insert  clojure.core/def
-  tram.db/define-before-select  clojure.core/def
-  tram.db/define-before-update  clojure.core/def
-  tram.db/define-default-fields clojure.core/def
-  tram.db/define-named-query    clojure.core/def
-  tram.db/deftransforms         clojure.core/def}}
+ :hooks
+ {:analyze-call
+  {tram.db/with-connection      hooks.toucan2.connection/with-connection
+   tram.db/with-transaction     hooks.toucan2.connection/with-transaction
+   tram.db/define-after-insert  hooks.toucan2.tools.after-insert/define-after-insert
+   tram.db/define-after-select  hooks.toucan2.tools.after-select/define-after-select
+   tram.db/define-after-update  hooks.toucan2.tools.after-update/define-after-update
+   tram.db/define-before-delete hooks.toucan2.tools.before-delete/define-before-delete
+   tram.db/define-before-insert hooks.toucan2.tools.before-insert/define-before-insert
+   tram.db/define-before-select hooks.toucan2.tools.before-select/define-before-select
+   tram.db/define-before-update hooks.toucan2.tools.before-update/define-before-update
+   tram.db/define-default-fields hooks.toucan2.tools.default-fields/define-default-fields
+   tram.db/define-named-query   hooks.toucan2.tools.named-query/define-named-query}}}
