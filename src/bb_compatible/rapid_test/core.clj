@@ -88,7 +88,7 @@
         snapshot-contents (try
                             (str/trimr ;; newlines in files
                               (slurp snapshot-filename))
-                            (catch Exception e
+                            (catch Exception _
                               (println "Could not find snapshot"
                                        snapshot-name
                                        "so it was created.")

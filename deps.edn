@@ -20,7 +20,8 @@
   :watch     {:exec-args {:watch? true}
               :exec-fn   kaocha.runner/exec-fn}
   ;; This alias is useful if you need to develop a new hook for a macro
-  :clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "LATEST"}}}
+  :clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version "LATEST"}}
+              :main-opts  ["-m" "clj-kondo.main" "--lint" "src" "test"]}
   :build     {:extra-deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}}
               :ns-default build}
   :deploy    {:exec-args  {:artifact       "target/tram.jar"
