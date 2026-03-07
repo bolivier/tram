@@ -2,6 +2,7 @@
   "Primary namespace for logging in Tram.
 
   Most functions are rexported from `taoensso.telemere`."
+  (:refer-clojure :exclude [newline])
   (:require [potemkin :refer [import-vars]]
             [taoensso.telemere :as t]))
 

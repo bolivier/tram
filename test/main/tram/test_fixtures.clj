@@ -1,6 +1,5 @@
 (ns tram.test-fixtures
-  (:require [rapid-test.core :as rt]
-            [reitit.core :as r]))
+  (:require [reitit.core :as r]))
 
 (def tram-config
   {:database/development {:db {:dbname "tram_sample_development"
@@ -26,7 +25,7 @@
                           :store :database}
    :project/name         "tram-sample"})
 
-(defn ok-good-handler [req]
+(defn ok-good-handler [_req]
   {:status 200
    :body   "good"})
 

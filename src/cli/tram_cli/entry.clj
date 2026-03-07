@@ -5,7 +5,6 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.walk :refer [prewalk]]
-            [com.rpl.specter :as sp]
             [hickory.core :as hc]
             [tram-cli.generate :refer [do-generate]]
             [tram-cli.generator.new :refer [render-new-project-template]]

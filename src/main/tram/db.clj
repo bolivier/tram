@@ -1,5 +1,6 @@
 (ns ^:public tram.db
   "Primary namespace for db operations in Tram."
+  (:refer-clojure :exclude [count instance?])
   (:require
     [cheshire.core :as json]
     [clojure.java.io :as io]
@@ -78,7 +79,7 @@
     (let [conn      (.getConnection stmt)
           meta      (.getParameterMetaData stmt)
           type-name (.getParameterTypeName meta idx)]
-      (if-let [elem-type (when (= (first type-name) \_)
+      (if-let [_elem-type (when (= (first type-name) \_)
                            (apply str
                              (rest type-name)))]
         (.setObject stmt idx (.createArrayOf conn String (to-array v)))

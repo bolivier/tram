@@ -51,7 +51,7 @@
          :id]))
 
 (sql/register-fn! :on
-                  (fn on-formatter [f args]
+                  (fn on-formatter [_ args]
                     [(str "ON " (csk/->snake_case_string (first args)))]))
 
 (defn generic-formatter [clause x]
@@ -69,7 +69,7 @@
 (sql/register-clause! :for-each #'generic-formatter :execute-function)
 
 (sql/register-clause! :before-update
-                      (fn [clause x]
+                      (fn [_clause x]
                         (let [[sql & params] (if (or (vector? x)
                                                      (ident? x))
                                                (sql/format-expr x)

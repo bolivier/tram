@@ -1,4 +1,5 @@
-(ns ^:public tram.utils)
+(ns ^:public tram.utils
+  (:refer-clojure :exclude [ensure]))
 
 (defn map-keys [f coll]
   (reduce-kv (fn [acc k v] (assoc acc (f k) v)) {} coll))

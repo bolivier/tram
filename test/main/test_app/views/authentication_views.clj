@@ -3,17 +3,17 @@
 (defn layout [children]
   [:div#layout children])
 
-(defn sign-in [ctx]
+(defn sign-in [_ctx]
   "hello, sign in")
 
-(defn forgot [locals]
+(defn forgot [_locals]
   "forgotten password")
 
-(defn forgot-password [locals]
+(defn forgot-password [_locals]
   "forgotten password")
 
-(defn my-fn-template [locals]
+(defn my-fn-template [_locals]
   "fn template")
 
-(defn my-keyword-template [locals]
+(defn my-keyword-template [_locals]
   "template from keyword")

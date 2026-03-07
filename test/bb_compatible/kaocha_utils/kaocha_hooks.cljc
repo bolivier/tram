@@ -22,11 +22,12 @@
   #?@(:bb
       [test]                            ; no-op on babashka
       :default
-      [(do
-         (when-not @seeded?
+      [#_{:clj-kondo/ignore [:redundant-do]}
+       (do (when-not @seeded?
            (let [migration-config (tram.config/get-migration-config "test")
                  config           (:db migration-config)]
 
+             #_{:clj-kondo/ignore [:unresolved-symbol]}
              (try
                ;; Ensure we run CREATE DATABASE against a management DB.
                (jdbc/execute! (jdbc/get-datasource (assoc config :dbname "postgres"))
@@ -34,11 +35,12 @@
                (catch org.postgresql.util.PSQLException _
                  ;; most likely already exists
                  nil))
+             #_{:clj-kondo/ignore [:unresolved-symbol]}
              (try
                (let [ds (jdbc/get-datasource (assoc config :dbname "tram_test"))]
                  (jdbc/execute! ds ["DROP SCHEMA public CASCADE"])
                  (jdbc/execute! ds ["CREATE SCHEMA public"]))
-               (catch Exception e
+               (catch Exception _e
                  (println "Could not drop public schema.")
                  nil))
              (migratus/init migration-config)

@@ -2,7 +2,6 @@
   (:require [clojure.test :refer [deftest is testing]]
             [matcher-combinators.test]
             [rapid-test.core :as rt]
-            [tram.core :as tram]
             [tram.generators.sql-migration :as sut]
             [tram.test-fixtures :refer [tram-config]]
             [tram.tram-config :as tram.config]))

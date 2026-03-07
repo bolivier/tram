@@ -1,4 +1,5 @@
 (ns tram-cli.nrepl-client
+  (:refer-clojure :exclude [send])
   (:require [bencode.core :as b]
             [tram-cli.daemon-management :as dm]))
 

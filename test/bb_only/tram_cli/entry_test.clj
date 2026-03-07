@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing] :as t]
             [rapid-test.core :as rt]
+            [babashka.process]
             [tram-cli.entry :as sut]
             [tram-cli.generate]
             [tram-cli.generator.new :refer [render-new-project-template]]))
@@ -22,14 +23,14 @@
                                    (str ".snapshot")))
         snapshot-contents (try
                             (slurp snapshot-filename)
-                            (catch Exception e
+                            (catch Exception _e
                               (println "Could not find snapshot"
                                        snapshot-name
                                        "so it was created.")
                               (make-parents snapshot-filename)
                               (spit snapshot-filename actual)
                               actual))]
-    (t/is (= snapshot-contents actual))))
+    (is (= snapshot-contents actual))))
 
 (deftest generate-new-project
   (rt/with-stub [calls render-new-project-template]

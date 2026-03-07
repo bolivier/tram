@@ -1,10 +1,8 @@
 (ns rapid-test.core-test
   (:require [clojure.test :as t :refer [deftest is testing]]
-            [matcher-combinators.matchers :as m]
+            [matcher-combinators.matchers]
             [matcher-combinators.test]
             [rapid-test.core :as sut]))
-
-
 
 (def called-for-real?
   (atom false))

@@ -1,12 +1,13 @@
 (ns tram.routes-test
-  (:require [clojure.test :refer [deftest is]]
-            [malli.core :as m]
-            [malli.transform :as mt]
-            [matcher-combinators.test]
-            [reitit.core :as r]
-            test-app.handlers.authentication-handlers
-            [tram.routes :as sut]
-            [tram.test-fixtures :refer [sample-router]]))
+  (:require
+   [clojure.test :refer [deftest is]]
+   [malli.core :as m]
+   [malli.transform :as mt]
+   [matcher-combinators.test]
+   [reitit.core :as r]
+   test-app.handlers.authentication-handlers
+   [tram.routes :as sut]
+   [tram.test-fixtures :refer [sample-router]]))
 
 (defn component []
   [:a {:href :route/dashboard}])

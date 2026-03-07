@@ -1,7 +1,7 @@
 (ns sample-app.views.authentication-views
   (:require [tram.vars :refer [*current-user*]]))
 
-(defn sign-up [_ctx]
+(defn sign-up [_locals]
   [:div {:class "max-w-md mx-auto mb-1 mt-10"}
    [:div {:class  "p-6 border rounded shadow bg-blue-50 space-y-6"
           :hx-ext "response-targets"
@@ -36,7 +36,7 @@
        "w-full rounded-sm py-2 px-4 border-2 text-white bg-blue-600 hover:bg-blue-700 cursor-pointer transition-colors"}
       "Create"]]]])
 
-(defn sign-in [_ctx]
+(defn sign-in [_locals]
   [:div {:class "max-w-md mx-auto mb-1 mt-10"}
    [:div {:class  "p-6 border rounded shadow bg-blue-50 space-y-6"
           :hx-ext "response-targets"
@@ -78,7 +78,7 @@
 (defn sign-up-form-error []
   [:div.text-red-500 "User with that email already exists"])
 
-(defn dashboard [ctx]
+(defn dashboard [_locals]
   [:div
    "Welcome to Tram, "
    (:email *current-user*)

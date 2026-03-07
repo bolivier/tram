@@ -2,29 +2,29 @@
   "This is part of the public api of Tram.
 
   Here are fns and vars related to routing."
-  (:require [camel-snake-kebab.core :as csk]
-            [camel-snake-kebab.extras :refer [transform-keys]]
-            [clojure.string :as str]
-            [malli.dev.pretty :as pretty]
-            [malli.error :as me]
-            [malli.transform :as mt]
-            [malli.util :as mu]
-            [muuntaja.core :as muuntaja]
-            [potemkin :refer [import-vars]]
-            [reitit.coercion.malli :as rcm]
-            [reitit.core :as r]
-            [reitit.http :as http]
-            [reitit.http.coercion]
-            [reitit.http.interceptors.exception :as exception]
-            [reitit.http.interceptors.multipart]
-            [reitit.http.interceptors.parameters :as rhip]
-            [reitit.ring]
-            [tram.html :as tram.html]
-            [tram.impl.http]
-            [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
-            [tram.logging :as log]
-            [tram.rendering.template-renderer :as renderer]
-            [tram.vars :refer [*current-user* *req* *res*]]))
+  (:require
+[clojure.walk :refer [prewalk]]
+   [camel-snake-kebab.core :as csk]
+   [camel-snake-kebab.extras :refer [transform-keys]]
+   [clojure.string :as str]
+   [malli.dev.pretty :as pretty]
+   [malli.transform :as mt]
+   [muuntaja.core :as muuntaja]
+   [potemkin :refer [import-vars]]
+   [reitit.coercion.malli :as rcm]
+   [reitit.core :as r]
+   [reitit.http :as http]
+   [reitit.http.coercion]
+   [reitit.http.interceptors.exception :as exception]
+   [reitit.http.interceptors.multipart]
+   [reitit.http.interceptors.parameters :as rhip]
+   [reitit.ring]
+   [tram.html :as tram.html]
+   [tram.impl.http]
+   [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
+   [tram.logging :as log]
+   [tram.rendering.template-renderer :as renderer]
+   [tram.vars :refer [*current-user* *req* *res*]]))
 
 (import-vars [tram.impl.http htmx-request? html-request? full-redirect redirect]
              [reitit.http.interceptors.multipart multipart-interceptor]
@@ -47,7 +47,7 @@
                 (-> ctx
                     (update-in [:response :headers]
                                (fn [headers]
-                                 (clojure.walk/prewalk
+                                 (prewalk
                                    #(tram.html/route-name-expander router %)
                                    headers)))))))})
 

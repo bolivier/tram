@@ -1,5 +1,5 @@
 (ns tram.associations-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.test :refer [deftest is use-fixtures]]
             kaocha-utils.kaocha-hooks
             [matcher-combinators.matchers :as m]
             matcher-combinators.test
@@ -80,11 +80,8 @@
       (setup-db)))
 
 (comment
-  (do (require '[tram.tram-config :as tram.config])
-      (require '[matcher-combinators.test])
-      (require '[migratus.core :as migratus]
+  (do (require '[migratus.core :as migratus]
                '[next.jdbc :as jdbc]
-               '[test-migrations.seed-data]
                '[tram.tram-config :as tram.config])
       ;; On BB, splice in nothing. On JVM Clojure, pull in
       ;; jdbc/migratus/tram.

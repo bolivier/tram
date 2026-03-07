@@ -1,5 +1,5 @@
 (ns tram-cli.generate-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is]]
             [matcher-combinators.test]
             [tram-cli.generate :as sut]))
 

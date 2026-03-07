@@ -4,20 +4,20 @@
             [test-app.views.authentication-views :as views]
             [tram.core]))
 
-(defn sign-out [req]
+(defn sign-out [_req]
   {:status 200})
 
-(defn sign-in [req]
+(defn sign-in [_req]
   {:status 200})
 
-(defn forgot [req]
+(defn forgot [_req]
   {:status 200})
 
-(defn keyword-template [req]
+(defn keyword-template [_req]
   {:status   200
    :template :view/my-keyword-template})
 
-(defn fn-template [req]
+(defn fn-template [_req]
   {:status   200
    :template views/my-fn-template})
 
