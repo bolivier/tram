@@ -4,6 +4,7 @@
    [malli.core :as m]
    [malli.transform :as mt]
    [matcher-combinators.test]
+   [reitit.coercion :as coercion]
    [reitit.core :as r]
    test-app.handlers.authentication-handlers
    [tram.routes :as sut]
@@ -48,6 +49,16 @@
            (m/decode schema {:tags "foo"} transform)))
     (is (= {:tags ["foo" "bar"]}
            (m/decode schema {:tags ["foo" "bar"]} transform)))))
+
+(deftest default-values-on-query-params
+  (let [schema [:map [:page {:default 1} :int] [:q :string]]
+        coercer (coercion/-request-coercer sut/coercion :string schema)]
+    ;; missing :page should get default value of 1
+    (is (= {:page 1 :q "hello"}
+           (coercer {:q "hello"} nil)))
+    ;; provided :page should be coerced from string
+    (is (= {:page 2 :q "hello"}
+           (coercer {:page "2" :q "hello"} nil)))))
 
 (deftest expand-healthcheck-entries
   (let

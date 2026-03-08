@@ -9,6 +9,9 @@
 (defn htmx-request? [req]
   (some? (get-in req [:headers "hx-request"])))
 
+(defn boosted-request? [req]
+  (some? (get-in req [:headers "hx-boosted"])))
+
 (defn html-request? [req]
   (str/starts-with? (get-in req [:headers "accept"] "") "text/html"))
 

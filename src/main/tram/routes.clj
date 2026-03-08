@@ -2,29 +2,28 @@
   "This is part of the public api of Tram.
 
   Here are fns and vars related to routing."
-  (:require
-[clojure.walk :refer [prewalk]]
-   [camel-snake-kebab.core :as csk]
-   [camel-snake-kebab.extras :refer [transform-keys]]
-   [clojure.string :as str]
-   [malli.dev.pretty :as pretty]
-   [malli.transform :as mt]
-   [muuntaja.core :as muuntaja]
-   [potemkin :refer [import-vars]]
-   [reitit.coercion.malli :as rcm]
-   [reitit.core :as r]
-   [reitit.http :as http]
-   [reitit.http.coercion]
-   [reitit.http.interceptors.exception :as exception]
-   [reitit.http.interceptors.multipart]
-   [reitit.http.interceptors.parameters :as rhip]
-   [reitit.ring]
-   [tram.html :as tram.html]
-   [tram.impl.http]
-   [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
-   [tram.logging :as log]
-   [tram.rendering.template-renderer :as renderer]
-   [tram.vars :refer [*current-user* *req* *res*]]))
+  (:require [camel-snake-kebab.core :as csk]
+            [camel-snake-kebab.extras :refer [transform-keys]]
+            [clojure.string :as str]
+            [clojure.walk :refer [prewalk]]
+            [malli.dev.pretty :as pretty]
+            [malli.transform :as mt]
+            [muuntaja.core :as muuntaja]
+            [potemkin :refer [import-vars]]
+            [reitit.coercion.malli :as rcm]
+            [reitit.core :as r]
+            [reitit.http :as http]
+            [reitit.http.coercion]
+            [reitit.http.interceptors.exception :as exception]
+            [reitit.http.interceptors.multipart]
+            [reitit.http.interceptors.parameters :as rhip]
+            [reitit.ring]
+            [tram.html :as tram.html]
+            [tram.impl.http]
+            [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
+            [tram.logging :as log]
+            [tram.rendering.template-renderer :as renderer]
+            [tram.vars :refer [*current-user* *req* *res*]]))
 
 (import-vars [tram.impl.http htmx-request? html-request? full-redirect redirect]
              [reitit.http.interceptors.multipart multipart-interceptor]
@@ -47,9 +46,9 @@
                 (-> ctx
                     (update-in [:response :headers]
                                (fn [headers]
-                                 (prewalk
-                                   #(tram.html/route-name-expander router %)
-                                   headers)))))))})
+                                 (prewalk #(tram.html/route-name-expander router
+                                                                          %)
+                                          headers)))))))})
 
 (defn wrap-page-interceptor
   "Wraps the returned html in a full html page (if it should).
@@ -174,22 +173,23 @@
        (muuntaja/create))))
 
 (defn string->vector-transformer []
-  (mt/transformer
-    {:name     :string->vector
-     :decoders {:vector {:compile (fn [_schema _]
-                                    (fn [value]
-                                      (if (string? value)
-                                        [value]
-                                        value)))}}}))
+  (mt/transformer {:name     :string->vector
+                   :decoders {:vector {:compile (fn [_schema _]
+                                                  (fn [value]
+                                                    (if (string? value)
+                                                      [value]
+                                                      value)))}}}))
 
 (def ^:private string->vector-transformer-provider
-  (reify rcm/TransformationProvider
+  (reify
+    rcm/TransformationProvider
     (-transformer [_ {:keys [strip-extra-keys default-values]}]
-      (mt/transformer
-        (when strip-extra-keys (mt/strip-extra-keys-transformer))
-        (string->vector-transformer)
-        (mt/string-transformer)
-        (when default-values (mt/default-value-transformer))))))
+      (mt/transformer (when strip-extra-keys
+                        (mt/strip-extra-keys-transformer))
+                      (string->vector-transformer)
+                      (mt/string-transformer)
+                      (when default-values
+                        (mt/default-value-transformer))))))
 
 (def coercion
   "Adds coercion to the default coercion object from `reitit.coercion.malli`.

@@ -4,7 +4,7 @@
   TODO revisit how this works.  It seems not that good. "
   (:require [clojure.string :as str]
             [reitit.core :as r]
-            [tram.impl.http :refer [htmx-request?]]
+            [tram.impl.http :refer [boosted-request? htmx-request?]]
             [tram.language :as lang]))
 
 (defprotocol ITemplate
@@ -65,7 +65,10 @@
       (get-in match [:data method :template]))))
 
 (defn uses-layout? [req]
-  (not (htmx-request? req)))
+  (cond
+    (boosted-request? req) true
+    (htmx-request? req)    false
+    :else                  true))
 
 (defn make-root-layout-fn [ctx]
   (if (uses-layout? (:request ctx))
