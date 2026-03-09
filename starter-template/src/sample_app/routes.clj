@@ -26,13 +26,14 @@
                         #'sample-app.views.authentication-views/dashboard})}}]])
 
 (defmethod ig/init-key ::sys/router
-  [_ {:keys [routes]}]
+  [_ {:keys [routes csrf-secret]}]
   (tram-router routes
                {:data {:coercion     tr/coercion
                        :interceptors [(tr/format-interceptor)
                                       (tr/exception-interceptor)
                                       authentication-interceptor
                                       (tr/parameters-interceptor)
+                                      (tr/csrf-interceptor csrf-secret)
                                       (tr/multipart-interceptor)
                                       tr/expand-header-routes-interceptor
                                       tr/format-json-body-interceptors

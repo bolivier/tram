@@ -1,5 +1,6 @@
 (ns sample-app.views.authentication-views
-  (:require [tram.vars :refer [*current-user*]]))
+  (:require [tram.routes :as tr]
+            [tram.vars :refer [*current-user*]]))
 
 (defn sign-up [_locals]
   [:div {:class "max-w-md mx-auto mb-1 mt-10"}
@@ -12,6 +13,7 @@
     [:form {:hx-post   :route/sign-up
             :hx-target "#error"
             :class     "space-y-4"}
+     (tr/csrf-hidden-field)
      [:div {:class "flex flex-col space-y-1"}
       [:label {:for   "email"
                :class "text-sm"}
@@ -47,6 +49,7 @@
     [:form {:hx-post   :route/sign-in
             :hx-target "#error"
             :class     "space-y-4"}
+     (tr/csrf-hidden-field)
      [:div {:class "flex flex-col space-y-1"}
       [:label {:for   "email"
                :class "text-sm"}

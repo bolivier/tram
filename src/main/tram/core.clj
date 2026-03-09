@@ -5,7 +5,12 @@
             [tram.routes :as sut]
             [tram.tram-config]))
 
-(import-vars [tram.routes tram-router defroutes]
+(import-vars [tram.routes
+              tram-router
+              defroutes
+              csrf-interceptor
+              csrf-hidden-field
+              csrf-meta-tag]
              [tram.tram-config
               get-env
               get-tram-config

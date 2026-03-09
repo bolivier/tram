@@ -18,6 +18,7 @@
             [reitit.http.interceptors.multipart]
             [reitit.http.interceptors.parameters :as rhip]
             [reitit.ring]
+            [tram.csrf]
             [tram.html :as tram.html]
             [tram.impl.http]
             [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
@@ -32,7 +33,8 @@
               coerce-exceptions-interceptor
               coerce-request-interceptor
               coerce-response-interceptor]
-             [tram.html make-route make-path])
+             [tram.html make-route make-path]
+             [tram.csrf csrf-interceptor csrf-hidden-field csrf-meta-tag])
 
 (def expand-header-routes-interceptor
   "Expands route references in response headers."

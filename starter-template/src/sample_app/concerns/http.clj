@@ -1,4 +1,6 @@
-(ns sample-app.concerns.http)
+(ns sample-app.concerns.http
+  (:require [tram.routes :as tr]
+            [tram.vars :refer [*req*]]))
 
 (defn as-full-page
   ([body]
@@ -28,5 +30,8 @@
      [:link {:rel  :stylesheet
              :href "/assets/index.css"}]
      [:script {:src         "https://unpkg.com/htmx-ext-response-targets@2.0.2"
-               :crossorigin "anonymous"}]]
-    [:body body]]))
+               :crossorigin "anonymous"}]
+     (tr/csrf-meta-tag)]
+    [:body {:hx-headers (format "{\"X-CSRF-Token\": \"%s\"}"
+                                (:csrf-token *req*))}
+     body]]))
