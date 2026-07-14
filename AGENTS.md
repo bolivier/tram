@@ -176,3 +176,17 @@ one — with conventional commit messages:
 - `test:` adding or updating tests
 - `docs:` documentation
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live as GitHub issues in `bolivier/tram`, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles, each mapped to its identically-named label (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
