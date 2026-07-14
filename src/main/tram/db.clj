@@ -34,6 +34,7 @@
     [toucan2.tools.transformed]
     [toucan2.update]
     [tram.associations]
+    [tram.db.sqlite]
     [tram.generators.sql-migration]
     [tram.language :as lang]
     [tram.tram-config :as tram.config]
@@ -80,8 +81,8 @@
           meta      (.getParameterMetaData stmt)
           type-name (.getParameterTypeName meta idx)]
       (if-let [_elem-type (when (= (first type-name) \_)
-                           (apply str
-                             (rest type-name)))]
+                            (apply str
+                              (rest type-name)))]
         (.setObject stmt idx (.createArrayOf conn String (to-array v)))
         (.setObject stmt idx (clj->jsonb v))))))
 
