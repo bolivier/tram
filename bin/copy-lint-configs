@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source "$(dirname "$0")/_kondo.sh"
+
+run_kondo --lint "$(clojure -A:cljs:dev:test -Spath)" --copy-configs --skip-lint

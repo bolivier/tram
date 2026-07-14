@@ -97,11 +97,24 @@ bin/test-bb              # Babashka-compatible tests
 # Formatting (zprint) & linting (clj-kondo)
 zprint '{:search-config? true}' -w src/**/*.clj   # format in place
 zprint '{:search-config? true}' -c src/**/*.clj   # check only
-clojure -M:clj-kondo                              # lint src + test
+bin/lint                                          # lint src + test
+bin/copy-lint-configs                             # import lint configs from deps
 
 # CLI (scaffolding, run from a generated app dir)
 ./tram generate <thing> ...
 ```
+
+### Aliases vs. scripts
+
+`deps.edn` aliases exist to assemble dependencies and classpath — the ecosystem a
+tool needs. Keep specific invocations (lint targets, flags, arg lists) out of an
+alias's `:main-opts`; put them in a `bin/` script that calls the tool. This keeps
+the alias reusable by more than one caller — e.g. `:clj-kondo` just provides the
+linter, while `bin/lint` and `bin/copy-lint-configs` invoke it with their own args.
+
+A self-contained, single-purpose runner (`:test`, `:cli`) is the tolerated
+exception. But the moment you want to invoke an alias two different ways, that's
+the signal to move the invocation into a script.
 
 ### Clojure MCP Server (preferred for REPL work)
 
