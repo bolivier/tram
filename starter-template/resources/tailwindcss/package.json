@@ -13,6 +13,7 @@
     "tailwindcss": "^4.1.7"
   },
   "scripts": {
-    "dev": "tailwindcss -i ./index.css -o ../public/index.css --watch"
+    "dev": "tailwindcss -i ./index.css -o ../public/index.css --watch",
+    "build": "tailwindcss -i ./index.css -o ../public/index.css --minify"
   }
 }

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+source "bin/_kondo.sh"
+
+run_kondo --lint src test

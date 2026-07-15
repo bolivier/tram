@@ -20,7 +20,15 @@ jobs:
           java-version: '23'
 
       - name: Install Clojure
-        run: sudo bin/install-clojure.sh
+        uses: DeLaGuardo/setup-clojure@13.2
+        with:
+          cli: latest
+
+      - name: Check formatting
+        run: bin/format --check
+
+      - name: Lint
+        run: bin/lint
 
       - name: Run tests
-        run: bin/kaocha
+        run: bin/test

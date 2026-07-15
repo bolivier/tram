@@ -5,6 +5,6 @@
   (constantly {:status 200
                :body   (page-fn)}))
 
-(defn redirect-to-home-handler [req]
+(defn redirect-to-home-handler [_req]
   {:status  301
    :headers {"location" (make-route :route/sign-in)}})

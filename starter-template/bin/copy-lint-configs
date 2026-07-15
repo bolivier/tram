@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+source "bin/_kondo.sh"
+
+# Imports the lint configs Tram and its deps ship, so clj-kondo understands
+# macros like defroutes instead of flagging them.
+run_kondo --lint "$(clojure -A:dev:test -Spath)" --copy-configs --skip-lint

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/../resources/tailwindcss"
+
+# One-shot build of resources/public/index.css. `tram dev` runs the watching
+# equivalent; this is for serving, testing, or packaging the app without it.
+[ -d node_modules ] || npm install
+
+npm run build

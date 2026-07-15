@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+source "bin/_zprint.sh"
+
+# The summary variants (-sw/-sc) are used over plain -w/-c because those print
+# nothing; -sc reports what needs formatting and still exits non-zero, which is
+# what makes --check usable in CI.
+mode="-sw"
+if [ "${1:-}" = "--check" ]; then
+  mode="-sc"
+fi
+
+run_zprint '{:search-config? true}' "$mode" $(zprint_targets)
