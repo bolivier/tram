@@ -37,8 +37,10 @@
 
      [_ _ route-data] forgot-password-route-data]
     (is (match? ["/forgot-password"
-                 {:get  {:template
-                         'test-app.views.authentication-views/forgot-password}
+                 {:get {:template
+                        (list
+                          'quote
+                          'test-app.views.authentication-views/forgot-password)}
                   :name keyword?}]
                 route-data))))
 

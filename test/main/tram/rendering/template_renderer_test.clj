@@ -61,11 +61,27 @@
                  ::r/match       match
                  ::r/router      test-router}]
     (is (thrown-match? clojure.lang.ExceptionInfo
-                       {:uri           "/sign-out"
-                        :template-name "<nil>"
-                        :error         :no-template}
+                       {:uri "/sign-out"
+                        :template 'test-app.views.authentication-views/sign-out
+                        :template-name "sign-out"
+                        :error :no-template}
                        (sut/render {:request  request
                                     :response (handler request)})))))
+
+(deftest view-written-after-its-route-was-compiled-still-renders
+  (let [match   (r/match-by-name test-router :route/sign-out)
+        request {:uri      "/sign-out"
+                 :request-method :get
+                 ::r/match match}]
+    (intern 'test-app.views.authentication-views
+            'sign-out
+            (fn [_] [:div "written later"]))
+    (try
+      (is (= [:div "written later"]
+             (get-in (sut/render {:request  request
+                                  :response {:status 200}})
+                     [:response :body])))
+      (finally (ns-unmap 'test-app.views.authentication-views 'sign-out)))))
 
 (deftest keyword-template-ns-derivation-only-converts-trailing-segments
   (let [ctx {:request {::r/match {:data

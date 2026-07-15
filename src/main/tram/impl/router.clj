@@ -31,8 +31,7 @@
             [clojure.zip :as zip]
             [methodical.core :as m]
             [reitit.ring]
-            [tram.language :as lang]
-            [tram.logging :as log]))
+            [tram.language :as lang]))
 
 (def HandlerSpecSchema
   [:map [:handler fn?]])
@@ -81,19 +80,14 @@
   [_]
   {:status 200})
 
-(defn get-automagic-template-symbol [sym]
-  (let [template-symbol (lang/view-symbol *ns* sym)]
-    (try
-      (when (requiring-resolve template-symbol)
-        template-symbol)
-      (catch Exception _
-        (log/event! ::could-not-find-template-ns
-                    {:data {:message         (format "Could not find var %s."
-                                                     template-symbol)
-                            :handler-name    sym
-                            :handler-ns      (symbol (str *ns*))
-                            :template-symbol template-symbol}})
-        nil))))
+(defn get-automagic-template-symbol
+  "The view symbol for `sym`, quoted for emission into route data.
+
+  Emitting the symbol rather than the resolved view defers resolution to request
+  time, so a view written after its route was compiled still renders, and an
+  edited view takes effect without re-evaluating the routes."
+  [sym]
+  (list 'quote (lang/view-symbol *ns* sym)))
 
 (m/defmulti ->handler-spec
   (fn [handler-entry]

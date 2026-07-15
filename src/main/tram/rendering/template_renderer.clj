@@ -1,7 +1,13 @@
 (ns tram.rendering.template-renderer
   "Render html templates from the ring response.
 
-  TODO revisit how this works.  It seems not that good. "
+  The template to render is whatever the handler returned as `:template`,
+  falling back to the one `defroutes` stamped on the route. `ITemplate` turns
+  any of the shapes that may be — symbol, keyword, var, fn — into a view fn,
+  and names it well enough to report on when it resolves to nothing.
+
+  Views are resolved per request rather than when the route is compiled, so a
+  view written or edited after its route still renders."
   (:require [reitit.core :as r]
             [tram.impl.http :refer [boosted-request? htmx-request?]]
             [tram.language :as lang]))
@@ -23,13 +29,28 @@
   (get-namespace [this ctx]
     "Get the namespace for the template"))
 
+(defn- resolve-view
+  "Resolve `view-sym` to its var, or nil when no such view exists.
+
+  A view namespace that fails to load for its own reasons still throws."
+  [view-sym]
+  (try
+    (requiring-resolve view-sym)
+    (catch java.io.FileNotFoundException _
+      nil)))
+
 (extend-protocol ITemplate
+  clojure.lang.Symbol
+  (get-name [this _] (name this))
+  (get-namespace [this _] (namespace this))
+  (get-view-fn [this _] (resolve-view this))
+
   clojure.lang.Keyword
   (get-name [this _] (name this))
   (get-namespace [this ctx]
     (namespace (lang/view-symbol (handler-ns ctx) this)))
   (get-view-fn [this ctx]
-    (requiring-resolve (lang/view-symbol (handler-ns ctx) this)))
+    (resolve-view (lang/view-symbol (handler-ns ctx) this)))
 
   clojure.lang.Fn
   (get-view-fn [this _] this)
@@ -41,8 +62,8 @@
     (str this))
 
   clojure.lang.Var
-  (get-name [this _] (:name (:meta this)))
-  (get-namespace [this _] (:namespace (:meta this)))
+  (get-name [this _] (:name (meta this)))
+  (get-namespace [this _] (str (:ns (meta this))))
   (get-view-fn [this _] this)
 
   nil
@@ -50,9 +71,7 @@
   (get-namespace [_ ctx]
     (when-let [ns (handler-ns ctx)]
       (lang/convert-ns ns :view)))
-  (get-view-fn [_ ctx]
-    (let [method (get-in ctx [:request :request-method])]
-      (get-in ctx [:request ::r/match :data method :template]))))
+  (get-view-fn [_ _] nil))
 
 (defn uses-layout? [req]
   (cond
@@ -66,14 +85,27 @@
       (:layouts ctx))
     identity))
 
+(defn- effective-template
+  "The template to render: the one the handler returned, else the one the route
+  was compiled with."
+  [ctx]
+  (or (get-in ctx [:response :template])
+      (get-in ctx
+              [:request
+               ::r/match
+               :data
+               (get-in ctx [:request :request-method])
+               :template])))
+
 (defn render
   "Renders a template."
   [ctx]
   (let [{:keys [request response]} ctx
-        {:keys [locals template]} response
-        view-fn (if-let [body (:body response)]
-                  (constantly body)
-                  (get-view-fn template ctx))]
+        {:keys [locals]} response
+        template         (effective-template ctx)
+        view-fn          (if-let [body (:body response)]
+                           (constantly body)
+                           (get-view-fn template ctx))]
     (if-not view-fn
       (throw
         (ex-info
@@ -88,6 +120,7 @@ Expected to find template called `"
             (get-namespace template ctx))
           {:error         :no-template
            :uri           (:uri request)
+           :template      template
            :template-name (get-name template ctx)}))
       (let [layout-fn (make-root-layout-fn ctx)]
         (assoc-in ctx [:response :body] (layout-fn (view-fn locals)))))))
