@@ -6,7 +6,6 @@
             [clojure.string :as str]
             [clojure.walk :refer [prewalk]]
             [hickory.core :as hc]
-            [tram-cli.generate :refer [do-generate]]
             [tram-cli.generator.new :refer [render-new-project-template]]
             [tram.tram-config :refer [get-tram-config]]))
 
@@ -36,17 +35,12 @@ tram new <name>         create a new project in this directory
 tram test               run unit tests (--watch to watch)
 tram hiccup             convert clipboard contents from html to hiccup (alias html)
 tram dev                run dev commands (tasks)
-tram generate           tram generators subcommand (run with -h to see more)
 tram help               print this menu
 ")))
 
 (defn do-new-project [{:keys [opts]}]
   (let [{:keys [new-project-name]} opts]
     (render-new-project-template new-project-name)))
-
-(defn do-generate-here [{:keys [args]}]
-  (println "generating")
-  (do-generate args))
 
 (defn do-test [{:keys [opts]}]
   (let [watch     (:watch opts)
@@ -188,10 +182,6 @@ tram help               print this menu
   [{:cmds       ["new"]
     :fn         do-new-project
     :args->opts [:new-project-name]}
-   {:cmds ["g"]
-    :fn   do-generate-here}
-   {:cmds ["generate"]
-    :fn   do-generate-here}
    {:cmds ["test"]
     :fn   do-test}
    {:cmds ["help"]
@@ -215,4 +205,4 @@ tram help               print this menu
                                       args)))))}])
 
 (defn -main [& cli-args]
-  (cli/dispatch cmd-table cli-args {:aliases {:g :generate}}))
+  (cli/dispatch cmd-table cli-args {}))

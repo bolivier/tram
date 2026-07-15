@@ -35,7 +35,6 @@
     [toucan2.update]
     [tram.associations]
     [tram.db.sqlite]
-    [tram.generators.sql-migration]
     [tram.language :as lang]
     [tram.tram-config :as tram.config]
     [zprint.core :as zpc])
@@ -86,8 +85,7 @@
         (.setObject stmt idx (.createArrayOf conn String (to-array v)))
         (.setObject stmt idx (clj->jsonb v))))))
 
-(import-vars [tram.associations has-many! has-one! belongs-to!]
-             [tram.generators.sql-migration write-to-migration-files])
+(import-vars [tram.associations has-many! has-one! belongs-to!])
 
 ;; toucan2.core
 (import-vars

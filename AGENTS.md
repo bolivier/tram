@@ -51,9 +51,8 @@ CLI under `tram-cli.*`.
 | `src/main/tram/html.clj`               | HTML utilities and path generation               |
 | `src/main/tram/associations.clj`       | ORM associations (`has-many!`, etc.)             |
 | `src/main/tram/rendering/`             | Template rendering                               |
-| `src/main/tram/generators/`            | Code generators (model, migration)               |
 | `src/main/rapid_test/`                 | Test helpers (HTML assertions, hiccup zipper)    |
-| `src/cli/tram_cli/`                    | `tram` CLI (generate, daemon, nrepl client)      |
+| `src/cli/tram_cli/`                    | `tram` CLI (new, start, test, db:migrate, dev)   |
 | `src/bb_compatible/`                   | Code that must run under Babashka                |
 | `test/main/tram/test_fixtures.clj`     | Test setup, fixtures, sample data                |
 | `starter-template/`                    | Scaffold for new Tram apps — keep in sync        |
@@ -100,8 +99,8 @@ zprint '{:search-config? true}' -c src/**/*.clj   # check only
 bin/lint                                          # lint src + test
 bin/copy-lint-configs                             # import lint configs from deps
 
-# CLI (scaffolding, run from a generated app dir)
-./tram generate <thing> ...
+# CLI (scaffolding)
+./tram new <name>          # create a new project in the current directory
 ```
 
 ### Aliases vs. scripts

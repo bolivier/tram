@@ -1,12 +1,11 @@
 (ns tram-cli.entry-test
   (:require [babashka.fs :as fs]
+            [babashka.process]
             [clojure.java.io :refer [make-parents]]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing] :as t]
             [rapid-test.core :as rt]
-            [babashka.process]
             [tram-cli.entry :as sut]
-            [tram-cli.generate]
             [tram-cli.generator.new :refer [render-new-project-template]]))
 
 (defn match-snapshot
@@ -36,13 +35,6 @@
   (rt/with-stub [calls render-new-project-template]
     (sut/-main "new" "my-project")
     (is (match? {:args ["my-project"]} (first @calls)))))
-
-(deftest generate-cmd
-  (rt/with-stub [calls tram-cli.generate/do-generate]
-    (sut/-main "generate" "migration")
-    (sut/-main "g" "migration-shorthand")
-    (is (match? [["migration"]] (:args (first @calls))))
-    (is (match? [["migration-shorthand"]] (:args (second @calls))))))
 
 (deftest testing-cmd
   (testing "kaocha version"
