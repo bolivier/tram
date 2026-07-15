@@ -6,7 +6,9 @@
     [sample-app.concerns.http :refer [as-full-page]]
     [sample-app.config :as sys]
     [sample-app.handlers.authentication-handlers :as auth.handlers]
+    [sample-app.handlers.welcome-handlers :as welcome.handlers]
     [sample-app.views.authentication-views]
+    [sample-app.views.welcome-views]
     [tram.routes :refer [tram-router] :as tr]))
 
 (defmethod ig/init-key ::sys/routes
@@ -17,6 +19,7 @@
     {:name    :route/healthcheck
      :handler (constantly {:status 200
                            :body   "Alive."})}]
+   welcome.handlers/routes
    auth.handlers/routes
    ["/dashboard"
     {:name :route/dashboard
