@@ -66,6 +66,13 @@
                        (sut/render {:request  request
                                     :response (handler request)})))))
 
+(deftest keyword-template-ns-derivation-only-converts-trailing-segments
+  (let [ctx {:request {::r/match {:data
+                                  {:namespace
+                                   "handler-co.handlers.handler-utils"}}}}]
+    (is (= "handler-co.views.handler-utils"
+           (sut/get-namespace :view/anything ctx)))))
+
 (deftest layout-updates-in-correct-order
   (let [ctx       {:layouts [(fn [body] (* 2 body)) (fn [body] (inc body))]}
         layout-fn (sut/make-root-layout-fn ctx)]

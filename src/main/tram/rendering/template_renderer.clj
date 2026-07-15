@@ -2,8 +2,7 @@
   "Render html templates from the ring response.
 
   TODO revisit how this works.  It seems not that good. "
-  (:require [clojure.string :as str]
-            [reitit.core :as r]
+  (:require [reitit.core :as r]
             [tram.impl.http :refer [boosted-request? htmx-request?]]
             [tram.language :as lang]))
 
@@ -23,9 +22,8 @@
   clojure.lang.Keyword
   (get-name [this _] (name this))
   (get-namespace [_ ctx]
-    (str/replace (:namespace (:data (:reitit.core/match (:request ctx))))
-                 #"handler"
-                 "view"))
+    (lang/convert-ns (:namespace (:data (:reitit.core/match (:request ctx))))
+                     :view))
   (get-view-fn [this ctx]
     (let [namespace-str (get-namespace this ctx)]
       (requiring-resolve (symbol namespace-str (get-name this ctx)))))
