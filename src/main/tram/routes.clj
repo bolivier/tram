@@ -2,24 +2,21 @@
   "This is part of the public api of Tram.
 
   Here are fns and vars related to routing."
-  (:require [clojure.string :as str]
-            [clojure.walk :refer [prewalk]]
-            [malli.dev.pretty :as pretty]
+  (:require [malli.dev.pretty :as pretty]
             [potemkin :refer [import-vars]]
             [reitit.core :as r]
             [reitit.http :as http]
             [reitit.http.coercion]
             [reitit.http.interceptors.exception :as exception]
             [reitit.http.interceptors.multipart]
-            [reitit.http.interceptors.parameters :as rhip]
+            [reitit.http.interceptors.parameters]
             [reitit.ring]
             [tram.csrf]
-            [tram.html :as tram.html]
+            [tram.html]
             [tram.impl.http]
             [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
             [tram.logging :as log]
-            [tram.rendering.template-renderer :as renderer]
-            [tram.vars :refer [*current-user* *req* *res*]]
+            [tram.rendering]
             [tram.wire-format]))
 
 (import-vars [tram.impl.http htmx-request? html-request? full-redirect redirect]
@@ -36,74 +33,12 @@
               string->vector-transformer
               format-interceptor
               format-json-body-interceptors]
+             [tram.rendering
+              expand-header-routes-interceptor
+              wrap-page-interceptor
+              render-template-interceptor
+              render]
              [tram.csrf csrf-interceptor csrf-hidden-field csrf-meta-tag])
-
-(def expand-header-routes-interceptor
-  "Expands route references in response headers."
-  {:name  :tram/expand-headers
-   :leave (fn [ctx]
-            (let [router (get-in ctx [:request ::r/router])]
-              (assert router "expand-header-routes-interceptor requires router")
-              (binding [*current-user* (get-in ctx [:request :current-user])
-                        *req*          (:request ctx)
-                        *res*          (:response ctx)]
-                (-> ctx
-                    (update-in [:response :headers]
-                               (fn [headers]
-                                 (prewalk #(tram.html/route-name-expander router
-                                                                          %)
-                                          headers)))))))})
-
-(defn wrap-page-interceptor
-  "Wraps the returned html in a full html page (if it should).
-
-  Does nothing if the current request is via htmx, or if it is an assets
-  request.
-
-  `full-page-renderer` is the component for your full html page. It should
-  render <head> and any other meta tags a full page reload would need for your
-  application. It is called with one argument, the contents of the body tag."
-  [full-page-renderer]
-  {:name  :tram/wrap-page
-   :must-run-after [:tram/format]
-   :leave (fn [ctx]
-            (let [req       (:request ctx)
-                  html?     (html-request? req)
-                  htmx?     (htmx-request? req)
-                  resource? (str/starts-with? (:uri req) "/assets")
-                  needs-full-page? (and html? (not htmx?) (not resource?))]
-              (update-in ctx
-                         [:response :body]
-                         (fn [body]
-                           (cond
-                             needs-full-page?
-                             (let [f full-page-renderer]
-                               (f body))
-
-                             :else body)))))})
-
-(def render-template-interceptor
-  {:name  :tram/render-template
-   :must-run-after [:tram/format :tram/wrap-page]
-   :leave (fn [ctx]
-            (cond
-              (or (str/starts-with? (get-in ctx [:request :uri]) "/assets")
-                  (<= 300 (get-in ctx [:response :status] 300) 399))
-              ctx
-
-              (re-find #"application/json"
-                       (get-in ctx [:request :headers "accept"] ""))
-              (update ctx
-                      :response
-                      (fn [res]
-                        (assoc res
-                          :body (:data res))))
-
-              :else
-              (binding [*current-user* (get-in ctx [:request :current-user])
-                        *req*          (get ctx :request)
-                        *res*          (get ctx :response)]
-                (renderer/render ctx))))})
 
 (defn default-error-handler
   "Default error handler for `tram.routes/exception-interceptor`."
