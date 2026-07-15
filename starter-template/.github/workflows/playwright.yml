@@ -44,12 +44,19 @@ jobs:
           java-version: "23"
 
       - name: Install Clojure
-        run: sudo bin/install-clojure.sh
+        uses: DeLaGuardo/setup-clojure@13.2
+        with:
+          cli: latest
+
+      - name: Build CSS
+        run: bin/css
 
       - name: Build Jar
         run: clojure -T:build uber
 
       - name: Run Java Server
+        env:
+          TRAM_ENV: development
         run: |
           nohup java -jar target/sample_app.jar > server.log 2>&1 &
           SERVER_PID=$!

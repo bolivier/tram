@@ -14,16 +14,23 @@
 (def uber-file
   "target/sample_app.jar")
 
+(def tram-env
+  "AOT compilation loads the app's config, which requires a TRAM_ENV. Only the
+  compiler needs it: the value is not baked into the jar, which reads TRAM_ENV
+  again when it runs."
+  (or (System/getProperty "TRAM_ENV") (System/getenv "TRAM_ENV") "development"))
+
 (defn clean [_]
   (b/delete {:path "target"}))
 
 (defn uber [_]
   (clean nil)
-  (b/copy-dir {:src-dirs   ["src/main"]
+  (b/copy-dir {:src-dirs   ["src" "resources"]
                :target-dir class-dir})
   (b/compile-clj {:basis      basis
                   :ns-compile '[sample-app.core]
-                  :class-dir  class-dir})
+                  :class-dir  class-dir
+                  :java-opts  [(str "-DTRAM_ENV=" tram-env)]})
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis     basis
