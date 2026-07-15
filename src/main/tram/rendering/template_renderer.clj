@@ -6,6 +6,11 @@
             [tram.impl.http :refer [boosted-request? htmx-request?]]
             [tram.language :as lang]))
 
+(defn- handler-ns
+  "The namespace the matched route was defined in, stamped by `defroutes`."
+  [ctx]
+  (get-in ctx [:request ::r/match :data :namespace]))
+
 (defprotocol ITemplate
   "Protocol for something that can be used as a render template.
 
@@ -21,12 +26,10 @@
 (extend-protocol ITemplate
   clojure.lang.Keyword
   (get-name [this _] (name this))
-  (get-namespace [_ ctx]
-    (lang/convert-ns (:namespace (:data (:reitit.core/match (:request ctx))))
-                     :view))
+  (get-namespace [this ctx]
+    (namespace (lang/view-symbol (handler-ns ctx) this)))
   (get-view-fn [this ctx]
-    (let [namespace-str (get-namespace this ctx)]
-      (requiring-resolve (symbol namespace-str (get-name this ctx)))))
+    (requiring-resolve (lang/view-symbol (handler-ns ctx) this)))
 
   clojure.lang.Fn
   (get-view-fn [this _] this)
@@ -45,22 +48,11 @@
   nil
   (get-name [_ _] "<nil>")
   (get-namespace [_ ctx]
-    (let [request    (:request ctx)
-          router     (::r/router request)
-          uri        (:uri request)
-          match      (r/match-by-path router uri)
-          handler-ns (:namespace (:data match))]
-      (when handler-ns
-        (let [template-ns (lang/convert-ns handler-ns
-                                           :view)]
-          template-ns))))
+    (when-let [ns (handler-ns ctx)]
+      (lang/convert-ns ns :view)))
   (get-view-fn [_ ctx]
-    (let [request (:request ctx)
-          router  (::r/router request)
-          uri     (:uri request)
-          method  (:request-method request)
-          match   (r/match-by-path router uri)]
-      (get-in match [:data method :template]))))
+    (let [method (get-in ctx [:request :request-method])]
+      (get-in ctx [:request ::r/match :data method :template]))))
 
 (defn uses-layout? [req]
   (cond

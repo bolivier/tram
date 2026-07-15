@@ -48,7 +48,7 @@
 (def RouteSchema
   [:map
    [:name [:qualified-keyword {:namespace :route}]]
-   [:layout [:or fn? [:fn :var?] [:qualified-keyword {:namespace :view}]]]
+   [:layout [:or fn? [:fn :var?] lang/ViewKeyword]]
    [:interceptors [:vector Interceptor]]
    [:get {:optional true}
     HandlerSpecSchema]
@@ -82,7 +82,7 @@
   {:status 200})
 
 (defn get-automagic-template-symbol [sym]
-  (let [template-symbol (symbol (lang/convert-ns *ns* :view) (str sym))]
+  (let [template-symbol (lang/view-symbol *ns* sym)]
     (try
       (when (requiring-resolve template-symbol)
         template-symbol)
@@ -118,7 +118,7 @@
 (m/defmethod ->handler-spec :view-keyword
   [handler-entry]
   {:handler  `default-handler
-   :template (get-automagic-template-symbol (name handler-entry))})
+   :template (get-automagic-template-symbol handler-entry)})
 
 (m/defmethod ->handler-spec :handler-spec
   [handler-entry]
@@ -160,9 +160,8 @@
                               (let [layout-value (get route k)]
                                 (if (keyword? layout-value)
                                   (list `layout-interceptor
-                                        (symbol (lang/convert-ns *ns*
-                                                                 :view)
-                                                (name layout-value)))
+                                        (lang/view-symbol *ns*
+                                                          layout-value))
                                   `(layout-interceptor ~layout-value))))))
 
               (verb? k) (update route k ->handler-spec)

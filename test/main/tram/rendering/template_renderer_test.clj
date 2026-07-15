@@ -7,9 +7,10 @@
             [tram.rendering.template-renderer :as sut]))
 
 (deftest rendering-nil-template-test
-  (let [request {:uri       "/sign-in"
+  (let [request {:uri            "/sign-in"
                  :request-method :get
-                 ::r/router test-router}
+                 ::r/match       (r/match-by-name test-router :route/sign-in)
+                 ::r/router      test-router}
         body    (-> {:request request}
                     sut/render
                     (get-in [:response :body]))]

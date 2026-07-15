@@ -32,6 +32,20 @@
     (is (= (str views-ns) (sut/convert-ns views-ns :view)))
     (is (= (str handlers-ns) (sut/convert-ns views-ns :handler)))))
 
+(deftest view-symbol-test
+  (is (= 'test-app.views.authentication-views/sign-in
+         (sut/view-symbol handlers-ns :view/sign-in)))
+  (is (= 'test-app.views.authentication-views/sign-in
+         (sut/view-symbol handlers-ns 'sign-in)))
+  (is (= 'test-app.views.authentication-views/sign-in
+         (sut/view-symbol handlers-ns "sign-in"))))
+
+(deftest view-symbol-rejects-keyword-outside-view-ns-test
+  (is (thrown? clojure.lang.ExceptionInfo
+               (sut/view-symbol handlers-ns :sign-in)))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (sut/view-symbol handlers-ns :views/sign-in))))
+
 (deftest modelize-singular
   (let [tests [[:models/users :users]
                [:models/users :models/users]

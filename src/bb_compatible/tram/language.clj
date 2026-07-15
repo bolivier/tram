@@ -128,6 +128,26 @@
                                       (ns-type-lookup to)))]
     (str/join "." (map converter segments))))
 
+(def ViewKeyword
+  "A view referred to by keyword, in route data or on a response `:template`."
+  [:qualified-keyword {:namespace :view}])
+
+(defn view-symbol
+  "The symbol for the view named `view-name` in the view namespace matching
+  `handler-ns`.
+
+  `view-name` may be a keyword, symbol, or string; keywords must be namespaced
+  `:view/` so a misspelled designator fails here rather than as a missing var."
+  [handler-ns view-name]
+  (when (and (keyword? view-name)
+             (not (malli/validate ViewKeyword
+                                  view-name)))
+    (throw (ex-info (str "Views must be named with a :view/ keyword, got: "
+                         view-name)
+                    {:error     :invalid-view-keyword
+                     :view-name view-name})))
+  (symbol (convert-ns handler-ns :view) (name view-name)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; numeric lang utils ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
