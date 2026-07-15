@@ -52,36 +52,6 @@
                                   data
                                   opts)))
 
-(def HandlerSpecSchema
-  [:map [:handler fn?]])
-
-(def Interceptor
-  [:map
-   [:name :keyword]
-   [:enter {:optional true}
-    :fn]
-   [:leave {:optional true}
-    :fn]])
-
-(def RouteSchema
-  [:map
-   [:name [:qualified-keyword {:namespace :route}]]
-   [:layout [:or fn? [:fn :var?] lang/ViewKeyword]]
-   [:interceptors [:vector Interceptor]]
-   [:get {:optional true}
-    HandlerSpecSchema]
-   [:post {:optional true}
-    HandlerSpecSchema]
-   [:put {:optional true}
-    HandlerSpecSchema]
-   [:patch {:optional true}
-    HandlerSpecSchema]
-   [:delete {:optional true}
-    HandlerSpecSchema]])
-
-(def HandlEntrySchema
-  [:enum [fn? var? [:qualified-keyword {:namespace :view}]]])
-
 (def verbs
   #{:get :put :patch :post :delete})
 
