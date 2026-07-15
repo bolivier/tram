@@ -13,6 +13,9 @@
             [malli.transform :as mt]
             [muuntaja.core :as muuntaja]
             [reitit.coercion.malli :as rcm]
+            [reitit.http.coercion :as rhc]
+            [reitit.http.interceptors.multipart :as multipart]
+            [reitit.http.interceptors.parameters :as parameters]
             [tram.html :as tram.html]
             [tram.vars :refer [*current-user* *req* *res*]]))
 
@@ -129,3 +132,22 @@
                                                m
                                                request
                                                response)))))})))}))
+
+(defn- named
+  "Assoc a canonical :tram/* name onto a (reitit) interceptor so it can be
+  referenced by `:must-run-after` and the assembly check."
+  [interceptor nm]
+  (assoc interceptor :name nm))
+
+(defn wire-format
+  "The wire-format concern-group. Returns the ordered vector of interceptors that
+  translate between the bytes on the HTTP wire and Clojure data: content
+  negotiation, parameter parsing, multipart, coercion, and json key-casing."
+  []
+  [(format-interceptor)
+   (named (parameters/parameters-interceptor) :tram/parameters)
+   (named (multipart/multipart-interceptor) :tram/multipart)
+   (named (rhc/coerce-request-interceptor) :tram/coerce-request)
+   (named (rhc/coerce-exceptions-interceptor) :tram/coerce-exceptions)
+   (named (rhc/coerce-response-interceptor) :tram/coerce-response)
+   format-json-body-interceptors])

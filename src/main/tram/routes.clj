@@ -19,26 +19,28 @@
             [tram.rendering]
             [tram.wire-format]))
 
-(import-vars [tram.impl.http htmx-request? html-request? full-redirect redirect]
-             [reitit.http.interceptors.multipart multipart-interceptor]
-             [reitit.http.interceptors.parameters parameters-interceptor]
-             [reitit.http.coercion
-              coerce-exceptions-interceptor
-              coerce-request-interceptor
-              coerce-response-interceptor]
-             [tram.html make-route make-path]
-             [tram.wire-format
-              make-muuntaja-instance
-              coercion
-              string->vector-transformer
-              format-interceptor
-              format-json-body-interceptors]
-             [tram.rendering
-              expand-header-routes-interceptor
-              wrap-page-interceptor
-              render-template-interceptor
-              render]
-             [tram.csrf csrf-interceptor csrf-hidden-field csrf-meta-tag])
+(import-vars
+  [tram.impl.http htmx-request? html-request? full-redirect redirect]
+  [reitit.http.interceptors.multipart multipart-interceptor]
+  [reitit.http.interceptors.parameters parameters-interceptor]
+  [reitit.http.coercion
+   coerce-exceptions-interceptor
+   coerce-request-interceptor
+   coerce-response-interceptor]
+  [tram.html make-route make-path]
+  [tram.wire-format
+   make-muuntaja-instance
+   coercion
+   string->vector-transformer
+   format-interceptor
+   format-json-body-interceptors
+   wire-format]
+  [tram.rendering
+   expand-header-routes-interceptor
+   wrap-page-interceptor
+   render-template-interceptor
+   render]
+  [tram.csrf csrf-interceptor csrf-hidden-field csrf-meta-tag security])
 
 (defn default-error-handler
   "Default error handler for `tram.routes/exception-interceptor`."

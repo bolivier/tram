@@ -9,6 +9,8 @@
             [buddy.core.nonce :as nonce]
             [buddy.sign.jwt :as jwt]
             [clojure.string :as str]
+            [malli.core :as m]
+            [malli.error :as me]
             [tram.vars :refer [*req*]]))
 
 (defn generate-token
@@ -152,3 +154,24 @@
   []
   [:meta {:name    "csrf-token"
           :content (:csrf-token *req*)}])
+
+(def ^:private security-opts-schema
+  [:map [:secret [:string {:min 1}]]])
+
+(defn security
+  "The security concern-group. Returns the ordered vector of request-safety
+  interceptors.
+
+  `opts` requires:
+
+  | key       | description |
+  |-----------|-------------|
+  | `:secret` | stable secret key used to sign CSRF tokens |"
+  [opts]
+  (when-not (m/validate security-opts-schema
+                        opts)
+    (throw (ex-info (str "Invalid opts for tram.csrf/security: "
+                         (me/humanize (m/explain security-opts-schema
+                                                 opts)))
+                    {:opts opts})))
+  [(csrf-interceptor (:secret opts))])
