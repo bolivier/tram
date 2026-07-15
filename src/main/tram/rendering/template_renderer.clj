@@ -29,7 +29,7 @@
   (get-namespace [this ctx]
     "Get the namespace for the template"))
 
-(defn- resolve-view
+(defn resolve-view
   "Resolve `view-sym` to its var, or nil when no such view exists.
 
   A view namespace that fails to load for its own reasons still throws."

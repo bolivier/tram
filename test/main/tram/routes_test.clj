@@ -85,6 +85,39 @@
                    :name :route/healthcheck}]
                 healthcheck-route-data))))
 
+(defn- view-route [path template]
+  [path {:get {:template       template
+               :view-required? true}}])
+
+(deftest assert-views-exist-passes-when-the-view-exists
+  (is (nil? (sut/assert-views-exist!
+              [(view-route "/a"
+                           'test-app.views.authentication-views/sign-in)]))))
+
+(deftest assert-views-exist-reports-every-missing-view-at-once
+  (let [e (try
+            (sut/assert-views-exist!
+              [(view-route "/a" 'test-app.views.authentication-views/nope)
+               (view-route "/b"
+                           'test-app.views.authentication-views/also-nope)])
+            (catch clojure.lang.ExceptionInfo e
+              e))]
+    (is (match? {:error   :missing-views
+                 :missing [{:path "/a"} {:path "/b"}]}
+                (ex-data e)))
+    (is (re-find #"/a.*has no view" (ex-message e)))
+    (is (re-find #"/b.*has no view" (ex-message e)))))
+
+(deftest assert-views-exist-ignores-routes-that-do-not-promise-a-view
+  (is (nil? (sut/assert-views-exist!
+              [["/a"
+                {:get {:template
+                       'test-app.views.authentication-views/nope}}]]))))
+
+(deftest tram-router-accepts-handler-routes-without-views
+  (is (some? (sut/tram-router
+               test-app.handlers.authentication-handlers/routes))))
+
 (deftest flatten-interceptors-splices-groups
   (is (= [{:name :a} {:name :b} {:name :c} {:name :d}]
          (sut/flatten-interceptors

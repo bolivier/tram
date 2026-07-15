@@ -2,19 +2,22 @@
   "This is part of the public api of Tram.
 
   Here are fns and vars related to routing."
-  (:require [malli.dev.pretty :as pretty]
-            [potemkin :refer [import-vars]]
-            [reitit.core :as r]
-            [reitit.http :as http]
-            [reitit.http.interceptors.exception :as exception]
-            [reitit.ring]
-            [tram.csrf]
-            [tram.html]
-            [tram.impl.http]
-            [tram.impl.router :refer [coerce-route-entries-to-specs map-routes]]
-            [tram.logging :as log]
-            [tram.rendering]
-            [tram.wire-format]))
+  (:require
+    [clojure.string :as str]
+    [malli.dev.pretty :as pretty]
+    [potemkin :refer [import-vars]]
+    [reitit.core :as r]
+    [reitit.http :as http]
+    [reitit.http.interceptors.exception :as exception]
+    [reitit.ring]
+    [tram.csrf]
+    [tram.html]
+    [tram.impl.http]
+    [tram.impl.router :refer [coerce-route-entries-to-specs map-routes verbs]]
+    [tram.logging :as log]
+    [tram.rendering]
+    [tram.rendering.template-renderer :as renderer]
+    [tram.wire-format]))
 
 (import-vars
   [tram.impl.http htmx-request? html-request? full-redirect redirect]
@@ -129,12 +132,45 @@
                         {:interceptor (:name x)
                          :dependency  dep}))))))
 
+(defn- missing-views
+  "Every route that promises a view which does not exist, as
+  `{:path :method :template}`."
+  [routes]
+  (for [[path data] routes
+        method      verbs
+        :let        [entry (get data method)]
+        :when       (:view-required? entry)
+        :when       (not (renderer/resolve-view (:template entry)))]
+    {:method   method
+     :path     path
+     :template (:template entry)}))
+
+(defn assert-views-exist!
+  "Verify every route named by a `:view/` keyword has a view to render, and
+  report all of them at once rather than one per request.
+
+  Only those routes are checked. A route with a handler of its own may
+  legitimately render no view at all -- returning a body, redirecting, or
+  choosing its template at request time -- so a view it never resolves is not an
+  error."
+  [routes]
+  (when-let [missing (seq (missing-views routes))]
+    (throw (ex-info (str "Routes declare views that do not exist:\n\n"
+                         (str/join "\n"
+                                   (for [{:keys [method path template]} missing]
+                                     (format "  %-6s %-24s has no view %s"
+                                             (str/upper-case (name method))
+                                             path
+                                             template))))
+                    {:error   :missing-views
+                     :missing missing}))))
+
 (defn tram-router
   "`reitit.http/router` with default options for tram.
 
   Flattens any concern-groups in `[:data :interceptors]` into a single ordered
   chain and verifies their `:must-run-after` dependencies before building the
-  router.
+  router, then verifies every route named by a `:view/` keyword has a view.
 
   `routes` - vector of routes.
   `options` - map of possible overrides"
@@ -146,6 +182,8 @@
                               flatten-interceptors)]
      (when flattened
        (assert-interceptor-order! flattened))
-     (http/router routes
-                  (cond-> options
-                    flattened (assoc-in [:data :interceptors] flattened))))))
+     (doto (http/router routes
+                        (cond-> options
+                          flattened (assoc-in [:data :interceptors] flattened)))
+       (-> r/routes
+           assert-views-exist!)))))

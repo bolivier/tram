@@ -42,6 +42,24 @@
                   '(var test-app.handlers.authentication-handlers/sign-in)}}
                 (sut/coerce-route-entries-to-specs '{:get sign-in})))))
 
+(deftest handler-spec-keeps-an-explicit-template
+  (binding [*ns* (the-ns 'test-app.handlers.authentication-handlers)]
+    (is (match? {:template 'views/explicit}
+                (sut/->handler-spec '{:handler  sign-in
+                                      :template views/explicit})))))
+
+(deftest handler-spec-without-a-template-is-given-one
+  (binding [*ns* (the-ns 'test-app.handlers.authentication-handlers)]
+    (is (match? {:template (list 'quote
+                                 'test-app.views.authentication-views/sign-in)}
+                (sut/->handler-spec '{:handler sign-in})))))
+
+(deftest handler-spec-with-an-explicit-template-need-not-name-its-handler
+  (binding [*ns* (the-ns 'test-app.handlers.authentication-handlers)]
+    (is (match? {:template 'views/explicit}
+                (sut/->handler-spec '{:handler  (fn [_] nil)
+                                      :template views/explicit})))))
+
 (def sample-interceptor
   {:name  :sample/interceptor
    :enter identity})

@@ -130,8 +130,11 @@
 
 (m/defmethod ->handler-spec :view-keyword
   [handler-entry]
-  {:handler  `default-handler
-   :template (get-automagic-template-symbol handler-entry)})
+  ;; A route named by a view keyword renders through `default-handler`, so
+  ;; unlike a route with a handler of its own, its view is not optional.
+  {:handler        `default-handler
+   :template       (get-automagic-template-symbol handler-entry)
+   :view-required? true})
 
 (m/defmethod ->handler-spec :handler-spec
   [handler-entry]
@@ -139,9 +142,10 @@
     (throw (ex-info "Tried to coerce handler-spec without a :handler keyword."
                     {:handler-spec handler-entry})))
   (-> handler-entry
-      (assoc
-        :template (get-automagic-template-symbol (name (:handler
-                                                         handler-entry))))
+      (cond->
+        (not (contains? handler-entry :template))
+        (assoc :template
+          (get-automagic-template-symbol (name (:handler handler-entry)))))
       (update :handler
               (fn [handler]
                 (if (symbol? handler)
