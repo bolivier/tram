@@ -6,11 +6,14 @@
             [clojure.string :as str]))
 
 (defn get-bin-file-paths
-  "Get string relative path of all files in /bin."
-  []
-  (->> (fs/list-dir "starter-template/bin")
+  "Get string relative path of all files in `template-root`'s /bin.
+
+  Resolved against `template-root` rather than the working directory because
+  outside development mode the template is a clone in a temp dir."
+  [template-root]
+  (->> (fs/list-dir (io/file template-root "bin"))
        (remove fs/directory?)
-       (map #(fs/relativize "starter-template" %))
+       (map #(fs/relativize (str template-root) (str %)))
        (map str)))
 
 (def called-from-dir
@@ -89,7 +92,7 @@
                   slurp
                   (str/replace "sample_app" (->snake_case project-name))
                   (str/replace "sample-app" project-name))))
-      (doseq [bin (get-bin-file-paths)]
+      (doseq [bin (get-bin-file-paths template-root)]
         (fs/copy (io/file template-root bin)
                  (io/file project-root bin)
                  {:copy-attributes  true
