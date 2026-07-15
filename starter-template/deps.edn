@@ -1,7 +1,12 @@
-{:aliases {:dev       {:extra-deps  {io.github.nubank/morse {:git/sha "d99b09c"
+;; TRAM_ENV is set per-alias as a system property, which tram.tram-config reads
+;; ahead of the environment variable. That keeps a shell's TRAM_ENV from
+;; pointing a test run at the development database.
+{:aliases {:tram      {:jvm-opts ["-DTRAM_ENV=development"]}
+           :dev       {:extra-deps  {io.github.nubank/morse {:git/sha "d99b09c"
                                                              :git/tag
                                                              "v2023.04.30.01"}}
-                       :extra-paths ["dev"]}
+                       :extra-paths ["dev"]
+                       :jvm-opts    ["-DTRAM_ENV=development"]}
            :test      {:extra-deps {lambdaisland/kaocha         {:mvn/version
                                                                  "1.91.1392"}
                                     nubank/matcher-combinators  {:mvn/version
@@ -12,6 +17,7 @@
                                                                  "0.3.3"}}
                        :extra-paths ["test"]
                        :jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                                  "-DTRAM_ENV=test"
                                   "-Dio.netty.tryReflectionSetAccessible=true"]
                        :main-opts ["-m" "kaocha.runner"]}
            :watch     {:exec-args {:watch? true}

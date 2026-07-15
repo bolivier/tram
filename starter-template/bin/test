@@ -3,6 +3,4 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-# TRAM_ENV must be forced: mise.toml sets it to development for the shell, and
-# inheriting that would point the test run at the development database.
-TRAM_ENV=test exec clojure -M:test "$@"
+exec clojure -M:test "$@"
