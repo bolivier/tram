@@ -157,6 +157,9 @@ acceptable comments are:
 - Use threading macros (`->`, `->>`) for transformation pipelines.
 - Prefer pure functions; isolate side effects at the edges.
 - Destructure in argument lists and `let` bindings — one level deep only.
+- Group arguments that travel together into one map, destructured at the
+  boundary; give the shape a Malli schema if it recurs.
+- Use Malli schemas to validate and check values rather than ad hoc checks.
 - Predicates end with `?`; mutating functions end with `!`.
 - kebab-case for Clojure names, snake_case for database columns.
 
@@ -167,6 +170,31 @@ acceptable comments are:
 - Models use keyword identifiers: `:models/users`, `:models/accounts`.
 - Routes use keyword names: `:route/dashboard`, `:route/user`.
 - Namespaces with `^:public` metadata are public API.
+
+### Structure
+
+How code should be shaped. Each rule carries a _watch for_ — the signal that it
+is being broken.
+
+- **Names reveal intent.** A name says what the thing does or holds.
+  _Watch for:_ a name that doesn't; if no honest name comes, the design is
+  murky.
+- **One home for a logic shape.** The same logic lives in one place, called from
+  everywhere that needs it.
+  _Watch for:_ the same shape in two or more places — including the same value
+  validated ad hoc in two or more places, which wants a Malli schema.
+- **Things that change together live together.** One concern's code sits in one
+  place.
+  _Watch for:_ one logical change forcing scattered edits across many files.
+- **A namespace changes for one reason.** Split so each namespace has a single
+  reason to change.
+  _Watch for:_ a namespace edited for several unrelated reasons.
+- **As concrete as the current need.** Implementation code is written for the
+  need in front of it; delete flexibility nothing uses.
+  _Watch for:_ abstraction with no seam and no second caller. Framework
+  extension points — protocols and multimethods at documented seams — are
+  exempt: generality there is the product, judged by whether the seam is real
+  (one adapter is hypothetical, two is real).
 
 ### Formatting
 
@@ -197,7 +225,8 @@ Issues and PRDs live as GitHub issues in `bolivier/tram`, managed with the `gh` 
 
 ### Triage labels
 
-The five canonical triage roles, each mapped to its identically-named label (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+The five canonical triage roles, each mapped to its identically-named label (`needs-triage`, `needs-info`,
+`ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
