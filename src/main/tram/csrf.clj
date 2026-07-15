@@ -9,6 +9,8 @@
             [buddy.core.nonce :as nonce]
             [buddy.sign.jwt :as jwt]
             [clojure.string :as str]
+            [malli.core :as m]
+            [malli.error :as me]
             [tram.vars :refer [*req*]]))
 
 (defn generate-token
@@ -105,33 +107,35 @@
   On leave:
   - Signs the token and sets the CSRF cookie via Set-Cookie header."
   [secret]
-  {:name  ::csrf
-   :enter (fn [ctx]
-            (let [request       (:request ctx)
-                  signed-cookie (get-csrf-cookie request)
-                  cookie-token  (when signed-cookie
-                                  (unsign-token secret
-                                                signed-cookie))
-                  token         (or cookie-token (generate-token))
-                  request       (assoc request :csrf-token token)
-                  ctx           (assoc ctx :request request)]
-              (if (and (state-changing-methods (:request-method request))
-                       (not (csrf-disabled? request)))
-                (let [submitted (get-submitted-token request)]
-                  (if (= token submitted)
-                    ctx
-                    (assoc ctx
-                      :response {:status 403
-                                 :body   "Invalid CSRF token"}
-                      :queue    [])))
-                ctx)))
-   :leave (fn [ctx]
-            (let [token        (get-in ctx [:request :csrf-token])
-                  signed-token (sign-token secret token)]
-              (update ctx
-                      :response
-                      append-set-cookie
-                      (cookie-string signed-token))))})
+  {:name           :tram/csrf
+   :must-run-after [:tram/format :tram/parameters]
+   :enter          (fn [ctx]
+                     (let [request       (:request ctx)
+                           signed-cookie (get-csrf-cookie request)
+                           cookie-token  (when signed-cookie
+                                           (unsign-token secret
+                                                         signed-cookie))
+                           token         (or cookie-token (generate-token))
+                           request       (assoc request :csrf-token token)
+                           ctx           (assoc ctx :request request)]
+                       (if (and (state-changing-methods (:request-method
+                                                          request))
+                                (not (csrf-disabled? request)))
+                         (let [submitted (get-submitted-token request)]
+                           (if (= token submitted)
+                             ctx
+                             (assoc ctx
+                               :response {:status 403
+                                          :body   "Invalid CSRF token"}
+                               :queue    [])))
+                         ctx)))
+   :leave          (fn [ctx]
+                     (let [token        (get-in ctx [:request :csrf-token])
+                           signed-token (sign-token secret token)]
+                       (update ctx
+                               :response
+                               append-set-cookie
+                               (cookie-string signed-token))))})
 
 (defn csrf-hidden-field
   "Returns a hiccup hidden input element containing the CSRF token.
@@ -150,3 +154,25 @@
   []
   [:meta {:name    "csrf-token"
           :content (:csrf-token *req*)}])
+
+(def ^:private security-opts-schema
+  [:map [:secret [:string {:min 1}]]])
+
+(defn security
+  "The security concern-group. Returns the ordered vector of request-safety
+  interceptors.
+
+  `opts` requires:
+
+  | key       | description |
+  |-----------|-------------|
+  | `:secret` | stable secret key used to sign CSRF tokens |"
+  [{:keys [secret]
+    :as   opts}]
+  (when-not (m/validate security-opts-schema
+                        opts)
+    (throw (ex-info (str "Invalid opts for tram.csrf/security: "
+                         (me/humanize (m/explain security-opts-schema
+                                                 opts)))
+                    {:opts opts})))
+  [(csrf-interceptor secret)])

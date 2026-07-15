@@ -31,14 +31,8 @@
                {:data {:coercion     tr/coercion
                        :interceptors [(tr/format-interceptor)
                                       (tr/exception-interceptor)
+                                      (tr/wire-format)
                                       authentication-interceptor
-                                      (tr/parameters-interceptor)
-                                      (tr/csrf-interceptor csrf-secret)
-                                      (tr/multipart-interceptor)
-                                      tr/expand-header-routes-interceptor
-                                      tr/format-json-body-interceptors
-                                      (tr/coerce-request-interceptor)
-                                      (tr/coerce-exceptions-interceptor)
-                                      (tr/coerce-response-interceptor)
-                                      (tr/wrap-page-interceptor as-full-page)
-                                      tr/render-template-interceptor]}}))
+                                      (tr/security {:secret csrf-secret})
+                                      (tr/render {:page-wrapper
+                                                  as-full-page})]}}))
