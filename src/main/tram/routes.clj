@@ -6,10 +6,7 @@
             [potemkin :refer [import-vars]]
             [reitit.core :as r]
             [reitit.http :as http]
-            [reitit.http.coercion]
             [reitit.http.interceptors.exception :as exception]
-            [reitit.http.interceptors.multipart]
-            [reitit.http.interceptors.parameters]
             [reitit.ring]
             [tram.csrf]
             [tram.html]
@@ -21,12 +18,6 @@
 
 (import-vars
   [tram.impl.http htmx-request? html-request? full-redirect redirect]
-  [reitit.http.interceptors.multipart multipart-interceptor]
-  [reitit.http.interceptors.parameters parameters-interceptor]
-  [reitit.http.coercion
-   coerce-exceptions-interceptor
-   coerce-request-interceptor
-   coerce-response-interceptor]
   [tram.html make-route make-path]
   [tram.wire-format
    make-muuntaja-instance
@@ -34,6 +25,11 @@
    string->vector-transformer
    format-interceptor
    format-json-body-interceptors
+   parameters-interceptor
+   multipart-interceptor
+   coerce-request-interceptor
+   coerce-exceptions-interceptor
+   coerce-response-interceptor
    wire-format]
   [tram.rendering
    expand-header-routes-interceptor

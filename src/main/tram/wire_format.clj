@@ -133,21 +133,44 @@
                                                request
                                                response)))))})))}))
 
-(defn- named
-  "Assoc a canonical :tram/* name onto a (reitit) interceptor so it can be
-  referenced by `:must-run-after` and the assembly check."
-  [interceptor nm]
-  (assoc interceptor :name nm))
+(defn parameters-interceptor
+  "reitit's parameters interceptor, named `:tram/parameters`."
+  []
+  (assoc (parameters/parameters-interceptor) :name :tram/parameters))
+
+(defn multipart-interceptor
+  "reitit's multipart interceptor, named `:tram/multipart`."
+  []
+  (assoc (multipart/multipart-interceptor) :name :tram/multipart))
+
+(defn coerce-request-interceptor
+  "reitit's request-coercion interceptor, named `:tram/coerce-request`."
+  []
+  (assoc (rhc/coerce-request-interceptor) :name :tram/coerce-request))
+
+(defn coerce-exceptions-interceptor
+  "reitit's coercion-exception interceptor, named `:tram/coerce-exceptions`."
+  []
+  (assoc (rhc/coerce-exceptions-interceptor) :name :tram/coerce-exceptions))
+
+(defn coerce-response-interceptor
+  "reitit's response-coercion interceptor, named `:tram/coerce-response`."
+  []
+  (assoc (rhc/coerce-response-interceptor) :name :tram/coerce-response))
 
 (defn wire-format
-  "The wire-format concern-group. Returns the ordered vector of interceptors that
-  translate between the bytes on the HTTP wire and Clojure data: content
-  negotiation, parameter parsing, multipart, coercion, and json key-casing."
+  "The wire-format concern-group. Returns the ordered vector of request-side
+  interceptors that interpret an HTTP request as Clojure data: parameter
+  parsing, multipart, coercion, and json key-casing.
+
+  `format-interceptor` is deliberately NOT part of this group: it is the
+  outermost transport codec and must sit outside the exception boundary so it
+  encodes error responses too. Place `(format-interceptor)` first in the chain,
+  then `(exception-interceptor)`, then this group."
   []
-  [(format-interceptor)
-   (named (parameters/parameters-interceptor) :tram/parameters)
-   (named (multipart/multipart-interceptor) :tram/multipart)
-   (named (rhc/coerce-request-interceptor) :tram/coerce-request)
-   (named (rhc/coerce-exceptions-interceptor) :tram/coerce-exceptions)
-   (named (rhc/coerce-response-interceptor) :tram/coerce-response)
+  [(parameters-interceptor)
+   (multipart-interceptor)
+   (coerce-request-interceptor)
+   (coerce-exceptions-interceptor)
+   (coerce-response-interceptor)
    format-json-body-interceptors])

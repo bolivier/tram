@@ -44,3 +44,10 @@ the interceptor that requires it.
   new `tram.wire-format`), not in a single interceptors module. The
   per-interceptor `:must-run-after` is what makes that safe: the pipeline's
   correctness is verified at assembly rather than read from one central file.
+- The `format` transport codec is applied outermost — before `exception` — and
+  is deliberately *not* part of the `wire-format` group. `exception` must wrap
+  the coercion interceptors to catch coercion failures, but `format` must sit
+  outside `exception` so it encodes the error responses `exception` produces
+  (e.g. a coercion `:error` handler that re-renders a form as hiccup). The
+  exception boundary therefore cuts through the wire concern: `format` outside,
+  parsing/coercion inside.

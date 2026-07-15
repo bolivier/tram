@@ -15,9 +15,10 @@ into its interceptor chain rather than listing individual interceptors.
 _Avoid_: middleware stack, interceptor bundle, compound interceptor
 
 **wire-format**:
-The concern-group translating between the bytes on the HTTP wire and Clojure
-data — content negotiation, body decoding, parameter parsing, coercion, and
-response encoding.
+The concern-group that interprets an HTTP request as Clojure data — parameter
+parsing, multipart, and coercion. The `format` transport codec (content
+negotiation and response encoding) sits outermost, outside the error boundary,
+so it also encodes error responses; it is therefore not part of this group.
 _Avoid_: parsing, serialization, formatting (each names only one direction)
 
 **security**:
