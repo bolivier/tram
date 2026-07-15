@@ -109,37 +109,23 @@
         interceptors))
 
 (defn assert-interceptor-order!
-  "Verify every interceptor's `:must-run-after` is satisfied in the assembled
-  chain: each named dependency must be present and appear earlier. Throws an
-  ex-info naming the offender when a dependency is absent or ordered later."
+  "Verify every interceptor's `:must-run-after` dependencies are present in the
+  assembled chain and appear earlier. Throws an ex-info naming the offender."
   [interceptors]
-  (let [present  (into #{} (keep :name) interceptors)
-        position (into {}
-                       (comp (map-indexed vector)
-                             (keep (fn [[i x]]
-                                     (when-let [nm (:name x)]
-                                       [nm i]))))
-                       interceptors)]
+  (let [position (into {} (map-indexed (fn [i x] [(:name x) i])) interceptors)]
     (doseq [[i x] (map-indexed vector interceptors)
-            dep   (:must-run-after x)]
-      (when-not (contains? present
-                           dep)
-        (throw (ex-info (str (:name x)
-                             " must run after "
-                             dep
-                             ", but "
-                             dep
-                             " is not in the chain.")
-                        {:interceptor (:name x)
-                         :missing     dep})))
-      (when (>= (position dep)
-                i)
-        (throw (ex-info (str (:name x)
-                             " must run after "
-                             dep
-                             ", but "
-                             dep
-                             " appears later in the chain.")
+            dep   (:must-run-after x)
+            :let  [at (position dep)]]
+      (when (or (nil? at)
+                (>= at
+                    i))
+        (throw (ex-info (format "%s must run after %s, but %s %s"
+                                (:name x)
+                                dep
+                                dep
+                                (if at
+                                  "appears later in the chain."
+                                  "is not in the chain."))
                         {:interceptor (:name x)
                          :dependency  dep}))))))
 
