@@ -1,6 +1,11 @@
 (ns tram.impl.router-test
   (:require [clojure.test :refer [deftest is testing]]
             [matcher-combinators.test]
+            [reitit.http :as http]
+            [reitit.interceptor :as interceptor]
+            [reitit.interceptor.sieppari :as sieppari]
+            [reitit.ring :as ring]
+            [test-app.handlers.authentication-handlers :as handlers]
             [test-app.views.authentication-views :as views]
             [tram.impl.router :as sut]))
 
@@ -29,3 +34,34 @@
   (binding [*ns* (the-ns 'test-app.handlers.authentication-handlers)]
     (is (match? {:get {:handler 'tram.impl.router/default-handler}}
                 (sut/coerce-route-entries-to-specs {:get :view/layout})))))
+
+(deftest symbol-handler-entry-is-emitted-as-a-var
+  (binding [*ns* (the-ns 'test-app.handlers.authentication-handlers)]
+    (is (match? {:get
+                 {:handler
+                  '(var test-app.handlers.authentication-handlers/sign-in)}}
+                (sut/coerce-route-entries-to-specs '{:get sign-in})))))
+
+(def sample-interceptor
+  {:name  :sample/interceptor
+   :enter identity})
+
+(deftest var-holding-an-interceptor-map-is-not-coerced-into-a-handler
+  (is (= :sample/interceptor
+         (:name (interceptor/into-interceptor #'sample-interceptor nil {})))))
+
+(deftest redefined-handler-takes-effect-without-rebuilding-the-router
+  (let [app      (http/ring-handler handlers/test-router
+                                    (ring/create-default-handler)
+                                    {:executor sieppari/executor})
+        original @#'handlers/sign-in]
+    (try
+      (intern 'test-app.handlers.authentication-handlers
+              'sign-in
+              (fn [_] {:status 418}))
+      (is (= 418
+             (:status (app {:request-method :get
+                            :uri "/sign-in"}))))
+      (finally (intern 'test-app.handlers.authentication-handlers
+                       'sign-in
+                       original)))))

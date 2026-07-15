@@ -30,8 +30,27 @@
   (:require [clojure.set :as set]
             [clojure.zip :as zip]
             [methodical.core :as m]
+            [reitit.interceptor :as interceptor]
             [reitit.ring]
             [tram.language :as lang]))
+
+(defn- invoke-through-var
+  "Wrap `handler-var` so each request invokes through the var rather than the fn
+  it holds right now.
+
+  This is what lets a redefined handler take effect without rebuilding the
+  router."
+  [handler-var]
+  (fn [request] (handler-var request)))
+
+(extend-protocol interceptor/IntoInterceptor
+  clojure.lang.Var
+  (into-interceptor [this data opts]
+    (interceptor/into-interceptor (if (fn? @this)
+                                    (invoke-through-var this)
+                                    @this)
+                                  data
+                                  opts)))
 
 (def HandlerSpecSchema
   [:map [:handler fn?]])
@@ -106,7 +125,7 @@
 
 (m/defmethod ->handler-spec :symbol-spec
   [handler-entry]
-  {:handler  (symbol (str *ns*) (str (name handler-entry)))
+  {:handler  (list 'var (symbol (str *ns*) (str (name handler-entry))))
    :template (get-automagic-template-symbol handler-entry)})
 
 (m/defmethod ->handler-spec :view-keyword
@@ -119,8 +138,16 @@
   (when-not (:handler handler-entry)
     (throw (ex-info "Tried to coerce handler-spec without a :handler keyword."
                     {:handler-spec handler-entry})))
-  (assoc handler-entry
-    :template (get-automagic-template-symbol (name (:handler handler-entry)))))
+  (-> handler-entry
+      (assoc
+        :template (get-automagic-template-symbol (name (:handler
+                                                         handler-entry))))
+      (update :handler
+              (fn [handler]
+                (if (symbol? handler)
+                  (list 'var
+                        handler)
+                  handler)))))
 
 (m/defmethod ->handler-spec :list
   [handler-entry]
