@@ -101,12 +101,69 @@
     `(def ~var-name
        ~(map-routes coerce-route-entries-to-specs evaluated-routes))))
 
+(defn flatten-interceptors
+  "Flatten concern-groups (sub-vectors of interceptors) into a single ordered
+  vector. Interceptor maps are leaves; any sequential element is spliced."
+  [interceptors]
+  (into []
+        (mapcat (fn [x]
+                  (if (sequential? x)
+                    (flatten-interceptors x)
+                    [x])))
+        interceptors))
+
+(defn assert-interceptor-order!
+  "Verify every interceptor's `:must-run-after` is satisfied in the assembled
+  chain: each named dependency must be present and appear earlier. Throws an
+  ex-info naming the offender when a dependency is absent or ordered later."
+  [interceptors]
+  (let [present  (into #{} (keep :name) interceptors)
+        position (into {}
+                       (comp (map-indexed vector)
+                             (keep (fn [[i x]]
+                                     (when-let [nm (:name x)]
+                                       [nm i]))))
+                       interceptors)]
+    (doseq [[i x] (map-indexed vector interceptors)
+            dep   (:must-run-after x)]
+      (when-not (contains? present
+                           dep)
+        (throw (ex-info (str (:name x)
+                             " must run after "
+                             dep
+                             ", but "
+                             dep
+                             " is not in the chain.")
+                        {:interceptor (:name x)
+                         :missing     dep})))
+      (when (>= (position dep)
+                i)
+        (throw (ex-info (str (:name x)
+                             " must run after "
+                             dep
+                             ", but "
+                             dep
+                             " appears later in the chain.")
+                        {:interceptor (:name x)
+                         :dependency  dep}))))))
+
 (defn tram-router
   "`reitit.http/router` with default options for tram.
+
+  Flattens any concern-groups in `[:data :interceptors]` into a single ordered
+  chain and verifies their `:must-run-after` dependencies before building the
+  router.
 
   `routes` - vector of routes.
   `options` - map of possible overrides"
   ([routes]
    (tram-router routes {}))
   ([routes options]
-   (http/router routes options)))
+   (let [interceptors (get-in options [:data :interceptors])
+         flattened    (some-> interceptors
+                              flatten-interceptors)]
+     (when flattened
+       (assert-interceptor-order! flattened))
+     (http/router routes
+                  (cond-> options
+                    flattened (assoc-in [:data :interceptors] flattened))))))
