@@ -5,6 +5,22 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
+(defn get-template-file-paths
+  "Relative paths of the files making up the template at `template-root`.
+
+  Asks git rather than walking the filesystem, so that a checkout's build
+  output — node_modules, target, caches, the odd .DS_Store — stays out of
+  generated projects. `--others --exclude-standard` keeps files that are new but
+  not ignored, and the existence check drops any that are staged but deleted."
+  [template-root]
+  (->> (p/shell {:dir template-root
+                 :out :string}
+                "git ls-files --cached --others --exclude-standard")
+       :out
+       str/split-lines
+       (remove str/blank?)
+       (filter #(.isFile (io/file template-root %)))))
+
 (defn get-bin-file-paths
   "Get string relative path of all files in `template-root`'s /bin.
 
@@ -79,12 +95,11 @@
                         " already exists.  Please remove it and try again."))
           (System/exit 1)))
       (println "Copying files")
-      (doseq [src  (->> (file-seq template-root)
-                        (filter #(.isFile %)))
-              :let [relative (-> (.getPath src)
-                                 (str/replace-first #".*starter-template/" "")
-                                 (str/replace "sample_app"
-                                              (ns->path project-name)))
+      (doseq [tracked (get-template-file-paths template-root)
+              :let [src      (io/file template-root tracked)
+                    relative (str/replace tracked
+                                          "sample_app"
+                                          (ns->path project-name))
                     dest     (io/file project-root relative)]]
         (io/make-parents dest)
         (spit dest
@@ -102,17 +117,23 @@
                   slurp
                   (str/replace "sample_app" (->snake_case project-name))
                   (str/replace "sample-app" project-name))))
-      (println "Installing node deps for Tailwind")
-      (p/shell {:dir (io/file project-root "resources" "tailwindcss")} "npm i")
+      ;; bin/css installs the node deps and builds the stylesheet, so the app
+      ;; serves a styled page before `tram dev` starts Tailwind's watcher.
+      (println "Installing node deps and building CSS")
+      (p/shell "bin/css")
+      (println "Importing lint configs (this warms the dependency cache too)")
+      (p/shell "bin/copy-lint-configs")
+      ;; Renaming sample-app to the project's name shifts identifier lengths,
+      ;; which zprint aligns on. Without this the first commit is already
+      ;; misformatted.
+      (println "Formatting")
+      (p/shell "bin/format")
       (println "Initializing a git repo.")
       (p/shell "git init")
       (p/shell "git add .")
       (p/shell "git commit -m 'Initial commit'")
-      (p/shell "mise trust")
+      ;; SQLite keeps no server, so there is nothing to stand up first: the
+      ;; database is a file under db/ that migrating creates.
       (println "Next Steps: ")
-      (println "  To initialize your database:")
-      (println "    $ docker-compose up")
-      (println "    $ bin/db-init")
-      (println "")
-      (println "  To migrate your new database, run:  $ tram db:migrate")
-      (println "  Start your server with $ tram dev"))))
+      (println "  Create your database with:  $ tram db:migrate")
+      (println "  Start your server with:     $ tram dev"))))

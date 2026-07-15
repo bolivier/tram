@@ -5,6 +5,10 @@ cd "$(dirname "$0")/../resources/tailwindcss"
 
 # One-shot build of resources/public/index.css. `tram dev` runs the watching
 # equivalent; this is for serving, testing, or packaging the app without it.
-[ -d node_modules ] || npm install
+#
+# npm install runs unconditionally: it is cheap when already satisfied, and a
+# node_modules that arrived by any route other than npm cannot be trusted to
+# have its executable bits.
+npm install
 
 npm run build
