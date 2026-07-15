@@ -55,11 +55,8 @@
                          [:response :body]
                          (fn [body]
                            (cond
-                             needs-full-page?
-                             (let [f full-page-renderer]
-                               (f body))
-
-                             :else body)))))})
+                             needs-full-page? (full-page-renderer body)
+                             :else            body)))))})
 
 (def render-template-interceptor
   {:name  :tram/render-template
@@ -96,7 +93,8 @@
   | key             | description |
   |-----------------|-------------|
   | `:page-wrapper` | one-arg fn wrapping body hiccup in a full html page |"
-  [opts]
+  [{:keys [page-wrapper]
+    :as   opts}]
   (when-not (m/validate render-opts-schema
                         opts)
     (throw (ex-info (str "Invalid opts for tram.rendering/render: "
@@ -104,5 +102,5 @@
                                                  opts)))
                     {:opts opts})))
   [expand-header-routes-interceptor
-   (wrap-page-interceptor (:page-wrapper opts))
+   (wrap-page-interceptor page-wrapper)
    render-template-interceptor])

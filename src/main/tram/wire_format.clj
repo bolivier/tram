@@ -66,7 +66,7 @@
       [:transformers :body :formats "application/x-www-form-urlencoded"]
       string->vector-transformer-provider)))
 
-(def format-json-body-interceptors
+(def json-casing-interceptor
   {:name  :tram/json-casing
    :enter (fn [ctx]
             (let [ct (get-in ctx [:request :muuntaja/request :format])]
@@ -173,4 +173,4 @@
    (coerce-request-interceptor)
    (coerce-exceptions-interceptor)
    (coerce-response-interceptor)
-   format-json-body-interceptors])
+   json-casing-interceptor])

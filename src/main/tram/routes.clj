@@ -24,7 +24,7 @@
    coercion
    string->vector-transformer
    format-interceptor
-   format-json-body-interceptors
+   json-casing-interceptor
    parameters-interceptor
    multipart-interceptor
    coerce-request-interceptor
@@ -98,13 +98,13 @@
        ~(map-routes coerce-route-entries-to-specs evaluated-routes))))
 
 (defn flatten-interceptors
-  "Flatten concern-groups (sub-vectors of interceptors) into a single ordered
-  vector. Interceptor maps are leaves; any sequential element is spliced."
+  "Flatten concern-groups into a single ordered vector: a group is a sequential
+  of interceptors and is spliced; an interceptor map is a leaf."
   [interceptors]
   (into []
         (mapcat (fn [x]
                   (if (sequential? x)
-                    (flatten-interceptors x)
+                    x
                     [x])))
         interceptors))
 

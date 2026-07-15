@@ -167,11 +167,12 @@
   | key       | description |
   |-----------|-------------|
   | `:secret` | stable secret key used to sign CSRF tokens |"
-  [opts]
+  [{:keys [secret]
+    :as   opts}]
   (when-not (m/validate security-opts-schema
                         opts)
     (throw (ex-info (str "Invalid opts for tram.csrf/security: "
                          (me/humanize (m/explain security-opts-schema
                                                  opts)))
                     {:opts opts})))
-  [(csrf-interceptor (:secret opts))])
+  [(csrf-interceptor secret)])
