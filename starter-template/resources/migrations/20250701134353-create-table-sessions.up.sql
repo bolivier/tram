@@ -1,13 +1,15 @@
 CREATE TABLE sessions (
-  id SERIAL PRIMARY KEY,
-  expires_at TIMESTAMPTZ NOT NULL,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  expires_at TEXT NOT NULL,
   user_id INTEGER REFERENCES users(id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 
 --;;
 
-CREATE TRIGGER "set_updated_at_on_sessions" BEFORE
-UPDATE
-  ON sessions FOR EACH row EXECUTE FUNCTION update_updated_at_column()
+CREATE TRIGGER set_updated_at_on_sessions
+AFTER UPDATE ON sessions FOR EACH ROW
+BEGIN
+  UPDATE sessions SET updated_at = datetime('now') WHERE id = NEW.id;
+END

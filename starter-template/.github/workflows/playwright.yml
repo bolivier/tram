@@ -7,20 +7,6 @@ on:
 
 jobs:
   test:
-    services:
-      postgres:
-        image: postgres:16
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_DB: sample_app_development
-        options: >-
-          --health-cmd="pg_isready"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
@@ -50,6 +36,9 @@ jobs:
 
       - name: Build CSS
         run: bin/css
+
+      - name: Create the database
+        run: bin/db-migrate
 
       - name: Build Jar
         run: clojure -T:build uber

@@ -1,29 +1,19 @@
-{:database/development {:db            {:dbname   "sample_app_development"
-                                        :dbtype   "postgresql"
-                                        :host     "localhost"
-                                        :password #env PG_PASSWORD
-                                        :port     5433
-                                        :user     #env PG_USER}
+;; SQLite needs no server, so a database is just a file under db/. Tram teaches
+;; Toucan2 the SQLite dialect in tram.db.sqlite, which tram.db loads for you.
+{:database/development {:db            {:dbname "db/development.db"
+                                        :dbtype "sqlite"}
                         :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
                         :store         :database}
- :database/production  {:db            {:dbname   "sample_app_production"
-                                        :dbtype   "postgresql"
-                                        :host     "localhost"
-                                        :password #env PG_PASSWORD
-                                        :port     5433
-                                        :user     #env PG_USER}
+ :database/production  {:db            {:dbname "db/production.db"
+                                        :dbtype "sqlite"}
                         :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"
                         :store         :database}
- :database/test        {:db            {:dbname   "sample_app_test"
-                                        :dbtype   "postgresql"
-                                        :host     "localhost"
-                                        :password #env PG_PASSWORD
-                                        :port     5433
-                                        :user     #env PG_USER}
+ :database/test        {:db            {:dbname "db/test.db"
+                                        :dbtype "sqlite"}
                         :init-script   "init.sql"
                         :migration-dir "migrations/"
                         :migration-table-name "migrations"

@@ -20,4 +20,7 @@ pom.xml.asc
 /.clj-kondo/.cache
 /.clj-kondo/.lock
 resources/public/index.css
-/.postgres
+/db/*.db
+/db/*.db-journal
+/db/*.db-wal
+/db/*.db-shm

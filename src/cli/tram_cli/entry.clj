@@ -165,8 +165,10 @@ tram help               print this menu
       (deref process))))
 
 (defn do-db-migrate [_]
-  (let [p (p/process {:out :inherit
-                      :err :inherit}
+  (let [p (p/process {:out       :inherit
+                      :err       :inherit
+                      :extra-env {"TRAM_ENV" (or (System/getenv "TRAM_ENV")
+                                                 "development")}}
                      "clojure -X tram.db/migrate-from-cli")]
     (println "Migrating database.")
     (println "Starting JVM...")

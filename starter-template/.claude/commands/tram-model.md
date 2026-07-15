@@ -11,7 +11,7 @@ Generate a Tram model namespace with Toucan2 hooks and association declarations.
 **Examples:**
 ```
 /tram-model :models/posts title:string! body:text! author:references(users) published:boolean
-/tram-model :models/users email:citext^! password:text! username:string^!
+/tram-model :models/users email:string^! password:text! username:string^!
 /tram-model :models/comments body:text! post:references(posts) author:references(users)
 ```
 

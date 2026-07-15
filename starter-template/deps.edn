@@ -32,9 +32,12 @@
  ;; Tram is batteries-included: reitit, malli, integrant, toucan2,
  ;; honeysql, next.jdbc, migratus, buddy, telemere and friends arrive with
  ;; it. Only add a dep here if Tram does not already bring it.
- :deps    {bolivier/tram       {:git/sha
-                                "939165fd1088b779617241cb3b06fbd4312bad5c"
+ :deps    {bolivier/tram          {:git/sha
+                                   "939165fd1088b779617241cb3b06fbd4312bad5c"
 
-                                :git/url "https://github.com/bolivier/tram"}
-           org.clojure/clojure {:mvn/version "1.12.0"}}
+                                   :git/url "https://github.com/bolivier/tram"}
+           org.clojure/clojure    {:mvn/version "1.12.0"}
+           ;; Tram teaches Toucan2 the SQLite dialect, but only depends on
+           ;; the driver from its own :test alias, so the app supplies it.
+           org.xerial/sqlite-jdbc {:mvn/version "3.47.1.0"}}
  :paths   ["src" "resources"]}

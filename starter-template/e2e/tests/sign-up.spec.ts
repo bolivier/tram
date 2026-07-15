@@ -1,5 +1,5 @@
 import { test, expect } from "../fixtures";
-import postgres from "postgres";
+import Database from "better-sqlite3";
 
 test("Happy Path", async ({ signUpPage, dashboardHomePage }) => {
   test.step("Ensure homer user doesn't exist", deleteCarl);
@@ -40,17 +40,16 @@ test("User exists path", async ({ signUpPage }) => {
   );
 });
 
-const sql = postgres({
-  host: "localhost",
-  database: "sample_app_development",
-  port: 5433,
-  fetch_types: false,
-});
+// The app serves TRAM_ENV=development, so these assertions read the same file
+// its handlers write. Paths are relative to e2e/, where playwright runs.
+const db = new Database("../db/development.db");
 
-async function getCarl() {
-  return await sql`SELECT * FROM users where email = 'carl@springfieldnuclear.com'`;
+const CARL = "carl@springfieldnuclear.com";
+
+function getCarl() {
+  return db.prepare("SELECT * FROM users WHERE email = ?").all(CARL);
 }
 
-async function deleteCarl() {
-  return await sql`delete from users where email = 'carl@springfieldnuclear.com'`;
+function deleteCarl() {
+  return db.prepare("DELETE FROM users WHERE email = ?").run(CARL);
 }

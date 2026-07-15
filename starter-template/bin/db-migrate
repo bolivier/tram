@@ -3,4 +3,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Migrates the development database unless told otherwise, e.g.
+#   TRAM_ENV=test bin/db-migrate
+# Passed as an environment variable rather than -DTRAM_ENV, because a system
+# property would take precedence and make TRAM_ENV here impossible to override.
+export TRAM_ENV="${TRAM_ENV:-development}"
+
 exec clojure -X tram.db/migrate-from-cli "$@"

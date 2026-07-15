@@ -1,17 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS citext;
-
---;;
-
-CREATE OR REPLACE FUNCTION update_updated_at_column ()
-    RETURNS TRIGGER
-    AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$
-LANGUAGE plpgsql;
-
---;;
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Migratus requires an init script. SQLite has no extensions to install and no
+-- procedural language to define a shared updated_at function in, so each table
+-- carries its own updated_at trigger instead and there is nothing to do here.
+SELECT 1;
