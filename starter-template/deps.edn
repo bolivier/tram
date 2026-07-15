@@ -32,12 +32,9 @@
  ;; Tram is batteries-included: reitit, malli, integrant, toucan2,
  ;; honeysql, next.jdbc, migratus, buddy, telemere and friends arrive with
  ;; it. Only add a dep here if Tram does not already bring it.
- :deps    {bolivier/tram        {:git/sha
-                                 "939165fd1088b779617241cb3b06fbd4312bad5c"
+ :deps    {bolivier/tram       {:git/sha
+                                "939165fd1088b779617241cb3b06fbd4312bad5c"
 
-                                 :git/url "https://github.com/bolivier/tram"}
-           enlive/enlive        {:mvn/version "1.1.6"}
-           meander/epsilon      {:mvn/version "0.0.650"}
-           org.clojure/clojure  {:mvn/version "1.12.0"}
-           org.clojure/data.xml {:mvn/version "0.2.0-alpha6"}}
+                                :git/url "https://github.com/bolivier/tram"}
+           org.clojure/clojure {:mvn/version "1.12.0"}}
  :paths   ["src" "resources"]}
