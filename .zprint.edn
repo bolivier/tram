@@ -36,6 +36,7 @@
                :rod-no-ma-nl    ;; function formattin
                :sort-require    ;; sorting
                :hiccup          ;; improved hiccup vector formatting
+               :keyword-respect-nl
                :extend-nl       ;; require newlines in extend et al
                :map-nl     ;; require newlines in maps
                :pair-nl    ;; require newlines between pairs
