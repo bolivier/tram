@@ -1,7 +1,8 @@
 (ns sample-app.concerns.authentication
   (:require [buddy.hashers :as hashers]
             [clojure.string :as str]
-            [tram.db :as db]))
+            [tram.db :as db])
+  (:import (org.sqlite SQLiteErrorCode SQLiteException)))
 
 (defn hash-password [password]
   (hashers/derive password))
@@ -31,8 +32,31 @@
                      email)
       nil)))
 
-(defn register-new-account [account]
-  (db/insert-returning-instance! :models/users account))
+(defn- unique-violation?
+  "True when `ex`, or any exception it wraps, is a SQLite UNIQUE constraint
+  failure. Toucan2 wraps the driver's SQLiteException, whose SQLSTATE is null, so
+  the result code is what identifies the violation."
+  [ex]
+  (loop [e ex]
+    (cond
+      (nil? e) false
+      (and (instance? SQLiteException e)
+           (= (.getResultCode ^SQLiteException e)
+              SQLiteErrorCode/SQLITE_CONSTRAINT_UNIQUE))
+      true
+
+      :else (recur (.getCause ^Throwable e)))))
+
+(defn register-new-account
+  "Inserts a user, or returns `nil` if one already has that email — the same
+  falsy result the caller shows as “that email is taken”."
+  [account]
+  (try
+    (db/insert-returning-instance! :models/users account)
+    (catch Exception e
+      (if (unique-violation? e)
+        nil
+        (throw e)))))
 
 (def cookie-name
   "session-id")
