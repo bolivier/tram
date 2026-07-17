@@ -1,0 +1,5 @@
+;; Configs exported by Tram and its dependencies (which teach clj-kondo about
+;; defroutes, the toucan2 macros, and friends) are imported into
+;; .clj-kondo/imports by bin/copy-lint-configs. Project-specific lint config
+;; goes here.
+{}

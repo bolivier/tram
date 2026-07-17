@@ -1,0 +1,43 @@
+;; TRAM_ENV is set per-alias as a system property, which tram.tram-config reads
+;; ahead of the environment variable. That keeps a shell's TRAM_ENV from
+;; pointing a test run at the development database.
+{:aliases {:tram      {:jvm-opts ["-DTRAM_ENV=development"]}
+           :dev       {:extra-deps  {io.github.nubank/morse {:git/sha "d99b09c"
+                                                             :git/tag
+                                                             "v2023.04.30.01"}}
+                       :extra-paths ["dev"]
+                       :jvm-opts    ["-DTRAM_ENV=development"]}
+           :test      {:extra-deps {lambdaisland/kaocha         {:mvn/version
+                                                                 "1.91.1392"}
+                                    nubank/matcher-combinators  {:mvn/version
+                                                                 "3.9.2"}
+                                    pjstadig/humane-test-output {:mvn/version
+                                                                 "0.11.0"}
+                                    vvvvalvalval/scope-capture  {:mvn/version
+                                                                 "0.3.3"}}
+                       :extra-paths ["test"]
+                       :jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                                  "-DTRAM_ENV=test"
+                                  "-Dio.netty.tryReflectionSetAccessible=true"]
+                       :main-opts ["-m" "kaocha.runner"]}
+           :watch     {:exec-args {:watch? true}
+                       :exec-fn   kaocha.runner/exec-fn}
+           ;; This alias is useful if you need to develop a new hook for a
+           ;; macro
+           :clj-kondo {:extra-deps {clj-kondo/clj-kondo {:mvn/version
+                                                         "LATEST"}}}
+           :build     {:extra-deps {io.github.clojure/tools.build {:mvn/version
+                                                                   "0.9.6"}}
+                       :ns-default build}}
+ ;; Tram is batteries-included: reitit, malli, integrant, toucan2,
+ ;; honeysql, next.jdbc, migratus, buddy, telemere and friends arrive with
+ ;; it. Only add a dep here if Tram does not already bring it.
+ :deps    {bolivier/tram          {:git/sha
+                                   "939165fd1088b779617241cb3b06fbd4312bad5c"
+
+                                   :git/url "https://github.com/bolivier/tram"}
+           org.clojure/clojure    {:mvn/version "1.12.0"}
+           ;; Tram teaches Toucan2 the SQLite dialect, but only depends on
+           ;; the driver from its own :test alias, so the app supplies it.
+           org.xerial/sqlite-jdbc {:mvn/version "3.47.1.0"}}
+ :paths   ["src" "resources"]}

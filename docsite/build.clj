@@ -1,0 +1,37 @@
+(ns build
+  (:gen-class)
+  (:refer-clojure :exclude [test])
+  (:require [clojure.tools.build.api :as b]))
+
+(def lib
+  'com.samples/tram-docs)
+(def version
+  (format "0.1.%s" (b/git-count-revs nil)))
+(def class-dir
+  "target/classes")
+(def basis
+  (b/create-basis {:project "deps.edn"}))
+(def uber-file
+  "target/tram_docs.jar")
+
+(def tram-env
+  "AOT compilation loads the app's config, which requires a TRAM_ENV. Only the
+  compiler needs it: the value is not baked into the jar, which reads TRAM_ENV
+  again when it runs."
+  (or (System/getProperty "TRAM_ENV") (System/getenv "TRAM_ENV") "development"))
+
+(defn clean [_]
+  (b/delete {:path "target"}))
+
+(defn uber [_]
+  (clean nil)
+  (b/copy-dir {:src-dirs   ["src" "resources"]
+               :target-dir class-dir})
+  (b/compile-clj {:basis      basis
+                  :ns-compile '[tram-docs.core]
+                  :class-dir  class-dir
+                  :java-opts  [(str "-DTRAM_ENV=" tram-env)]})
+  (b/uber {:class-dir class-dir
+           :uber-file uber-file
+           :basis     basis
+           :main      'tram-docs.core}))
