@@ -3,6 +3,7 @@
             [reitit.ring :as ring]
             [tram-docs.concerns.http :refer [as-full-page]]
             [tram-docs.config :as sys]
+            [tram-docs.handlers.examples-handlers :as examples.handlers]
             [tram-docs.handlers.welcome-handlers :as welcome.handlers]
             [tram-docs.views.welcome-views]
             [tram.routes :refer [tram-router] :as tr]))
@@ -15,6 +16,7 @@
     {:name    :route/healthcheck
      :handler (constantly {:status 200
                            :body   "Alive."})}]
+   ["/rhizome" examples.handlers/routes]
    welcome.handlers/routes])
 
 (defmethod ig/init-key ::sys/router
