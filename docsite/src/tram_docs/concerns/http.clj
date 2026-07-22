@@ -9,8 +9,9 @@
     [:head
      [:title title]
 
-     [:link {:rel  :stylesheet
-             :href "/assets/index.css"}]
-     (tr/csrf-meta-tag)]
+     [:script {:src "/assets/js/rhizome.js"}]
+
+     #_[:link {:rel  :stylesheet
+               :href "/assets/index.css"}]]
     [:body
      body]]))

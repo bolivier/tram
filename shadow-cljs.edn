@@ -1,0 +1,10 @@
+{:builds
+ {:docsite {:js-options {:resolve {"idiomorph" {:file "vendor/idiomorph.esm.js"
+                                                :target :file}
+                                   "process"   {:global "process"
+                                                :target :global}}}
+            :modules    {:rhizome {:init-fn rhizome.core/init}}
+            :output-dir "docsite/resources/public/js"
+            :target     :browser}}
+
+ :deps {:aliases [:cljs]}}

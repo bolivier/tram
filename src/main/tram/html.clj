@@ -1,16 +1,14 @@
 (ns tram.html
   "Functions for dealing with html and hiccup."
-  (:require
-   [clojure.string :as str]
-   [clojure.walk :refer [prewalk]]
-   [huff2.core :as h]
-   [muuntaja.format.core :as mfc]
-   [reitit.core :as r]
-   [ring.util.codec :refer [form-decode url-encode]]
-   [tram.logging :as log]
-   [tram.vars :refer [*req*]])
-  (:import
-   (java.io OutputStream)))
+  (:require [clojure.string :as str]
+            [clojure.walk :refer [prewalk]]
+            [muuntaja.format.core :as mfc]
+            [reitit.core :as r]
+            [rhizome.html :as h]
+            [ring.util.codec :refer [form-decode url-encode]]
+            [tram.logging :as log]
+            [tram.vars :refer [*req*]])
+  (:import (java.io OutputStream)))
 
 (defn ->query
   "`q` is a scalar to be prepared for a query string."

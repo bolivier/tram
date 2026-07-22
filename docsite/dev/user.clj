@@ -6,7 +6,7 @@
             [tram-docs.core]))
 
 (ir/set-prep! #(ig/prep c/system))
-(set-refresh-dirs "src" "dev" "test")
+(set-refresh-dirs "src" "dev" "test" "../../src/")
 
 (defn restart []
   (reset))
