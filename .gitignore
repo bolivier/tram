@@ -1,6 +1,7 @@
 .clj-kondo/.cache
 .lsp
 .cpcache
+.shadow-cljs
 /.nrepl-port
 /tram-daemon.log
 .postgres
