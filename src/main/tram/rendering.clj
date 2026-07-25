@@ -13,7 +13,7 @@
             [malli.error :as me]
             [reitit.core :as r]
             [tram.html :as tram.html]
-            [tram.impl.http :refer [html-request? htmx-request?]]
+            [tram.impl.http :refer [html-request? rhizome-request?]]
             [tram.rendering.template-renderer :as renderer]
             [tram.vars :refer [*current-user* *req* *res*]]))
 
@@ -36,7 +36,7 @@
 (defn wrap-page-interceptor
   "Wraps the returned html in a full html page (if it should).
 
-  Does nothing if the current request is via htmx, or if it is an assets
+  Does nothing if the current request is via rhizome, or if it is an assets
   request.
 
   `full-page-renderer` is the component for your full html page. It should
@@ -46,11 +46,11 @@
   {:name  :tram/wrap-page
    :must-run-after [:tram/format]
    :leave (fn [ctx]
-            (let [req       (:request ctx)
-                  html?     (html-request? req)
-                  htmx?     (htmx-request? req)
-                  resource? (str/starts-with? (:uri req) "/assets")
-                  needs-full-page? (and html? (not htmx?) (not resource?))]
+            (let [req              (:request ctx)
+                  html?            (html-request? req)
+                  rhizome?         (rhizome-request? req)
+                  resource?        (str/starts-with? (:uri req) "/assets")
+                  needs-full-page? (and html? (not rhizome?) (not resource?))]
               (update-in ctx
                          [:response :body]
                          (fn [body]

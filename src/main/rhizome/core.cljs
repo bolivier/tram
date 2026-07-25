@@ -118,13 +118,21 @@
                         [:form])]
         (get-body el spec))))
 
+(def request-header
+  "Header rhizome sets on every request it drives, so the server can tell a
+  rhizome fetch apart from a full page load and answer with a fragment instead
+  of a whole page."
+  "rhizome-request")
+
 (defn execute-http [el
                     {:keys [http/method http/url event]
                      :as   cmd}]
   (when event
     (.preventDefault event)
     (.stopPropagation event))
-  (p/let [resp (js/fetch url #js {:method (str/upper-case (name method))})]
+  (p/let [resp (js/fetch url
+                         #js {:method  (str/upper-case (name method))
+                              :headers (js-obj request-header "true")})]
     (let [content-type (.get (.-headers resp) "content-type")]
       (cond
         (re-find #"text/html" content-type)

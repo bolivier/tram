@@ -9,8 +9,11 @@
 (defn htmx-request? [req]
   (some? (get-in req [:headers "hx-request"])))
 
-(defn boosted-request? [req]
-  (some? (get-in req [:headers "hx-boosted"])))
+(defn rhizome-request?
+  "True when the rhizome runtime drove this request, rather than the browser
+  loading a page. Rhizome sets the header on every fetch it makes."
+  [req]
+  (some? (get-in req [:headers "rhizome-request"])))
 
 (defn html-request? [req]
   (str/starts-with? (get-in req [:headers "accept"] "") "text/html"))

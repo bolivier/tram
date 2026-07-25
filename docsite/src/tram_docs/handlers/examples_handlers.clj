@@ -27,6 +27,7 @@
 
 (tr/defroutes routes
   ["/examples"
+   {:layout v/layout}
    ["/counter"
     [""
      {:name :route/examples.counter

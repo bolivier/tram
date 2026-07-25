@@ -95,8 +95,8 @@
         layout-fn (sut/make-root-layout-fn ctx)]
     (is (= 4 (layout-fn 1)))))
 
-(deftest layout-is-not-applied-to-htmx-req
-  (let [ctx       {:request (rt.req/htmx-request {})
+(deftest layout-is-not-applied-to-rhizome-req
+  (let [ctx       {:request (rt.req/rhizome-request {})
                    :layouts [(fn [body] (* 2 body)) (fn [body] (inc body))]}
         layout-fn (sut/make-root-layout-fn ctx)]
     (is (= 1 (layout-fn 1)))))

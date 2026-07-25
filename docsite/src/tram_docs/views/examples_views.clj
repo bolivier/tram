@@ -23,3 +23,12 @@
                   :ident    [:this]}}
    [global-button global-count]
    [user-button user-count]])
+
+(defn layout [children]
+  [:main#main
+   [:aside#examples-sidebar
+    [:ul
+     [:li
+      [:a {:href :route/examples.counter}
+       "Counter"]]]]
+   [:section#examples-content children]])

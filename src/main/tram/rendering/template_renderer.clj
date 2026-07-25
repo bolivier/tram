@@ -9,7 +9,7 @@
   Views are resolved per request rather than when the route is compiled, so a
   view written or edited after its route still renders."
   (:require [reitit.core :as r]
-            [tram.impl.http :refer [boosted-request? htmx-request?]]
+            [tram.impl.http :refer [rhizome-request?]]
             [tram.language :as lang]))
 
 (defn- handler-ns
@@ -74,10 +74,7 @@
   (get-view-fn [_ _] nil))
 
 (defn uses-layout? [req]
-  (cond
-    (boosted-request? req) true
-    (htmx-request? req)    false
-    :else                  true))
+  (not (rhizome-request? req)))
 
 (defn make-root-layout-fn [ctx]
   (if (uses-layout? (:request ctx))

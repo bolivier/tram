@@ -159,27 +159,25 @@
    \< "&lt;"
    \> "&gt;"
    \" "&quot;"
-   \\ "&#39;"})
+   \' "&#39;"})
 
 (defn maybe-escape-html
   "1. Change special characters into HTML character entities when *escape?*
    2. call `append!` on the maybe-transformed text value"
   [append! text]
-  (if (map? text)
-    (append! (str text))
-    (let [text-str (stringify text)]
-      (if (or (not *escape?*)
-              (raw-string? text))
-        (append! text-str)
-        (let [some-replacement? (some char->replacement
-                                      text-str)]
-          (if some-replacement?
-            (let [s (into []
-                          text-str)]
-              (doseq [c s]
-                (append! (char->replacement c
-                                            c))))
-            (append! text-str)))))))
+  (let [text-str (stringify text)]
+    (if (or (not *escape?*)
+            (raw-string? text))
+      (append! text-str)
+      (let [some-replacement? (some char->replacement
+                                    text-str)]
+        (if some-replacement?
+          (let [s (into []
+                        text-str)]
+            (doseq [c s]
+              (append! (char->replacement c
+                                          c))))
+          (append! text-str))))))
 
 (defmulti emit
   (fn [_append! form _opts] (:key form)))

@@ -1,8 +1,10 @@
 (ns tram.html-test
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [matcher-combinators.test]
             [muuntaja.format.core :as mfc]
+            [rhizome.html :as h]
             [tram.html :as sut]
             [tram.test-fixtures :refer [sample-router]]
             [tram.vars :refer [*req*]]))
@@ -56,3 +58,28 @@
             (mfc/encode-to-output-stream encoder [:div "hello"] "UTF-8")]
         (encode-fn baos))
       (is (str/includes? (.toString baos "UTF-8") "<div>")))))
+
+(def ^:private entity->char
+  {"&quot;" "\""
+   "&#39;"  "'"
+   "&lt;"   "<"
+   "&gt;"   ">"
+   "&amp;"  "&"})
+
+(defn- decode-entities
+  "What a browser hands back from `getAttribute`, so a test can read the command
+  map the rhizome runtime would see."
+  [s]
+  (reduce-kv str/replace s entity->char))
+
+(deftest rhizome-command-attribute-survives-the-browser-test
+  (let [command   {:op          :dom/morph
+                   :on          :event/click
+                   :http/url    "/counter"
+                   :dom/content "say \"hi\""
+                   :ident       [:closest "[data-panel]"]}
+        rendered  (str (h/html [:button {:rhizome.core/on command}]))
+        attribute (second (re-find #"rhizome_core___on=\"([^\"]*)\"" rendered))]
+    (is (not (str/includes? attribute "\""))
+        "a raw quote ends the attribute early, truncating the command")
+    (is (= command (edn/read-string (decode-entities attribute))))))

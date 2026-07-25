@@ -13,6 +13,11 @@
   (is (not (sut/htmx-request? {:headers {}})))
   (is (sut/htmx-request? {:headers {"hx-request" "true"}})))
 
+(deftest rhizome-request?
+  (is (not (sut/rhizome-request? {:headers {}})))
+  (is (not (sut/rhizome-request? {:headers {"hx-request" "true"}})))
+  (is (sut/rhizome-request? {:headers {"rhizome-request" "true"}})))
+
 (deftest redirect-static-route-test
   (is (match? {:status  301
                :headers {"hx-redirect" [:tram.html/make :route/login {}]}}
