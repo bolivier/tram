@@ -1,0 +1,148 @@
+/* Preflight */
+*,
+::after,
+::before,
+::backdrop,
+::file-selector-button {
+    margin: 0;
+    padding: 0;
+}
+
+*,
+::after,
+::before,
+::backdrop,
+::file-selector-button {
+    box-sizing: border-box;
+    border: 0 solid;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+ol,
+ul,
+menu {
+    list-style: none;
+}
+
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+    display: block;
+    vertical-align: middle;
+}
+
+img,
+video {
+    max-width: 100%;
+    height: auto;
+}
+
+/* End Preflight */
+
+:root {
+    --border-default: 1px solid black;
+    --sidebar-width: 24rem;
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+
+    /* Theme Colors */
+
+    /* Base */
+    --bg: oklch(97% 0.015 100);
+    --surface: oklch(100% 0 0);
+    --text: oklch(22% 0.02 250);
+    --text-muted: oklch(48% 0.015 250);
+
+    /* Brand */
+    --primary: oklch(68% 0.18 150);
+
+    /* Accents */
+    --secondary: oklch(74% 0.16 70); /* warm yellow */
+    --accent: oklch(70% 0.17 250); /* playful blue */
+    --danger: oklch(66% 0.2 25); /* coral red */
+
+    /* UI */
+    --border: oklch(22% 0.02 250);
+    --shadow: oklch(22% 0.02 250);
+
+    /* Text on colored surfaces */
+    --text-on-primary: oklch(98% 0 0);
+    --text-on-secondary: oklch(22% 0.02 250);
+    --text-on-danger: oklch(98% 0 0);
+
+    /* Shadow geometry */
+    --shadow-sm: 2px 2px 0 0 var(--shadow);
+    --shadow-md: 4px 4px 0 0 var(--shadow);
+    --shadow-lg: 6px 6px 0 0 var(--shadow);
+    --shadow-xl: 8px 8px 0 0 var(--shadow);
+}
+
+.debug {
+    border: solid 1px red;
+}
+
+body {
+    background: var(--bg);
+    text: var(--text);
+}
+
+nav {
+    min-height: var(--text-2xl);
+    min-width: 100%;
+    border-bottom: var(--border-default);
+}
+
+.btn {
+    padding: 0.5rem;
+    border: 3px solid var(--border);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+
+    /* &:hover { */
+    /*     transform: translate(2px, 2px); */
+    /*     box-shadow: var(--shadow-sm); */
+    /* } */
+
+    &:active {
+        transform: translate(4px, 4px);
+        box-shadow: none;
+    }
+
+    &.primary {
+        background-color: var(--primary);
+        color: var(--text-on-primary);
+    }
+}
+
+#examples-sidebar {
+    position: fixed;
+    width: var(--sidebar-width);
+    height: 100vh;
+    border-right: 1px solid var(--border);
+}
+
+#examples-content {
+    padding-left: calc(var(--sidebar-width) + 0.5rem);
+}
+
+.nav-title {
+    font-size: var(--text-2xl);
+}
