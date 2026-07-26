@@ -1,7 +1,7 @@
 (ns tram.html-test
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [matcher-combinators.test]
             [muuntaja.format.core :as mfc]
             [rhizome.html :as h]
@@ -58,6 +58,18 @@
             (mfc/encode-to-output-stream encoder [:div "hello"] "UTF-8")]
         (encode-fn baos))
       (is (str/includes? (.toString baos "UTF-8") "<div>")))))
+
+(deftest encode-rhizome-attributes-test
+  (binding [*req* {:reitit.core/router sample-router}]
+    (let
+      [encoder (sut/huff-html-encoder nil)
+       hiccup [:button {:rhizome.core/on {:http/url :route/dashboard}}]
+       expected
+       "<button rhizome_core___on=\"{:http/url &quot;/dashboard&quot;}\"></button>"
+
+       output (String. (mfc/encode-to-bytes encoder hiccup "UTF-8"))]
+      (is (= expected output)))))
+
 
 (def ^:private entity->char
   {"&quot;" "\""

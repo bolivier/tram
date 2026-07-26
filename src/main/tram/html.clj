@@ -93,41 +93,46 @@
 
     :else node))
 
+;; Not the best extension mechanism, per-keyword.
+;; Need to figure out if I wanna do something like attr-mapper or no.
+(defmethod h/emit-attr :rhizome.core/on
+  [append! key value]
+  (append! (h/stringify key) "=\"")
+  (binding [*print-namespace-maps* false]
+    (h/maybe-escape-html
+      append!
+      (pr-str
+        (if *req*
+          (let [router   (:reitit.core/router *req*)
+                expander (partial route-name-expander
+                                  router)
+                mapper   (fn [v]
+                           (prewalk expander
+                                    v))]
+            (mapper value))
+          (do (log/event!
+                ::processing-rz-on-without-reqn
+                {:data {:message
+                        "Could not find *req* while processing :rhizome.core/on"
+
+                        :key key
+                        :value value}})
+              value)))))
+  (append! "\""))
+
 (defn huff-html-encoder [_]
   (reify
     mfc/EncodeToBytes
     (encode-to-bytes [_ data charset]
-      (assert *req* "*req* MUST be bound in encoder")
-      (let [router   (:reitit.core/router *req*)
-            _ (assert router "router is required in encoder")
-            expander (partial route-name-expander router)
-            mapper   (fn [[k v]] [k
-                                  (if (coll? v)
-                                    (prewalk expander
-                                             v)
-                                    (expander v))])]
-        (.getBytes (str (h/html {:allow-raw   true
-                                 :attr-mapper mapper}
-                                data))
-                   ^String charset)))
+      (.getBytes (str (h/html {:allow-raw true} data)) ^String charset))
 
     mfc/EncodeToOutputStream
     (encode-to-output-stream [_ data charset]
       (fn [^OutputStream output-stream]
-        (let [router   (:reitit.core/router *req*)
-              _ (assert router "router is required in encoder")
-              expander (partial route-name-expander router)
-              mapper   (fn [[k v]] [k
-                                    (if (coll? v)
-                                      (prewalk expander
-                                               v)
-                                      (expander v))])]
-          (.write output-stream
-                  (.getBytes (str (h/html {:allow-raw   true
-                                           :attr-mapper mapper}
-                                          data))
-                             ^String charset))
-          (.flush output-stream))))))
+        (.write output-stream
+                (.getBytes (str (h/html {:allow-raw true} data))
+                           ^String charset))
+        (.flush output-stream)))))
 
 (defn form-decoder [_]
   (reify
