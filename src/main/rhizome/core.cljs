@@ -124,41 +124,52 @@
   of a whole page."
   "rhizome-request")
 
+(defn fetch [{:keys [url method :body headers]
+              :as   fetch-args}]
+  (let [params (cond-> {:method (str/upper-case (name method))}
+                 (not= :get method) (assoc :body (str body))
+                 true (assoc :headers
+                        (merge {request-header "true"
+                                :content-type  "application/edn"}
+                               headers)))]
+    (js/fetch url (clj->js params))))
+
 (defn execute-http [el
                     {:keys [http/method http/url event]
                      :as   cmd}]
   (when event
     (.preventDefault event)
     (.stopPropagation event))
-  (p/let [resp (js/fetch url
-                         #js {:method  (str/upper-case (name method))
-                              :headers (js-obj request-header "true")})]
-    (let [content-type (.get (.-headers resp) "content-type")]
-      (cond
-        (re-find #"text/html" content-type)
-        (p/let [body (.text resp)]
-          (execute el
-                   (merge cmd
-                          {:op :dom/morph
-                           :dom/content body})))
+  (p/catch (p/let [resp (fetch {:url    url
+                                :method method
+                                :body   (resolve-body el nil)})]
+             (let [content-type (.get (.-headers resp) "content-type")]
+               (cond
+                 (re-find #"text/html" content-type)
+                 (p/let [body (.text resp)]
+                   (execute el
+                            (merge cmd
+                                   {:op :dom/morph
+                                    :dom/content body})))
 
-        #_(= content-type "text/event-stream")
-        #_(let [body   (.-body resp)
-                reader (.getReader body)]
-            (p/loop []
-              (p/let [chunk (.read reader)]
-                (if (.-done chunk)
-                  nil
-                  (let [value (decode-chunk chunk)]
-                    (when (= (:event value) 'rhizome-patch-element)
-                      (doseq [html (get-in value
-                                           [:data :elements])]
-                        (execute el
-                                 (merge cmd
-                                        {:op          :dom/morph
-                                         :ident       nil
-                                         :dom/content html}))))
-                    (p/recur))))))))))
+                 #_(= content-type "text/event-stream")
+                 #_(let [body   (.-body resp)
+                         reader (.getReader body)]
+                     (p/loop []
+                       (p/let [chunk (.read reader)]
+                         (if (.-done chunk)
+                           nil
+                           (let [value (decode-chunk chunk)]
+                             (when (= (:event value) 'rhizome-patch-element)
+                               (doseq [html (get-in value
+                                                    [:data :elements])]
+                                 (execute el
+                                          (merge cmd
+                                                 {:op          :dom/morph
+                                                  :ident       nil
+                                                  :dom/content html}))))
+                             (p/recur)))))))))
+    (fn [err] (js/console.log err))))
 
 (defmethod execute :http/get
   [el cmd]
@@ -231,7 +242,7 @@
   [_ {:keys [op]}]
   (println "noop on rhizome.core/execute - not implemented for value " op))
 
-(def get-event
+(def events
   "Map of rhizome event keywords to native DOM event-type strings passed to
   `addEventListener`."
   {;; mouse
@@ -267,6 +278,32 @@
    :event/scroll      "scroll"
    :event/resize      "resize"
    :event/load        "load"})
+
+(defn get-inferred-event [el]
+  (let [event (case (.-tagName el)
+                "BUTTON"   :event/click
+                "FORM"     :event/submit
+                "SELECT"   :event/change
+                "TEXTAREA" :event/input
+                "A"        :event/click
+                "INPUT"    (case (.-type el)
+                             "button"   :event/click
+                             "submit"   :event/click
+                             "checkbox" :event/change
+                             "radio"    :event/change
+                             "text"     :event/input
+                             "search"   :event/input
+                             "email"    :event/input
+                             "number"   :event/input
+                             :event/change)
+                :event/click)]
+    (get events event)))
+
+(defn get-event [event-kw el]
+  (if event-kw
+    (get events
+         event-kw)
+    (get-inferred-event el)))
 
 (defn extract-command [el]
   (when-let [command (.getAttribute el "rhizome_core___on")]
@@ -313,7 +350,8 @@
                    "rhizomeWired"
                    true)
     (let [command (extract-command el)]
-      (if-let [event-type (get-event (:on command))]
+      (if-let [event-type (get-event (:on command)
+                                     el)]
         (let [filterer (fn [e]
                          (let [filters      (:op/filters config)
                                filter-preds (select-keys filters

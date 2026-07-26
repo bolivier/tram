@@ -111,13 +111,28 @@
                                     v))]
             (mapper value))
           (do (log/event!
-                ::processing-rz-on-without-reqn
+                ::processing-rz-on-without-req
                 {:data {:message
                         "Could not find *req* while processing :rhizome.core/on"
 
                         :key key
                         :value value}})
               value)))))
+  (append! "\""))
+
+(defmethod h/emit-attr :href
+  [append! key value]
+  (append! (h/stringify key) "=\"")
+  (append! (if *req*
+             (let [router (:reitit.core/router *req*)]
+               (route-name-expander router
+                                    value))
+             (do (log/event!
+                   ::processing-href-without-req
+                   {:data
+                    {:message "Could not find *req* while processing :href"
+                     :value   value}})
+                 value)))
   (append! "\""))
 
 (defn huff-html-encoder [_]

@@ -14,7 +14,7 @@
      [:link {:rel  :stylesheet
              :href "/assets/css/index.css"}]
 
-     #_[:link {:rel  :stylesheet
-               :href "/assets/index.css"}]]
+     [:link {:rel  :stylesheet
+             :href "/assets/index.css"}]]
     [:body
      body]]))
