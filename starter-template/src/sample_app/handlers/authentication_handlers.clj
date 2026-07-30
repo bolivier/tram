@@ -19,7 +19,7 @@
                                     :route/dashboard)
                           (:id session)))
     {:status 422
-     :body   (views/sign-up-form-error)}))
+     :hiccup (views/sign-up-form-error)}))
 
 (defn submit-sign-in-form-handler [req]
   (let [{:keys [email password]} (get-in req [:parameters :body])]
@@ -30,7 +30,7 @@
                                       :route/dashboard)
                             (:id session)))
       {:status 422
-       :body   (views/sign-in-form-error)})))
+       :hiccup (views/sign-in-form-error)})))
 
 (defn log-out-handler [req]
   (let [{:keys [session-id]} (get-cookie-value req)]

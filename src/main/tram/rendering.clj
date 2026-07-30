@@ -36,8 +36,8 @@
 (defn wrap-page-interceptor
   "Wraps the returned html in a full html page (if it should).
 
-  Does nothing if the current request is via rhizome, or if it is an assets
-  request.
+  Does nothing if the current request is via rhizome, if it is an assets
+  request, or if the handler set `:body` itself and so owns the whole response.
 
   `full-page-renderer` is the component for your full html page. It should
   render <head> and any other meta tags a full page reload would need for your
@@ -50,7 +50,10 @@
                   html?            (html-request? req)
                   rhizome?         (rhizome-request? req)
                   resource?        (str/starts-with? (:uri req) "/assets")
-                  needs-full-page? (and html? (not rhizome?) (not resource?))]
+                  needs-full-page? (and html?
+                                        (not rhizome?)
+                                        (not resource?)
+                                        (renderer/rendered? (:response ctx)))]
               (update-in ctx
                          [:response :body]
                          (fn [body]

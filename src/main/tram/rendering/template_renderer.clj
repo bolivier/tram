@@ -8,7 +8,10 @@
 
   Views are resolved per request rather than when the route is compiled, so a
   view written or edited after its route still renders."
-  (:require [reitit.core :as r]
+  (:require [malli.core :as m]
+            [malli.error :as me]
+            [reitit.core :as r]
+            [rhizome.html :as h]
             [tram.impl.http :refer [rhizome-request?]]
             [tram.language :as lang]))
 
@@ -94,30 +97,86 @@
                (get-in ctx [:request :request-method])
                :template])))
 
+(def ^:private content-key?
+  #{:hiccup :html :body})
+
+(def response-content-schema
+  "The mutually exclusive ways a handler hands content back.
+
+  `:hiccup` is a tree to render, escaped as data. `:html` is finished markup
+  emitted verbatim — from a markdown renderer, a cache, another template engine
+  — and still wrapped in the layout, so it is a fragment rather than a document.
+  `:body` is a Ring body the handler produced itself and owns outright.
+
+  A response with none of them — including no response at all — resolves a
+  `:template` instead."
+  [:maybe
+   [:and
+    [:map
+     [:hiccup {:optional true}
+      :any]
+     [:html {:optional true}
+      :string]
+     [:body {:optional true}
+      :any]]
+    [:fn {:error/message "only one of :hiccup, :html, or :body may be set"}
+     (fn [response] (>= 1 (count (filter content-key? (keys response)))))]]])
+
+(defn- validate-content! [uri response]
+  (when-not (m/validate response-content-schema
+                        response)
+    (throw (ex-info (str "Route (" uri
+                         ") returned an invalid response: "
+                         (me/humanize (m/explain response-content-schema
+                                                 response)))
+                    {:error    :invalid-response-content
+                     :uri      uri
+                     :response response}))))
+
+(defn owns-body?
+  "A handler that set `:body` produced the bytes itself — a stream, a file, a
+  string from another renderer — so rendering and page wrapping both step
+  aside and it reaches the client untouched."
+  [response]
+  (contains? response :body))
+
+(defn rendered?
+  "True once `render` has built a body from `:hiccup`, `:html`, or a template.
+  Page wrapping applies only to what the renderer made."
+  [response]
+  (contains? response ::rendered))
+
+(defn- content-view-fn
+  "A view fn for content the handler returned directly, or nil when it returned
+  none and a template must be resolved."
+  [response]
+  (cond
+    (contains? response :hiccup) (constantly (:hiccup response))
+    (contains? response :html)   (constantly (h/raw-string (:html response)))))
+
 (defn render
   "Renders a template."
   [ctx]
   (let [{:keys [request response]} ctx
-        {:keys [locals]} response
-        template         (effective-template ctx)
-        view-fn          (if-let [body (:body response)]
-                           (constantly body)
-                           (get-view-fn template ctx))]
-    (if-not view-fn
-      (throw
-        (ex-info
-          (str
-            "Route ("
-            (:uri request)
-            ") does not have a valid template.
-
-Expected to find template called `"
-            (get-name template ctx)
-            "` at: "
-            (get-namespace template ctx))
-          {:error         :no-template
-           :uri           (:uri request)
-           :template      template
-           :template-name (get-name template ctx)}))
-      (let [layout-fn (make-root-layout-fn ctx)]
-        (assoc-in ctx [:response :body] (layout-fn (view-fn locals)))))))
+        {:keys [locals]} response]
+    (validate-content! (:uri request) response)
+    (if (owns-body? response)
+      ctx
+      (let [template (effective-template ctx)
+            view-fn  (or (content-view-fn response)
+                         (get-view-fn template
+                                      ctx))]
+        (if-not view-fn
+          (throw (ex-info (format "Route (%s) does not have a valid template."
+                                  (:uri request))
+                          {:error :missing-template
+                           :uri (:uri request)
+                           :expected-template-ns (get-namespace template
+                                                                ctx)
+                           :expected-template-name (get-name template
+                                                             ctx)}))
+          (let [layout-fn (make-root-layout-fn ctx)]
+            (update ctx
+                    :response  assoc
+                    :body      (layout-fn (view-fn locals))
+                    ::rendered true)))))))
