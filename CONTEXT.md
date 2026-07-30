@@ -61,11 +61,24 @@ _Avoid_: props, assigns, model, context
 **layout**:
 A fn from hiccup to hiccup, declared on a route and applied around its view's
 output. Layouts stack: each layout on the path down the route tree wraps the ones
-below it. A layout is itself a view.
-_Avoid_: wrapper, chrome, page — that name belongs to the app-scoped one
+below it. A layout is named by a `:view/` keyword and lives alongside views, but
+it is not a view: its argument is the hiccup it wraps, not locals.
+_Avoid_: wrapper, chrome, page — a page is a kind of response, not a wrapper
 
 **page**:
-The fn that turns a body of hiccup into a complete html document. An application
-has one and gives it to the render concern-group. It runs on a full page load,
-not when a response replaces part of a page already on screen.
-_Avoid_: layout, page-wrapper, full-page-renderer, shell, root
+A response that carries a complete html document — html, head, meta, and body.
+It replaces the whole document. An application supplies one fn to build a page
+and gives it to the render concern-group.
+_Avoid_: full page, document, shell, root, page-wrapper, full-page-renderer
+
+**partial**:
+A response that carries html fragments instead of a document. Each top-level
+element replaces the element on screen with the same id, so one partial can
+update several targets at once. A partial gets no layout and no page around it,
+because both are already on screen.
+_Avoid_: fragment, snippet, chunk, swap
+
+Page and partial are the two kinds of response a view can produce, and they
+differ only in that rule: a page gets its layouts and its page fn, a partial gets
+neither. The rhizome runtime asks for partials; a browser page load asks for a
+page.
