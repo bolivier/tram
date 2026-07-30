@@ -16,13 +16,13 @@
 (defn click-global [req]
   (swap! global inc)
   {:status 200
-   :body   [:<> [v/global-button @global]]})
+   :hiccup [:<> [v/global-button @global]]})
 
 (defn click-user [req]
   (swap! user inc)
   (swap! global inc)
   {:status 200
-   :body   [:<>
+   :hiccup [:<>
             [v/user-button @user]
             [v/global-button @global]]})
 

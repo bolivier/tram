@@ -29,7 +29,8 @@
            :build     {:extra-deps {io.github.clojure/tools.build {:mvn/version
                                                                    "0.9.6"}}
                        :ns-default build}}
- :deps    {bolivier/tram          {:local/root ".."}
-           org.clojure/clojure    {:mvn/version "1.12.0"}
-           org.xerial/sqlite-jdbc {:mvn/version "3.47.1.0"}}
+ :deps    {bolivier/tram             {:local/root ".."}
+           markdown-clj/markdown-clj {:mvn/version "1.12.8"}
+           org.clojure/clojure       {:mvn/version "1.12.0"}
+           org.xerial/sqlite-jdbc    {:mvn/version "3.47.1.0"}}
  :paths   ["src" "resources"]}

@@ -4,6 +4,7 @@
             [tram-docs.concerns.http :refer [as-full-page]]
             [tram-docs.config :as sys]
             [tram-docs.handlers.examples-handlers :as examples.handlers]
+            [tram-docs.handlers.markdown-doc-handlers :as md-docs.handlers]
             [tram-docs.handlers.welcome-handlers :as welcome.handlers]
             [tram-docs.views.welcome-views]
             [tram.routes :refer [tram-router] :as tr]))
@@ -16,6 +17,7 @@
     {:name    :route/healthcheck
      :handler (constantly {:status 200
                            :body   "Alive."})}]
+   md-docs.handlers/routes
    ["/rhizome" examples.handlers/routes]
    welcome.handlers/routes])
 
