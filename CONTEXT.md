@@ -27,8 +27,8 @@ concerns such as security headers later.
 _Avoid_: auth (authentication is application-owned and sits outside this group)
 
 **render**:
-The concern-group turning a handler's returned template or hiccup into a
-response body — view resolution, layout wrapping, and route-reference expansion.
+The concern-group turning a handler's response into a response body — view
+resolution, layout and page wrapping, and route-reference expansion.
 _Avoid_: view, output
 
 **must-run-after**:
@@ -36,3 +36,36 @@ An ordering dependency declared on an interceptor, naming the interceptors that
 must be present and earlier in the chain for it to work. Its absence means the
 interceptor has no ordering requirement.
 _Avoid_: priority, weight, ordinal
+
+### Rendering
+
+**handler**:
+A fn from a request to a response. It supplies the locals its view renders with.
+It may also name a view other than the one its route declares.
+_Avoid_: controller, action, endpoint
+
+**view**:
+A fn from locals to hiccup. It produces the content of a response. A view lives
+in a `*.views.*` namespace and is named by a `:view/` keyword. A route may name a
+view where it would name a handler; Tram then supplies the handler.
+_Avoid_: template — Selmer owns that word here, and the CLI uses it for the
+new-app scaffold. Also avoid partial, component.
+
+**locals**:
+The map a view is called with. A handler supplies it on its response. A view a
+route names directly has no handler to supply them, so it receives an empty map.
+Locals are the only per-request data a view takes as an argument; it reads
+everything else from dynamic vars.
+_Avoid_: props, assigns, model, context
+
+**layout**:
+A fn from hiccup to hiccup, declared on a route and applied around its view's
+output. Layouts stack: each layout on the path down the route tree wraps the ones
+below it. A layout is itself a view.
+_Avoid_: wrapper, chrome, page — that name belongs to the app-scoped one
+
+**page**:
+The fn that turns a body of hiccup into a complete html document. An application
+has one and gives it to the render concern-group. It runs on a full page load,
+not when a response replaces part of a page already on screen.
+_Avoid_: layout, page-wrapper, full-page-renderer, shell, root
