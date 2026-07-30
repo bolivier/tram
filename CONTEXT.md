@@ -82,3 +82,51 @@ Page and partial are the two kinds of response a view can produce, and they
 differ only in that rule: a page gets its layouts and its page fn, a partial gets
 neither. The rhizome runtime asks for partials; a browser page load asks for a
 page.
+
+### Rhizome
+
+**directive**:
+The edn map on an element that tells rhizome what to do. It lives in the
+`::rz/do` attribute, which renders as `rhizome_core___do`. A directive names one
+command and carries that command's arguments and its trigger. An element holds at
+most one directive.
+_Avoid_: command (that names the verb inside a directive), binding, action,
+handler, rhizome-on
+
+**command**:
+The verb a directive names, under its `:command` key. A command is a namespaced
+keyword such as `:http/post` or `:dom/morph`. Rhizome ships a set of commands and
+an application registers its own.
+_Avoid_: op, operation, effect, action
+
+**command definition**:
+The map that registers one command. It carries the command's key, its lifecycle
+fns, and the schema its directive must satisfy.
+_Avoid_: handler, method, descriptor, spec (a spec here is a document in
+`docs/specs/`)
+
+**registry**:
+The map from command keyword to command definition. Rhizome ships a default
+registry and an application extends it before start.
+_Avoid_: config (the registry is one key inside the config), table, dispatch map
+
+**config**:
+The value rhizome starts with. It holds the registry, the directive attribute,
+and the error sink. An application builds one and hands it to `start!`.
+_Avoid_: options, settings, opts
+
+**trigger**:
+The dom event that runs a directive, named by its `:on` key. A directive without
+`:on` gets a trigger from its command, and failing that from its element's tag.
+_Avoid_: event. The dom event is the object the browser hands a command. The
+trigger is which one rhizome listens for.
+
+**mount**:
+To attach a directive to its element. Rhizome mounts every directive in the
+document at start, and mounts the directives in any subtree a morph adds.
+_Avoid_: wire, bind, hydrate, register, initialize
+
+**unmount**:
+To detach a directive from its element and release what the directive held.
+Rhizome unmounts a directive when its element leaves the page.
+_Avoid_: teardown, cleanup, destroy, dispose
