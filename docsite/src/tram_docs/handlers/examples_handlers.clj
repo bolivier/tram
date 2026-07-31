@@ -1,5 +1,6 @@
 (ns tram-docs.handlers.examples-handlers
   (:require [tram-docs.concerns.edit-row-example :as rowex]
+            [tram-docs.handlers.example-signal-handlers :as examples.signals]
             [tram-docs.views.examples-views :as v]
             [tram.routes :as tr]))
 
@@ -47,6 +48,7 @@
 (tr/defroutes routes
   ["/examples"
    {:layout v/layout}
+   examples.signals/routes
    ["/edit-row"
     [""
      {:name :route/examples.edit-row

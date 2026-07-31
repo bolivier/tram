@@ -1,0 +1,19 @@
+ #+title: Spec
+
+* Glossary
+- _Directive_: edn map specifying rhizome behavior (or vector of those maps).
+  May contain keys like `:do` or `:debounce 500`
+  `:do` is an abbreviation for *Directive Operation*
+- _Trigger_: key that maps to a directive in an html element.
+  These are named for events, either direct dom events, or abstract ones.
+- _Attribute_: key part of key-values stored on html elements
+- _Signal_: Piece of client state.
+  Signals are *reactive* state.
+  When a signal changes, any bound listeners update a computed expression.
+- _Register_: How to add new behavior.
+  Applies to allowed-expression-fns and directive operations.  
+- _Fragment_: an html partial; ie. not a full page
+- _Expressions_: Rhizome expressions are Clojure expressions.
+  They are quoted in the directive, and sent to the client.
+
+

@@ -120,6 +120,12 @@
               value)))))
   (append! "\""))
 
+(defmethod h/emit-attr :rhizome.core/text
+  [append! key value]
+  (append! (h/stringify key) "=\"")
+  (append! (str value))
+  (append! "\""))
+
 (defmethod h/emit-attr :href
   [append! key value]
   (append! (h/stringify key) "=\"")

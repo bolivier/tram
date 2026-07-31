@@ -9,7 +9,8 @@
     [:head
      [:title title]
 
-     [:script {:src "/assets/js/rhizome.js"}]
+     [:script {:defer true
+               :src   "/assets/js/rhizome.js"}]
 
      [:link {:rel  :stylesheet
              :href "/assets/css/index.css"}]

@@ -1,9 +1,41 @@
 (ns rhizome.core
-  "Public api of the rhizome client runtime: default-config, register,
-  start!, run!. Rebuilt from scratch per ADR-0005; the api lands with
-  phase 1 of docs/plans/rhizome-impl-plan.md.")
+  (:require [clojure.edn :as edn]
+            [rhizome.dom :as dom]
+            [rhizome.triggers :as triggers]))
 
-(defn init
-  "Entry point for the drop-in script and the docsite build. Becomes
-  (start! (default-config)) when phase 1 lands."
-  [])
+(defn mount!
+  ([]
+   (mount! js/document))
+  ([root]
+   (doseq [[trigger config] @triggers/registry]
+     (doseq [el (dom/query-selector-triggers root trigger)]
+       (when-not (unchecked-get el
+                                "rhizomeWired")
+         (unchecked-set el
+                        "rhizomeWired"
+                        true)
+         (let [{:keys [on-mount listener default-event]} config
+               directive (try
+                           (edn/read-string (get el
+                                                 trigger))
+                           (catch js/Error _
+                             (println "Could not parse edn"
+                                      (str get
+                                           el
+                                           trigger))
+                             nil))]
+           (when on-mount
+             (on-mount directive
+                       el))
+           (when default-event
+             (dom/add-event-listener el
+                                     default-event
+                                     (fn [e]
+                                       (listener e
+                                                 directive
+                                                 el))))))))))
+
+(defn init []
+  (triggers/register! triggers/bind)
+  (triggers/register! triggers/text)
+  (mount!))

@@ -270,7 +270,8 @@ nav {
         background-color: var(--bg);
         font-weight: 700;
 
-        td, th {
+        td,
+        th {
             padding: 0.625rem 0.75rem;
             border-top: 3px solid var(--border);
         }
@@ -283,7 +284,8 @@ nav {
     }
 
     &.compact {
-        th, td {
+        th,
+        td {
             padding: 0.3125rem 0.5rem;
         }
     }
@@ -291,7 +293,8 @@ nav {
     &.fixed {
         table-layout: fixed;
 
-        th, td {
+        th,
+        td {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -351,4 +354,29 @@ nav {
 
 .nav-title {
     font-size: var(--text-2xl);
+}
+
+.input {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border: 3px solid var(--border);
+    background-color: var(--surface);
+    font-size: var(--text-base);
+    font-weight: 700;
+    text-decoration: none;
+
+    &:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+    }
+}
+
+.signal-example-space {
+    margin-top: 2rem;
+    height: 8rem;
+    width: 20rem;
+    padding: 0.5rem 0.75rem;
+    border: 3px solid var(--border);
+    background-color: var(--surface);
+    font-size: var(--text-base);
 }

@@ -9,14 +9,11 @@
 (set-refresh-dirs "src" "dev" "test" "../../src/main")
 
 (defn restart []
+  (refresh-all)
   (reset))
 
 (comment
-  (refresh-all)
-  (go)
-  (halt)
-  (slurp "../../")
-  (reset)
+  (restart)
   nil)
 
 (comment
