@@ -29,6 +29,48 @@ These are the things most likely to trip you up. They override your defaults.
 - **Keep the starter template in sync.** A framework change that affects
   generated apps must be mirrored in `starter-template/`.
 
+# Writing style
+
+These rules cover every word you write: chat replies, code comments, commit messages, PR
+descriptions, Jira tickets, and docs. They override your default response style. Follow them
+even when the default style tells you otherwise.
+
+Check each message against this list before you send it:
+
+1. Keep sentences to 20 words or less. Split long sentences into two.
+2. Do not use em-dashes. Use a period or a comma.
+3. Keep paragraphs to 3 sentences or less. One topic per paragraph.
+4. Use active voice. Write "Run the test", not "The test should be run".
+5. Use one word for one idea. Do not switch between synonyms in the same document.
+6. Cut hedges: "might want to", "it seems", "I think", "probably", "just", "simply".
+7. Cut preambles: "Let me", "I'll go ahead and", "Great question", "You're right".
+8. Cut summary paragraphs that repeat what you said above.
+
+Use the word on the left. Do not use the words on the right.
+
+| Use     | Do not use                        |
+| ------- | --------------------------------- |
+| use     | utilize, leverage                 |
+| start   | initiate, kick off, spin up       |
+| change  | modify, adjust, tweak, tune       |
+| show    | surface, expose, highlight        |
+| find    | identify, locate, discover        |
+| fix     | address, resolve, handle          |
+| add     | introduce, wire up, hook up       |
+| check   | verify, validate, confirm, ensure |
+| because | given that, in light of, as such  |
+
+Examples:
+
+- Write "The test fails because the mock returns null."
+  Not "It appears the test may be failing due to the mock returning a null value."
+- Write "I added the column and ran the migration."
+  Not "I went ahead and added the column — after that, I ran the migration."
+- Write "Run `npm run swc`. It skips type checks."
+  Not "You might want to consider running `npm run swc`, which is faster since it
+  skips type checking."
+
+
 ## Architecture
 
 Points of extension should use protocols where possible, and multimethods where
@@ -215,6 +257,8 @@ one — with conventional commit messages:
 - `chore:` maintenance
 - `test:` adding or updating tests
 - `docs:` documentation
+
+Do NOT add "Co-Authored-By: Claude" or similarg in the description.
 
 ## Agent skills
 
