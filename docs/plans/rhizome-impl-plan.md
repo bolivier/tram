@@ -58,14 +58,32 @@ Tasks:
   `rhizome/mount.cljs`, plus empty files for later phases as they arrive. Add
   `rhizome/core/on.clj`, the empty jvm namespace that makes `::on/*` keywords
   resolve in server-side hiccup.
-- Add a cljs test build to `shadow-cljs.edn`. Use `:node-test` for pure
-  namespaces: registry, signals, expressions. Add a `:browser-test` build for
-  dom behaviour: mount, the observer, morph. Run it headless.
-- Add `bin/test-cljs` to invoke the test builds. Per the repo rule, the
-  invocation lives in a script, not in alias `:main-opts`.
+- Port the browser test harness from the old rhizome repo at `~/code/rhizome`.
+  It is proven and covers async tests, which shadow's own browser runner
+  cannot report on. The pieces:
+  - A `:wtr` shadow build, `:target :esm`, exporting `init` and `start`.
+  - The `rhizome.wtr` adapter, which resolves a promise from cljs.test's
+    `:end-run-tests` summary and feeds `sessionFinished` on @web/test-runner.
+  - `test-runner-index.html`, with the skip-completing flag that keeps the
+    browser open across hot reloads in manual mode.
+  - The msw fake server with ring-shaped handlers, so http commands run
+    against real `fetch` through a service worker.
+  - Test utils: `with-html`, the `eventually` assert-expr, `fire!`,
+    `fire-key!`, `type!`, and sinon fake timers scoped to `setTimeout`.
+- The harness needs npm in the framework repo: `@web/test-runner`,
+  `@web/test-runner-chrome`, `msw`, `sinon`, `shadow-cljs`. Add
+  `package.json`; run headless in CI, headed in manual mode.
+- One harness for all cljs tests. Pure namespaces, signals and expressions,
+  run in it too. A `:node-test` build is a later option if browser startup
+  becomes the slow part.
+- Add `bin/test-cljs` to invoke it. Per the repo rule, the invocation lives
+  in a script, not in alias `:main-opts`.
 
-Exit criteria: `bin/test-cljs` runs an empty suite green under node and
-headless browser.
+The old repo also holds prior art to read, not port: `signals.cljs` there
+couples the store to dom elements, the shape ADR-0007 rejects, and
+`event_stream.cljs` is a phase 9 reference.
+
+Exit criteria: `bin/test-cljs` runs an empty suite green in headless chrome.
 
 ## Phase 1: mount and the command registry
 
@@ -252,9 +270,11 @@ Exit criteria: a partial response can send the browser to a new url.
 Spec to write: `08-migration.md`. Executes the deletions ADR-0002 authorises.
 
 - **Distribution first.** A generated app needs a compiled `rhizome.js` and
-  has no cljs build. Produce an `:advanced` build as an artifact tram ships,
-  served from the generated app's resources. Nothing in the ADRs or specs
-  covers this today; it is the largest unplanned task in the migration.
+  has no cljs build. The old repo already solved this with a `:dist` shadow
+  build: a single self-initializing script released into `resources/`, which
+  sits on the consumer's classpath because tram is a dep. The app serves it
+  with no JS tooling of its own. Port that build; add a `bin/` script for the
+  release step and check the artifact freshness in CI.
 - Starter template: drop the unpkg `htmx.org` and `htmx-ext-response-targets`
   scripts, add rhizome.js, migrate the auth flow off `redirect` /
   `hx-redirect` onto navigation, and migrate its forms to signals.
