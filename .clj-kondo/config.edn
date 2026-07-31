@@ -1,5 +1,11 @@
 {:config-paths ["../resources/clj-kondo.exports/bolivier/tram"]
+ ;; `eventually` is a cljs.test/assert-expr extension (rhizome.macros), not a
+ ;; defined var — like matcher-combinators' match?, it's only valid as the head
+ ;; of an `is` form. Tell clj-kondo it's allowed there so it isn't "unknown".
+ :linters      {:unresolved-symbol {:exclude [(cljs.test/is [eventually])
+                                              (clojure.test/is [eventually])]}}
  :lint-as      {rapid-test.core/with-stub   clojure.core/let
+                rhizome.macros/with-html    clojure.core/let
                 tram.core/defroutes         clojure.core/def
                 tram.http.routing/defroutes clojure.core/def
                 tram.utils/with-same-output clojure.core/let}}

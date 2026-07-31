@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Compile the rhizome browser tests and run them headless.
+# RHIZOME__HEADED=1 opens a visible browser; `npm run test:dev` holds it open.
+set -euo pipefail
+
+clojure -M:cljs -m shadow.cljs.devtools.cli compile wtr
+node_modules/.bin/web-test-runner --config ./web-dev-server.config.mjs

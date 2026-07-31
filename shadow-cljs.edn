@@ -5,6 +5,16 @@
                                                 :target :global}}}
             :modules    {:rhizome {:init-fn rhizome.core/init}}
             :output-dir "docsite/resources/public/js"
-            :target     :browser}}
+            :target     :browser}
+  ;; Browser tests, run by @web/test-runner via bin/test-cljs.
+  :wtr     {:js-options {:resolve {"idiomorph" {:file "vendor/idiomorph.esm.js"
+                                                :target :file}
+                                   "process"   {:global "process"
+                                                :target :global}}}
+            :modules    {:tests {:exports {init  rhizome.wtr/init
+                                           start rhizome.wtr/start}}}
+            :output-dir "test/browser/browser-tests"
+            :runtime    :browser
+            :target     :esm}}
 
  :deps {:aliases [:cljs]}}

@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <body>
+    <div id="test-root"></div>
+    <h1>Rhizome browser tests</h1>
+    <script>
+      window.process = {
+        env: {
+          NODE_ENV: "development",
+          RHIZOME__SKIP_COMPLETING_TEST_RUNNER: false,
+        },
+      };
+    </script>
+
+    <script type="module">
+      import {
+        sessionStarted,
+        sessionFinished,
+        sessionFailed,
+      } from "@web/test-runner-core/browser/session.js";
+
+      // Import the tests dynamically so a failing import inside the bundle
+      // reports through sessionFailed instead of silently killing this whole
+      // module before sessionStarted.
+      try {
+        sessionStarted();
+        window.addEventListener("unhandledrejection", (e) =>
+          sessionFailed({ message: "unhandledrejection: " + String(e.reason) }),
+        );
+        const { init, start } = await import("/browser-tests/tests.js");
+        init();
+
+        const testResults = await start();
+
+        // In dev/manual mode the config flips the flag to `true` so we never
+        // tell web-test-runner the session finished — that's what keeps the
+        // browser open across shadow hot-reloads instead of being killed.
+        if (!window.process.env.RHIZOME__SKIP_COMPLETING_TEST_RUNNER) {
+          sessionFinished({
+            passed: testResults.passed,
+            testResults,
+          });
+        }
+      } catch (error) {
+        sessionFailed({
+          message: (error && error.message) || String(error),
+          stack: error && error.stack,
+        });
+      }
+    </script>
+  </body>
+</html>

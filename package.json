@@ -1,0 +1,20 @@
+{
+    "name": "tram",
+    "private": true,
+    "description": "npm devDependencies for the rhizome browser test harness.",
+    "license": "MIT",
+    "devDependencies": {
+        "@web/test-runner": "^0.20.2",
+        "@web/test-runner-chrome": "^0.18.1",
+        "msw": "^2.14.6",
+        "shadow-cljs": "^3.4.11",
+        "sinon": "^22.0.0"
+    },
+    "scripts": {
+        "test": "web-test-runner --config ./web-dev-server.config.mjs",
+        "test:dev": "web-test-runner --config ./web-dev-server.config.mjs --manual --open"
+    },
+    "msw": {
+        "workerDirectory": ["test/browser"]
+    }
+}
