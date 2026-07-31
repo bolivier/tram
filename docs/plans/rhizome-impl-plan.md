@@ -270,11 +270,13 @@ Exit criteria: a partial response can send the browser to a new url.
 Spec to write: `08-migration.md`. Executes the deletions ADR-0002 authorises.
 
 - **Distribution first.** A generated app needs a compiled `rhizome.js` and
-  has no cljs build. The old repo already solved this with a `:dist` shadow
-  build: a single self-initializing script released into `resources/`, which
-  sits on the consumer's classpath because tram is a dep. The app serves it
-  with no JS tooling of its own. Port that build; add a `bin/` script for the
-  release step and check the artifact freshness in CI.
+  has no cljs build. The end state is an npm package. Until that works, use
+  the interim the old repo proved with its `:dist` shadow build: a single
+  self-initializing script released into `resources/`, which sits on the
+  consumer's classpath because tram is a dep. The app serves it as an asset
+  with no JS tooling of its own. Port that build; add a `bin/` script for
+  the release step and check the artifact freshness in CI. The npm package
+  is out of scope for this plan.
 - Starter template: drop the unpkg `htmx.org` and `htmx-ext-response-targets`
   scripts, add rhizome.js, migrate the auth flow off `redirect` /
   `hx-redirect` onto navigation, and migrate its forms to signals.

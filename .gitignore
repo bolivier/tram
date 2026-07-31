@@ -7,3 +7,5 @@
 .postgres
 /target
 resources/test.db
+node_modules
+/test/browser/browser-tests/
