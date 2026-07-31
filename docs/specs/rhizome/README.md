@@ -129,7 +129,7 @@ Not binding. Split only when a namespace has two reasons to change.
 
 ```
 rhizome/core.cljs             public api: default-config, register, start!, run!
-rhizome/mount.cljs            the document walk, observers, listeners
+rhizome/mount.cljs            the scan, the observer, listeners
 rhizome/signals.cljs          the store and dependency graph
 rhizome/expr.cljs             read and interpret, the allowlist
 rhizome/commands/http.cljs    the five verbs and response dispatch

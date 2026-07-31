@@ -13,6 +13,7 @@ how an application adds commands of its own.
 
 ```clojure
 {:commands {:http/post {...} :dom/morph {...}}
+ :triggers #{:click :submit :input ...}
  :bindings {}
  :on-error (fn [error] (js/console.warn ...))}
 ```
@@ -20,8 +21,12 @@ how an application adds commands of its own.
 | Key         | What                                                            |
 |-------------|-----------------------------------------------------------------|
 | `:commands` | Command keyword to command definition.                          |
+| `:triggers` | The event names rhizome scans for. Becomes the mount selector.   |
 | `:bindings` | Binding attribute to binding definition. Empty until milestone 6. |
 | `:on-error` | Where every rhizome failure goes. One sink, one override point.  |
+
+`:triggers` and the keys of `:bindings` are the only source of the attribute names
+rhizome looks for. Nothing else may spell one.
 
 ## The command definition
 
@@ -122,24 +127,49 @@ mechanism, and each modifier tested.
 
 ## Mounting
 
-Rhizome cannot use `querySelectorAll`, because no css selector matches an
-attribute by name prefix. ADR-0006 records this. Mounting walks the tree and reads
-each element's attributes.
+`start!` builds one selector from the config and hands it to `querySelectorAll`.
 
-1. `start!` walks from `document.body`.
-2. For each element, read attributes whose name begins with the trigger prefix,
-   `rhizome_core_on___`. Derive that prefix once from the keyword namespace with
-   `rhizome.html/kw->string`, never as a literal.
+```
+[rhizome_core_on___click], [rhizome_core_on___submit], [rhizome_core_on___input], ...
+```
+
+The names come from `:triggers` on the config, so the selector is derived at start
+rather than written down. Spell each one with `rhizome.html/kw->string`, never as
+a literal. The old runtime hardcoded `"rhizome_core___on"` in four places.
+
+1. `start!` computes the selector and runs it from `document.body`.
+2. For each match, read the trigger attributes it carries.
 3. Parse each value as edn. A parse failure goes to `:on-error` and that attribute
    does not mount, leaving the rest of the element alone.
 4. Check each command against its definition's `:schema`.
 5. Add a listener, or for `::on/mount`, run once.
-6. Record what mounted on the element, so unmount can find it and so a second walk
+6. Record what mounted on the element, so unmount can find it and so a second scan
    over the same element does nothing.
 
-A `MutationObserver` on `document.body`, subtree and childList, mounts elements
-added later and unmounts elements removed. This covers everything morph does to
-the tree, which is why milestone 2 needs no idiomorph callback to rewire.
+A `MutationObserver` on `document.body`, subtree and childList, runs the same
+selector over each added subtree and unmounts what leaves in a removed one. This
+covers everything morph does to the tree, which is why milestone 2 needs no
+idiomorph callback to rewire.
+
+### The trigger list
+
+`:triggers` on the config is a set of event names. The default holds the standard
+dom events, so nobody registers `click`. An application adds its own for a custom
+event:
+
+```clojure
+(rz/register-trigger config :app/order-placed)
+```
+
+A generous default costs a longer selector string and nothing else. Whether a
+selector list of that size is worth trimming is a question for a measurement, not
+an opinion. Measure before shortening it.
+
+**An unregistered trigger is silently dead.** `::on/clik` matches no selector, so
+nothing mounts and nothing says so. A scan for known names cannot report a name it
+does not know. Cover it with a development-mode pass at `start!` that walks once
+looking for `rhizome_core_on___*` attributes the config does not cover, and sends
+each to `:on-error`. It runs once on page load, not per morph.
 
 ## The api
 
@@ -151,7 +181,7 @@ the tree, which is why milestone 2 needs no idiomorph callback to rewire.
 ;; => a new config. Pure. A duplicate :key replaces the earlier definition.
 
 (rz/start! config)
-;; => walks the document, starts the observer, remembers the config
+;; => scans the document, starts the observer, remembers the config
 ```
 
 ```clojure

@@ -24,12 +24,9 @@ when rhizome mounts the element.
 ## Considered options
 
 - **One attribute holding a map from trigger to commands**, `{::rz/do {:click
-  [...] :keydown [...]}}`. Rejected, though it is the closer call of the two. It
-  keeps `querySelectorAll` working, which the chosen design gives up. It loses on
-  reading: the trigger stops being visible in the attribute name, and it nests one
-  level deeper for the common case of a single trigger. Bindings will need a
-  document walk regardless, since `::rz/text` and `::rz/class` are separate
-  attributes, so the `querySelectorAll` advantage is temporary.
+  [...] :keydown [...]}}`. Rejected: the trigger stops being visible in the
+  attribute name, and it nests one level deeper for the common case of a single
+  trigger. It has no scanning advantage, see Consequences.
 - **Keep tag inference**, as the current runtime does: `BUTTON` to click, `FORM` to
   submit, `INPUT` by its type across seven cases. Rejected: it guesses, and a `div`
   falls through to click, which is wrong more often than not. Datastar does not
@@ -39,16 +36,25 @@ when rhizome mounts the element.
 
 ## Consequences
 
-- **Mount cannot use `querySelectorAll`.** No css selector matches "any element
-  with an attribute whose name starts with this prefix". Mounting walks the tree
-  and inspects each element's attributes, which is what Datastar does. A
+- **Mount uses `querySelectorAll` over a selector list built from the config.**
+  Css has no way to match an attribute by name prefix, since `[attr^=value]`
+  matches the value. It does not need one. The set of trigger names is known at
+  `start!`, so rhizome joins them into one selector, `[rhizome_core_on___click],
+  [rhizome_core_on___submit], ...`, and lets the browser's selector engine do the
+  work. Bindings scan the same way, from the keys of the binding registry. A
   `MutationObserver` covers elements added later, and subsumes the question of
   which idiomorph callbacks fire on which nodes.
-- **Any dom event works, including custom ones.** The event name comes from the
-  attribute, so the runtime needs no table. The current `events` map lists thirty
-  events and rejects everything else with `"Tried to use unknown event type"`. It
-  goes, along with `get-inferred-event`, its nested `case` tables, and the `:on`
-  key inside a directive.
+- **The trigger set is closed, but it is derived rather than written down.** It is
+  the keys of a registry, extended the same way commands are. This is not the old
+  runtime's `events` map, which hardcoded thirty rhizome keywords, mapped them to
+  dom strings for no reason, and rejected everything else with `"Tried to use
+  unknown event type"`. That map goes, along with `get-inferred-event`, its nested
+  `case` tables, and the `:on` key inside a directive.
+- **An unregistered trigger is silently dead.** `::on/clik` matches no selector, so
+  nothing mounts and nothing complains. A scan for known names cannot report a name
+  it does not know. This is the real cost of enumerating, and it is worth one
+  development-mode walk at `start!` that reports any `rhizome_core_on___*`
+  attribute the config does not cover.
 - **`::on/mount` replaces the `:event/load` special case**, and with it the
   `TODO: fix this hack` branch that calls the handler with a nil event. Mount
   stops being a fake dom event and becomes a real trigger.
