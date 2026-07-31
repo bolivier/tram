@@ -86,12 +86,23 @@ page.
 ### Rhizome
 
 **directive**:
-The edn map on an element that tells rhizome what to do. It lives in the
-`::rz/do` attribute, which renders as `rhizome_core___do`. A directive names one
-command and carries that command's arguments and its trigger. An element holds at
-most one directive.
-_Avoid_: command (that names the verb inside a directive), binding, action,
+The edn value in one of an element's `::on/*` attributes. It holds the commands
+that run when that trigger fires, and the modifiers that govern when they run. An
+element holds one directive per trigger and as many triggers as it needs.
+_Avoid_: command (that names a verb inside a directive), binding, action,
 handler, rhizome-on
+
+**trigger**:
+The event that runs a directive, named by the directive's own attribute.
+`::on/click` runs on a click. Rhizome never infers a trigger from an element's
+tag. Besides dom events, rhizome ships the synthetic trigger `::on/mount`.
+_Avoid_: event. The dom event is the object the browser hands a command. The
+trigger is which one rhizome listens for.
+
+**modifier**:
+A key on a directive that governs when or whether its commands run, such as
+`:debounce` or `:once`. A modifier never changes what a command does.
+_Avoid_: filter, wrapper, option
 
 **command**:
 The verb a directive names, under its `:command` key. A command is a namespaced
@@ -111,15 +122,20 @@ registry and an application extends it before start.
 _Avoid_: config (the registry is one key inside the config), table, dispatch map
 
 **config**:
-The value rhizome starts with. It holds the registry, the directive attribute,
-and the error sink. An application builds one and hands it to `start!`.
+The value rhizome starts with. It holds the registries and the error sink. An
+application builds one and hands it to `start!`.
 _Avoid_: options, settings, opts
 
-**trigger**:
-The dom event that runs a directive, named by its `:on` key. A directive without
-`:on` gets a trigger from its command, and failing that from its element's tag.
-_Avoid_: event. The dom event is the object the browser hands a command. The
-trigger is which one rhizome listens for.
+**signal**:
+A named piece of reactive client state. Commands read and write signals, bindings
+derive the dom from them, and every request carries them to the server.
+_Avoid_: state, store, variable, atom
+
+**binding**:
+An attribute that derives part of an element from signals, such as `::rz/text` or
+`::rz/class`. Rhizome re-applies a binding whenever a signal it read changes. A
+binding is the only way rhizome changes an element's own appearance.
+_Avoid_: reaction, watcher, computed, effect, subscription
 
 **mount**:
 To attach a directive to its element. Rhizome mounts every directive in the

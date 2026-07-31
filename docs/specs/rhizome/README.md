@@ -1,127 +1,142 @@
-# Rhizome rework
+# Rhizome build plan
 
-`src/main/rhizome/core.cljs` grew by accretion. It carries a targeting language
-nobody wants, a command dispatch that ignores its own config, a stub debounce, and
-a dead async require. This directory holds the plan to rebuild it, one spec at a
-time.
+Rhizome's client runtime is being rewritten from scratch with signals in it from
+the start. ADR-0005 records that decision and what survives the deletion.
 
-Read `CONTEXT.md` for the vocabulary. Read `docs/adr/0002`, `0003`, and `0004` for
-the decisions these specs rest on.
+Read `CONTEXT.md` for the vocabulary. Read ADRs 0002 through 0008 for the
+decisions the milestones rest on. Nothing below re-argues them.
 
-## Vocabulary, in one line
+## The design in one page
 
-A **directive** is the edn map in an element's `::rz/do` attribute. It names one
-**command** and carries that command's arguments and its **trigger**. Rhizome
-resolves the command in a **registry**, which lives on the **config** an
-application passes to `start!`. Rhizome **mounts** a directive onto its element,
-and **unmounts** it when the element leaves.
+An element carries attributes. Two kinds matter.
 
-## Order
+**Triggers** name an event and hold a directive, a vector of commands run in
+order.
 
-Each spec lands on its own commit. Do not start the next one until the last is
-implemented and its migration is done.
+```clojure
+[:button {::on/click [{:command :http/post :http/url "/save"}]}]
+```
 
-| #  | Spec                                                 | Status              |
-|----|------------------------------------------------------|---------------------|
-| 00 | Vocabulary and decisions                             | done                |
-| 01 | [Morph replaces by id](01-morph.md)                  | drafted             |
-| 02 | [The command registry](02-command-registry.md)       | drafted             |
-| 03 | Triggers and modifiers                               | not written         |
-| 04 | Request commands                                     | not written         |
-| 05 | Lifecycle and unmount                                | not written         |
-| 06 | Server sent events                                   | not written         |
-| 07 | Navigation                                           | not written         |
+**Bindings** derive part of the element from signals. Their value is a quoted
+Clojure form, read and interpreted against an allowlist.
 
-Spec 00 is the `### Rhizome` section of `CONTEXT.md`, plus ADR-0003 and ADR-0004.
-It is already written.
+```clojure
+[:span {::rz/text 'count}]
+[:div  {::rz/class {:saving 'in-flight?}}]
+```
 
-### 01, morph replaces by id
+Signals are the only mutable client state. Commands write them, bindings read
+them, and every request carries them to the server as edn. The dom is derived,
+never poked at. The exceptions are morph, which the server drives by id, and
+`:dom/remove`.
 
-The smallest cut and the largest one. Morph matches a fragment element to the
-page element with the same id, and nothing else selects a target. Takes `:ident`,
-`get-target`, `precedes?`, and `follows?` out with it. See ADR-0003.
+Both commands and bindings are registry entries on a config an application builds
+before `start!`. That is how an application adds its own.
 
-### 02, the command registry
+## Milestones
 
-Replaces the `execute` multimethod with a registry of command definitions, each a
-map of `:key` and lifecycle fns. Introduces the config, `register`, and `start!`.
-Renames the attribute from `::rz/on` to `::rz/do` and derives its html spelling in
-one place instead of four. See ADR-0004.
+One milestone per commit series. Do not start the next until the last runs.
 
-### 03, triggers and modifiers
+| #  | Milestone                                              | Status      |
+|----|--------------------------------------------------------|-------------|
+| 0  | Vocabulary and decisions                               | done        |
+| 1  | [Mount and the command registry](01-mount-and-registry.md) | drafted |
+| 2  | [The wire protocol](02-wire-protocol.md)               | drafted     |
+| 3  | Server sent events                                     | not written |
+| 4  | The signal store                                       | not written |
+| 5  | Expressions                                            | not written |
+| 6  | Bindings                                               | not written |
+| 7  | Signals on the wire                                    | not written |
+| 8  | Navigation                                             | not written |
+| 9  | Migration and htmx removal                             | not written |
 
-How a directive picks its dom event, and what modifies a trigger before it runs
-the command. Resolves `:on/key` and `:on/debounce`, which are currently defined
-twice and stubbed respectively. Decides whether a modifier filters, wraps, or
-both, and how an application adds one.
+Milestone 0 is the `### Rhizome` section of `CONTEXT.md` plus ADRs 0003 through
+0008. It is written.
 
-Depends on 02, which owns the config key modifiers live under.
+Milestones 1 and 2 together replace what the old runtime did, done right. They
+ship bodyless requests, which is enough to run the docsite counter. Request
+bodies wait for milestone 7, per ADR-0007.
 
-### 04, request commands
+### 3, server sent events
 
-The five http commands as registry entries. Fixes the body pipeline, which is
-broken in two places today. Decides what a rhizome request sends, what content
-types it accepts, and what happens on a non-2xx response. Today a failed request
-logs to the console and the page does not change.
+The `text/event-stream` branch that sat commented out in the old `execute-http`.
+Covers the event format, how an element patch reaches morph, and reconnection. It
+comes after milestone 1 because a stream is exactly the thing that must close on
+unmount.
 
-Depends on 01 for the morph it hands its response to.
+### 4, the signal store
 
-### 05, lifecycle and unmount
+The reactive core, written in cljs. A store of named values, dependency tracking,
+and batched updates that stay glitch free when one change reaches a node by two
+paths. No dom and no network. This is the piece everything from here on stands
+on, so it ships alone and well tested.
 
-When rhizome mounts a directive, when it unmounts one, and what a command may
-hold between the two. Covers the mount state a command returns from `:on-mount`,
-detection of a removed element, and the rewiring idiomorph triggers on the nodes
-it adds. Today nothing unmounts, so anything holding a connection or an interval
-leaks.
+### 5, expressions
 
-Depends on 02 for the lifecycle fns and on 01 for the morph that removes nodes.
+The reader and interpreter of ADR-0008, plus the default allowlist. **Starts with
+a spike:** build the allowlist by hand and with SCI, compile both with
+`:advanced`, and compare gzipped size. ADR-0008 leaves the choice open because
+nobody has that number.
 
-### 06, server sent events
+### 6, bindings
 
-The `text/event-stream` branch that sits commented out in `execute-http` today.
-Covers the wire format, how a `rhizome-patch-element` event reaches morph, and
-reconnection. Cannot be specified before 05, because a stream is exactly the
-thing that must close on unmount.
+`::rz/text`, `::rz/class`, `::rz/attr`, `::rz/show`, and `::rz/bind`. The second
+registry, beside commands, so an application adds its own. `::rz/bind` is the
+two-way one, and it is what makes a form field a signal.
 
-Depends on 05.
+### 7, signals on the wire
 
-### 07, navigation
+The request body becomes the signal map as edn. The response gains a signal patch
+alongside the element patch. Needs a convention for which signals stay on the
+client, an open question in both ADR-0007 and ADR-0008.
 
-ADR-0002 names this as the blocker on removing htmx from the framework. Rhizome
-has no way to navigate: no redirect command, no `window.location`, no
-`pushState`. The starter template's whole authentication flow depends on the
-`hx-redirect` header, so htmx cannot go until this exists.
+### 8, navigation
 
-Depends on 02.
+ADR-0002 names this as the blocker on removing htmx from Tram. Rhizome has no way
+to navigate: no redirect command, no `window.location`, no `pushState`.
 
-## Known defects
+### 9, migration and htmx removal
 
-Found while reading the current file. Each is assigned to the spec that owns it.
-None are fixed yet.
+The docsite's two examples, the starter template's whole authentication flow, and
+then the deletions ADR-0002 authorises: `htmx-request?` and the `hx-redirect` form
+of `redirect`.
 
-| Defect                                                                                     | Owner |
-|--------------------------------------------------------------------------------------------|-------|
-| `execute-http` calls `(resolve-body el nil)`, so a directive's `:http/body` never reaches the request | 04    |
-| `get-body :value` returns the spec vector `[:value x]` rather than `x`                       | 04    |
-| A non-2xx response is indistinguishable from a 200 and morphs the error body onto the page   | 04    |
-| `wire-el!` takes a config but calls `execute` directly, ignoring the config's `:op/handler`   | 02    |
-| The html attribute string `"rhizome_core___on"` is hardcoded in four places                  | 02    |
-| `cljs.core.async` is required and never used                                                 | 02    |
-| The `"load"` event type is special-cased with a `TODO: fix this hack` comment                | 02    |
-| `:on/key` is defined twice, once in `:op/filters` and once in `:op/wrappers`                 | 03    |
-| `:on/debounce` is registered as a wrapper that does not debounce                             | 03    |
-| Nothing unmounts a directive, so a command cannot safely hold a resource                     | 05    |
+## What the old runtime got wrong
+
+None of this code survives, so none of these are bugs to fix. They are the
+mistakes the rewrite must not make again.
+
+| Mistake                                                                    | Answered by |
+|----------------------------------------------------------------------------|-------------|
+| A config existed but the code ignored it and called `execute` directly       | ADR-0004    |
+| The html attribute string was hardcoded in four places                       | milestone 1 |
+| One element could hold one command, so it could not post and set a class     | ADR-0006    |
+| Triggers were guessed from tag names, and a `div` fell through to click      | ADR-0006    |
+| A closed table of thirty event names rejected everything else                | ADR-0006    |
+| `:event/load` was faked as a dom event, with a `TODO: fix this hack`         | ADR-0006    |
+| Six ways to name a target, five of them unused                               | ADR-0003    |
+| `:on/key` was defined twice, as a filter and as a wrapper                    | milestone 1 |
+| `:on/debounce` was registered as a wrapper that did not debounce             | milestone 1 |
+| `resolve-body` was called with `nil`, so `:http/body` never reached a request | ADR-0007    |
+| `get-body :value` returned the spec vector rather than the value             | ADR-0007    |
+| A non-2xx response morphed the error body onto the page                      | milestone 2 |
+| Nothing unmounted, so no command could safely hold a resource                | milestone 1 |
+| `cljs.core.async` was required and never used                                | ADR-0005    |
 
 ## Namespace layout
 
-Not binding. Decide at implementation, and only split when a namespace has two
-reasons to change.
+Not binding. Split only when a namespace has two reasons to change.
 
 ```
-rhizome/core.cljs           public api: default-config, register, start!, run!
-rhizome/mount.cljs          reading directives, resolving triggers, listeners
-rhizome/commands/dom.cljs   :dom/morph and the attribute commands
-rhizome/commands/http.cljs  the five http commands
+rhizome/core.cljs             public api: default-config, register, start!, run!
+rhizome/mount.cljs            the document walk, observers, listeners
+rhizome/signals.cljs          the store and dependency graph
+rhizome/expr.cljs             read and interpret, the allowlist
+rhizome/commands/http.cljs    the five verbs and response dispatch
+rhizome/commands/dom.cljs     morph and remove
+rhizome/bindings.cljs         text, class, attr, show, bind
 ```
 
-`rhizome/html.cljc` is a vendored huff fork and is out of scope for all of this.
+Empty jvm namespaces exist so keywords resolve when hiccup is written on the
+server: `rhizome/core.clj` today, plus `rhizome/core/on.clj` for `::on/*`.
+`rhizome/html.cljc` is the vendored huff fork and is out of scope for all of this.

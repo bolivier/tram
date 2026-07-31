@@ -12,13 +12,14 @@ Id is the only way a rhizome directive names a target.
 replaces the element on the page whose id equals the fragment element's own id.
 The directive carries no target of its own. The returned html says where it goes.
 
-Every other dom command takes an optional `:dom/id`. Absent, the command acts on
-the element its directive sits on.
+`:dom/remove` takes an optional `:dom/id`. Absent, it acts on the element its
+directive sits on. It is the only other command that names an element, because
+ADR-0007 deletes the rest of the imperative dom commands in favour of bindings.
 
-The `:ident` key is removed, along with the `get-target` multimethod and its
-`:id`, `:closest`, `:previous`, `:next`, `:this`, and `:end-of` methods. The
-`precedes?` and `follows?` helpers exist only to serve those methods and go with
-them.
+The old runtime's `:ident` key does not survive, nor does its `get-target`
+multimethod with its `:id`, `:closest`, `:previous`, `:next`, `:this`, and
+`:end-of` methods. The `precedes?` and `follows?` helpers exist only to serve
+those methods.
 
 This extends ADR-0002, which already states the same-id placement rule for
 partials. ADR-0002 records what a partial does. This one records that rhizome
@@ -50,10 +51,10 @@ offers no alternative.
 - **Every top level element in a partial must carry an id.** This is now a hard
   requirement on the server, not a convention. A partial element with no id
   cannot be placed and is an error.
-- **The docsite contradicts this decision.** `counter-example` in
+- **Two consumers still say `:ident`.** `counter-example` in
   `docsite/src/tram_docs/views/examples_views.clj` passes `:ident [:this]`, and
   `rhizome-command-attribute-survives-the-browser-test` in
-  `test/main/tram/html_test.clj` uses `:ident [:closest "[data-panel]"]`. Both
-  change when the removal lands.
+  `test/main/tram/html_test.clj` uses `:ident [:closest "[data-panel]"]`. Both are
+  rewritten with the runtime, per ADR-0005.
 - Shadow dom still works. The lookup runs from the root node of the element the
   directive sits on, so a directive inside a shadow root finds ids in that root.
