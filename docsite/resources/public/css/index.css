@@ -120,6 +120,8 @@ nav {
     box-shadow: var(--shadow-md);
     background-color: var(--surface);
     color: var(--text);
+    /* Form controls opt out of font inheritance. */
+    font-family: inherit;
     font-size: var(--text-base);
     font-weight: 700;
     line-height: 1;
@@ -358,17 +360,46 @@ nav {
 
 .input {
     display: block;
+    width: 100%;
     padding: 0.5rem 0.75rem;
     border: 3px solid var(--border);
+    box-shadow: var(--shadow-sm);
     background-color: var(--surface);
+    color: var(--text);
+    /* Form controls opt out of font inheritance. */
+    font-family: inherit;
     font-size: var(--text-base);
     font-weight: 700;
+    line-height: 1;
     text-decoration: none;
+
+    &::placeholder {
+        color: var(--text-muted);
+        font-weight: 400;
+    }
 
     &:focus-visible {
         outline: 3px solid var(--accent);
         outline-offset: 2px;
     }
+
+    &:disabled,
+    &[readonly] {
+        background-color: var(--bg);
+        color: var(--text-muted);
+        box-shadow: none;
+        cursor: not-allowed;
+    }
+
+    &[aria-invalid="true"] {
+        border-color: var(--danger);
+        outline-color: var(--danger);
+    }
+}
+
+textarea.input {
+    line-height: 1.4;
+    resize: vertical;
 }
 
 .signal-example-space {
