@@ -38,4 +38,5 @@
 (defn init []
   (triggers/register! triggers/bind)
   (triggers/register! triggers/text)
+  (triggers/register! triggers/click)
   (mount!))

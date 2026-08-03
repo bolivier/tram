@@ -1,5 +1,6 @@
 (ns rhizome.triggers
-  (:require [rhizome.signals :as signals]))
+  (:require [rhizome.directives :refer [execute]]
+            [rhizome.signals :as signals]))
 
 (defonce registry
   (atom {}))
@@ -31,3 +32,10 @@
                                    (fn [new-value]
                                      (set! (.-textContent el) new-value)))))})
 
+(def click
+  {:attribute     :rhizome.core/click
+   :default-event :event/click
+   :listener      (fn [e directive el]
+                    (execute (assoc directive
+                               :event e
+                               :el    el)))})
