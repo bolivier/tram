@@ -6,8 +6,26 @@
   ILookup
   (-lookup [el attr] (.getAttribute el (kw->string attr))))
 
-(defn query-selector-triggers [root trigger]
-  (.querySelectorAll root (str "[" (kw->string trigger) "]")))
+(defn element? [node]
+  (= js/Node.ELEMENT_NODE (.-nodeType node)))
+
+(defn trigger-selector [trigger]
+  (str "[" (kw->string trigger) "]"))
+
+(defn triggered-elements
+  "Elements under `root` carrying `trigger`, `root` itself included.
+
+  `querySelectorAll` never matches the node it is called on, and every node a
+  `MutationObserver` reports is such a node."
+  [root trigger]
+  (let [selector    (trigger-selector trigger)
+        descendants (array-seq (.querySelectorAll root selector))]
+    (if (and (element? root)
+             (.matches root
+                       selector))
+      (cons root
+            descendants)
+      descendants)))
 
 (defn add-event-listener
   "Wrapper for .addEventListener
