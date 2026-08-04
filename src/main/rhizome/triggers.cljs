@@ -47,3 +47,6 @@
 
 (def submit
   (event-trigger :rhizome.core/submit :event/submit))
+
+(def input
+  (event-trigger :rhizome.core/input :event/input))

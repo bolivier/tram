@@ -70,16 +70,16 @@
        output (String. (mfc/encode-to-bytes encoder hiccup "UTF-8"))]
       (is (= expected output)))))
 
-(deftest encode-rhizome-submit-attribute-test
+(deftest every-rhizome-trigger-expands-routes-test
   (binding [*req* {:reitit.core/router sample-router}]
-    (let
-      [encoder (sut/huff-html-encoder nil)
-       hiccup [:form {:rhizome.core/submit {:http/url :route/dashboard}}]
-       expected
-       "<form rhizome_core___submit=\"{:http/url &quot;/dashboard&quot;}\"></form>"
-
-       output (String. (mfc/encode-to-bytes encoder hiccup "UTF-8"))]
-      (is (= expected output)))))
+    (doseq [trigger [:rhizome.core/click
+                     :rhizome.core/submit
+                     :rhizome.core/input]]
+      (let [encoder (sut/huff-html-encoder nil)
+            hiccup  [:div {trigger {:http/url :route/dashboard}}]
+            output  (String. (mfc/encode-to-bytes encoder hiccup "UTF-8"))]
+        (is (str/includes? output "&quot;/dashboard&quot;")
+            (str trigger " left its route unexpanded"))))))
 
 
 (def ^:private entity->char

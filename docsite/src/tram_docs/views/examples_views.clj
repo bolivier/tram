@@ -31,6 +31,9 @@
      [:li
       [:a {:href :route/examples.edit-row}
        "Edit Row"]]
+     [:li
+      [:a {:href :route/examples.active-search}
+       "Active Search"]]
     ]]
    [:section#examples-content children]])
 
@@ -68,6 +71,35 @@
       "Edit"]]])
   ([person]
    (row {} person)))
+
+(defn search-results [{:keys [crew]}]
+  [:tbody#search-results
+   (if (seq crew)
+     (for [member crew]
+       [:tr.person-row
+        [:td (:name member)]
+        [:td (:rank member)]
+        [:td (:duty member)]])
+     [:tr
+      [:td {:colspan 3}
+       "Nobody by that name is on the roster."]])])
+
+(defn active-search-example [locals]
+  [:div#active-search-example
+   [:form#crew-search-form
+    [:input.input {:autocomplete "off"
+                   :name         :query
+                   :placeholder  "Search the squadron"
+                   ::rz/input    {:do :http/post
+                                  :http/url
+                                  :route/examples.active-search.results}}]]
+   [:table.table#squadron-table
+    [:thead
+     [:tr
+      [:th "Name"]
+      [:th "Rank"]
+      [:th "Duty"]]]
+    [search-results locals]]])
 
 (defn edit-row-example [locals]
   (let [edit-id (:editable locals)]
