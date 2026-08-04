@@ -26,6 +26,9 @@ These are the things most likely to trip you up. They override your defaults.
 - **Trivial queries use the Toucan2 ORM; anything more goes through HoneySQL.**
   See [Database](#database).
 - **Comments describe _why_, never _what_.** See [Code Style](#code-style).
+- **A handler's view is resolved from the handler's name.** `defroutes` maps
+  handler `foo` in `app.handlers.bar-handlers` to view `foo` in
+  `app.views.bar-views`. Pass `:template` only when the two names differ.
 - **Keep the starter template in sync.** A framework change that affects
   generated apps must be mirrored in `starter-template/`.
 
