@@ -93,9 +93,8 @@
 
     :else node))
 
-;; Not the best extension mechanism, per-keyword.
-;; Need to figure out if I wanna do something like attr-mapper or no.
-(defmethod h/emit-attr :rhizome.core/on
+(defn emit-directive-attr
+  "Emits a rhizome trigger attribute, expanding route keywords to paths."
   [append! key value]
   (append! (h/stringify key) "=\"")
   (binding [*print-namespace-maps* false]
@@ -111,14 +110,25 @@
                                     v))]
             (mapper value))
           (do (log/event!
-                ::processing-rz-on-without-req
-                {:data {:message
-                        "Could not find *req* while processing :rhizome.core/on"
+                ::processing-directive-without-req
+                {:data
+                 {:message
+                  "Could not find *req* while processing a rhizome trigger"
 
-                        :key key
-                        :value value}})
+                  :key key
+                  :value value}})
               value)))))
   (append! "\""))
+
+;; Not the best extension mechanism, per-keyword.
+;; Need to figure out if I wanna do something like attr-mapper or no.
+(defmethod h/emit-attr :rhizome.core/click
+  [append! key value]
+  (emit-directive-attr append! key value))
+
+(defmethod h/emit-attr :rhizome.core/submit
+  [append! key value]
+  (emit-directive-attr append! key value))
 
 (defmethod h/emit-attr :rhizome.core/text
   [append! key value]

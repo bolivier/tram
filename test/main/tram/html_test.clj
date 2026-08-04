@@ -63,9 +63,20 @@
   (binding [*req* {:reitit.core/router sample-router}]
     (let
       [encoder (sut/huff-html-encoder nil)
-       hiccup [:button {:rhizome.core/on {:http/url :route/dashboard}}]
+       hiccup [:button {:rhizome.core/click {:http/url :route/dashboard}}]
        expected
-       "<button rhizome_core___on=\"{:http/url &quot;/dashboard&quot;}\"></button>"
+       "<button rhizome_core___click=\"{:http/url &quot;/dashboard&quot;}\"></button>"
+
+       output (String. (mfc/encode-to-bytes encoder hiccup "UTF-8"))]
+      (is (= expected output)))))
+
+(deftest encode-rhizome-submit-attribute-test
+  (binding [*req* {:reitit.core/router sample-router}]
+    (let
+      [encoder (sut/huff-html-encoder nil)
+       hiccup [:form {:rhizome.core/submit {:http/url :route/dashboard}}]
+       expected
+       "<form rhizome_core___submit=\"{:http/url &quot;/dashboard&quot;}\"></form>"
 
        output (String. (mfc/encode-to-bytes encoder hiccup "UTF-8"))]
       (is (= expected output)))))
@@ -90,8 +101,9 @@
                    :http/url    "/counter"
                    :dom/content "say \"hi\""
                    :ident       [:closest "[data-panel]"]}
-        rendered  (str (h/html [:button {:rhizome.core/on command}]))
-        attribute (second (re-find #"rhizome_core___on=\"([^\"]*)\"" rendered))]
+        rendered  (str (h/html [:button {:rhizome.core/click command}]))
+        attribute (second (re-find #"rhizome_core___click=\"([^\"]*)\""
+                                   rendered))]
     (is (not (str/includes? attribute "\""))
         "a raw quote ends the attribute early, truncating the command")
     (is (= command (edn/read-string (decode-entities attribute))))))

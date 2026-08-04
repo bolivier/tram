@@ -1,5 +1,6 @@
 (ns rhizome.dom
-  (:require [rhizome.events :as event]
+  (:require [clojure.string :as str]
+            [rhizome.events :as event]
             [rhizome.utils :refer [kw->string]]))
 
 (extend-type js/HTMLElement
@@ -26,6 +27,27 @@
       (cons root
             descendants)
       descendants)))
+
+(defn closest-form [el]
+  (if (= "FORM" (.-tagName el))
+    el
+    (.closest el
+              "form")))
+
+(defn form->map
+  "A form's named controls as a map of keyword name to value.
+
+  `.elements` holds every control the form owns, including ones tied to it by
+  a `form` attribute rather than by nesting."
+  [form]
+  (reduce (fn [acc control]
+            (let [control-name (.-name control)]
+              (if (str/blank? control-name)
+                acc
+                (assoc acc
+                  (keyword control-name) (.-value control)))))
+    {}
+    (array-seq (.-elements form))))
 
 (defn add-event-listener
   "Wrapper for .addEventListener

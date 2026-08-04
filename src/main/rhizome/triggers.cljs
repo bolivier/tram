@@ -32,10 +32,18 @@
                                    (fn [new-value]
                                      (set! (.-textContent el) new-value)))))})
 
-(def click
-  {:attribute     :rhizome.core/click
-   :default-event :event/click
+(defn- event-trigger
+  "A trigger whose whole job is to run its directive when one dom event fires."
+  [attribute event]
+  {:attribute     attribute
+   :default-event event
    :listener      (fn [e directive el]
                     (execute (assoc directive
                                :event e
                                :el    el)))})
+
+(def click
+  (event-trigger :rhizome.core/click :event/click))
+
+(def submit
+  (event-trigger :rhizome.core/submit :event/submit))

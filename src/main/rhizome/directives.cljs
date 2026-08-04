@@ -1,6 +1,7 @@
 (ns rhizome.directives
   (:require ["idiomorph" :refer [Idiomorph]]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [rhizome.dom :as dom]))
 
 (defmulti execute
   :do)
@@ -10,23 +11,44 @@
   (println "rhizome.core/execute not implemented for operation"
            (:do directive)))
 
-(defn execute-http [{:keys [http/method http/url event]
+(defn request-body
+  "The form `el` belongs to, as edn. An element outside a form sends no body."
+  [el]
+  (some-> el
+          dom/closest-form
+          dom/form->map
+          pr-str))
+
+(defn execute-http [{:keys [http/method http/url event el]
                      :as   _directive}]
   (when event
     (.preventDefault event)
     (.stopPropagation event))
-  (let [resp-p (js/fetch url
-                         (clj->js {:method  (str/upper-case (name method))
-                                   :headers {"rhizome-request" "true"}}))]
-    (-> resp-p
+  (let [body   (when (not= :get
+                           method)
+                 (request-body el))
+        params (cond-> {:method  (str/upper-case (name method))
+                        :headers (cond-> {"rhizome-request" "true"}
+                                   body (assoc "content-type"
+                                          "application/edn"))}
+                 body (assoc :body body))]
+    (-> (js/fetch url (clj->js params))
         (.then (fn [resp] (.text resp)))
-        (.then (fn [body]
+        (.then (fn [html]
                  (execute {:do :dom/morph
-                           :dom/content body}))))))
+                           :dom/content html}))))))
+
+(defmethod execute :http/get
+  [directive]
+  (execute-http (assoc directive :http/method :get)))
 
 (defmethod execute :http/post
   [directive]
   (execute-http (assoc directive :http/method :post)))
+
+(defmethod execute :http/patch
+  [directive]
+  (execute-http (assoc directive :http/method :patch)))
 
 (defn parse-fragment
   "Parses an HTML string into a seq of its top-level elements.
