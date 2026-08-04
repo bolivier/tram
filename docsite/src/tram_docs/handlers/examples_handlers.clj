@@ -4,6 +4,7 @@
             [tram-docs.concerns.click-to-load-example :as visas]
             [tram-docs.concerns.edit-row-example :as rowex]
             [tram-docs.concerns.inline-validation-example :as transit]
+            [tram-docs.concerns.lazy-load-example :as dossier]
             [tram-docs.handlers.example-signal-handlers :as examples.signals]
             [tram-docs.views.examples-views :as v]
             [tram.routes :as tr]))
@@ -30,6 +31,13 @@
    :hiccup [:<>
             [v/user-button @user]
             [v/global-button @global]]})
+
+(defn lazy-load-example [req]
+  {:status 200})
+
+(defn transit-dossier [req]
+  {:status 200
+   :locals {:dossier (dossier/fetch-dossier)}})
 
 (defn inline-validation-example [req]
   {:status 200
@@ -115,6 +123,13 @@
                                        [:name :string]
                                        [:email :string]]}}
       :parameters {:path [:map [:id :int]]}}]]
+   ["/lazy-load"
+    [""
+     {:name :route/examples.lazy-load
+      :get  lazy-load-example}]
+    ["/dossier"
+     {:name :route/examples.lazy-load.dossier
+      :get  transit-dossier}]]
    ["/inline-validation"
     {:parameters {:body [:map [:applicant :string] [:destination :string]]}}
     [""

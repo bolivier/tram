@@ -51,6 +51,9 @@
      [:li
       [:a {:href :route/examples.inline-validation}
        "Inline Validation"]]
+     [:li
+      [:a {:href :route/examples.lazy-load}
+       "Lazy Load"]]
     ]]
    [:section#examples-content children]])
 
@@ -88,6 +91,24 @@
       "Edit"]]])
   ([person]
    (row {} person)))
+
+(defn transit-dossier [{:keys [dossier]}]
+  [:dl#transit-dossier.dossier
+   (for [{:keys [label value]} dossier]
+     [:<>
+      [:dt label]
+      [:dd value]])])
+
+(defn lazy-load-example [_locals]
+  [:div#lazy-load-example
+   [demo-card
+    [:h3 "The letters of transit"]
+    ;; The response carries no ::rz/load, so this fetches once.
+    [:dl#transit-dossier.dossier {::rz/load {:do :http/get
+                                             :http/url
+                                             :route/examples.lazy-load.dossier}}
+     [:dt "Status"]
+     [:dd "Asking around…"]]]])
 
 (defn applicant-error [errors]
   [:p#applicant-error.field-error (:applicant errors)])

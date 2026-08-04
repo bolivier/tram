@@ -134,6 +134,10 @@
   [append! key value]
   (emit-directive-attr append! key value))
 
+(defmethod h/emit-attr :rhizome.core/load
+  [append! key value]
+  (emit-directive-attr append! key value))
+
 (defmethod h/emit-attr :rhizome.core/text
   [append! key value]
   (append! (h/stringify key) "=\"")

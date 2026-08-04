@@ -396,6 +396,20 @@ nav {
     max-width: 24rem;
 }
 
+.dossier {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.25rem 1rem;
+
+    dt {
+        font-size: var(--text-sm);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+}
+
 .field-label {
     font-size: var(--text-sm);
     font-weight: 700;

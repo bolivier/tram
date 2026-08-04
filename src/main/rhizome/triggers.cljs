@@ -50,3 +50,11 @@
 
 (def input
   (event-trigger :rhizome.core/input :event/input))
+
+(def load
+  "Runs its directive as soon as the element mounts, with no event to wait on.
+
+  The response is expected to drop the attribute, or the new element mounts and
+  fetches again."
+  {:attribute :rhizome.core/load
+   :on-mount  (fn [directive el] (execute (assoc directive :el el)))})

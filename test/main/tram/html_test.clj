@@ -74,7 +74,8 @@
   (binding [*req* {:reitit.core/router sample-router}]
     (doseq [trigger [:rhizome.core/click
                      :rhizome.core/submit
-                     :rhizome.core/input]]
+                     :rhizome.core/input
+                     :rhizome.core/load]]
       (let [encoder (sut/huff-html-encoder nil)
             hiccup  [:div {trigger {:http/url :route/dashboard}}]
             output  (String. (mfc/encode-to-bytes encoder hiccup "UTF-8"))]

@@ -8,5 +8,6 @@
   (triggers/register! triggers/click)
   (triggers/register! triggers/submit)
   (triggers/register! triggers/input)
+  (triggers/register! triggers/load)
   (mount/mount!)
   (mount/observe!))
