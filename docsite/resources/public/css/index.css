@@ -351,6 +351,9 @@ nav {
 }
 
 #examples-content {
+    /* Contains the demo card's margins, which would otherwise collapse out
+       through #main and shift the whole layout down. */
+    display: flow-root;
     padding-left: calc(var(--sidebar-width) + 0.5rem);
 }
 
