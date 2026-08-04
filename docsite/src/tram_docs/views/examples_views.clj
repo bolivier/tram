@@ -152,6 +152,7 @@
                     :id           :applicant
                     :name         :applicant
                     ::rz/input    {:do :http/post
+                                   :debounce 300
                                    :http/url
                                    :route/examples.inline-validation.check}}]
      [applicant-error errors]
@@ -161,6 +162,7 @@
                     :id           :destination
                     :name         :destination
                     ::rz/input    {:do :http/post
+                                   :debounce 300
                                    :http/url
                                    :route/examples.inline-validation.check}}]
      [destination-error errors]
@@ -235,6 +237,7 @@
                     :name         :query
                     :placeholder  "Search the squadron"
                     ::rz/input    {:do :http/post
+                                   :debounce 300
                                    :http/url
                                    :route/examples.active-search.results}}]]
     [:table.table#squadron-table

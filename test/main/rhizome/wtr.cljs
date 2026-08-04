@@ -11,6 +11,7 @@
   (:require [cljs.test :as ct]
             rhizome.dom-test
             [rhizome.fake-server :as fake-server]
+            rhizome.mount-test
             rhizome.smoke-test
             [shadow.test :as st]
             [shadow.test.env :as env]))
