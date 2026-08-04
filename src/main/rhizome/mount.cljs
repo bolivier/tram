@@ -21,18 +21,21 @@
       nil)))
 
 (defn- wire! [el trigger config]
-  (let [{:keys [on-mount listener default-event]} config
-        directive (read-directive el trigger)]
+  (let [{:keys [on-mount listener default-event]} config]
     (mark-wired! el trigger)
     (when on-mount
-      (on-mount directive
+      (on-mount (read-directive el
+                                trigger)
                 el))
     (when default-event
+      ;; Read at event time, not mount time. A morph rewrites the attribute
+      ;; in place on an element it keeps, which never re-mounts.
       (dom/add-event-listener el
                               default-event
                               (fn [e]
                                 (listener e
-                                          directive
+                                          (read-directive el
+                                                          trigger)
                                           el))))))
 
 (defn mount!
