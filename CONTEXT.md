@@ -146,3 +146,30 @@ _Avoid_: wire, bind, hydrate, register, initialize
 To detach a directive from its element and release what the directive held.
 Rhizome unmounts a directive when its element leaves the page.
 _Avoid_: teardown, cleanup, destroy, dispose
+
+### Streaming
+
+**stream**:
+A response whose body is a sequence of stream events over one open connection,
+sent as `text/event-stream`. It is the third kind of response a handler can
+produce, beside a page and a partial. Any endpoint may return one.
+_Avoid_: sse (name the thing, not the acronym), feed, socket, subscription,
+channel (a channel is one way an application produces a stream's events)
+
+**stream event**:
+One frame on a stream. It names a command and carries that command's arguments
+as edn. The two-word term is deliberate: **event** on its own already means the
+dom event object the browser hands a command.
+_Avoid_: message, chunk, frame, patch, notification
+
+**stream source**:
+What a handler returns under `:stream`. It yields the stream's events in order.
+Tram accepts a core.async channel or a seq, and an application adds its own by
+satisfying `tram.sse/StreamSource`.
+_Avoid_: producer, publisher, generator, feed
+
+**emitter**:
+The write side of an open stream. It renders an event, frames it, and puts it on
+the wire, and it reports when the client has gone. One implementation per http
+server.
+_Avoid_: sink (rhizome's error sink already owns that word), writer, connection
