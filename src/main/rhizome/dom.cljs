@@ -34,20 +34,55 @@
     (.closest el
               "form")))
 
+(def ^:private unsubmittable-types
+  "Control types a browser leaves out of a form submission, plus `file`, which
+  has no edn representation."
+  #{"button" "file" "image" "reset" "submit"})
+
+(defn submittable?
+  "Whether a browser would include `control` when submitting its form."
+  [control]
+  (and (not (str/blank? (.-name control)))
+       (not (.-disabled control))
+       (not= "BUTTON" (.-tagName control))
+       (not (contains? unsubmittable-types (.-type control)))
+       (or (not (contains? #{"checkbox" "radio"} (.-type control)))
+           (.-checked control))))
+
+(defn control-value
+  "A control's value. A multi-select carries one per selected option."
+  [control]
+  (if (= "select-multiple" (.-type control))
+    (mapv #(.-value %)
+      (array-seq (.-selectedOptions control)))
+    (.-value control)))
+
+(defn- collect-value [acc control-name value]
+  (if (contains? acc
+                 control-name)
+    (update acc
+            control-name
+            (fn [seen]
+              (conj (if (vector? seen)
+                      seen
+                      [seen])
+                    value)))
+    (assoc acc
+      control-name value)))
+
 (defn form->map
-  "A form's named controls as a map of keyword name to value.
+  "A form's submittable controls as a map of keyword name to value.
 
   `.elements` holds every control the form owns, including ones tied to it by
-  a `form` attribute rather than by nesting."
+  a `form` attribute rather than by nesting. Names used more than once collect
+  into a vector, the way checkbox groups arrive."
   [form]
   (reduce (fn [acc control]
-            (let [control-name (.-name control)]
-              (if (str/blank? control-name)
-                acc
-                (assoc acc
-                  (keyword control-name) (.-value control)))))
+            (collect-value acc
+                           (keyword (.-name control))
+                           (control-value control)))
     {}
-    (array-seq (.-elements form))))
+    (filter submittable? (array-seq (.-elements form)))))
 
 (defn add-event-listener
   "Wrapper for .addEventListener
