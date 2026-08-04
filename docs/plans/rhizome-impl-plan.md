@@ -1,9 +1,10 @@
 # Rhizome implementation plan
 
 This file turns the rhizome build plan into ordered, committable work. The specs
-in `docs/specs/rhizome/` own behaviour. ADRs 0002 through 0008 own the
-decisions. This file owns sequencing, file-level tasks, test strategy, exit
-criteria, and the decisions still to make. Nothing here re-argues an ADR.
+in `docs/specs/rhizome/` and `docs/specs/tram/` own behaviour. ADRs 0002 through
+0012 own the decisions. This file owns sequencing, file-level tasks, test
+strategy, exit criteria, and the decisions still to make. Nothing here re-argues
+an ADR.
 
 Each milestone is one commit series. Within a milestone, follow the loop:
 
@@ -14,15 +15,19 @@ Each milestone is one commit series. Within a milestone, follow the loop:
 
 ## Departure from the README milestone order
 
-This plan moves server sent events from milestone 3 to last. Reasons:
+This plan once moved server sent events to last, on the grounds that nothing on
+the path to htmx removal needed a stream. **That is superseded.** The docsite
+wants a stream, which is a new fact and the only one the old argument rested on.
 
-- Nothing on the path to htmx removal needs a stream. The docsite, the starter
-  template, and navigation all run on plain requests.
-- The README placed it early because "a stream is exactly the thing that must
-  close on unmount". Milestone 2 already proves that seam: an in-flight request
-  aborts on unmount through the same `:on-trigger` / `:on-unmount` pair.
-- Half of SSE's value is the `application/edn` branch, which patches signals.
-  Signal patches do not exist until signals reach the wire.
+SSE sits immediately after phase 2 instead, because that is where its
+dependencies actually land. It needs unmount from phase 1 and response
+content-type dispatch from phase 2, and nothing else. Waiting for signals would
+only buy the `application/edn` branch, which is a second event name and not a
+second mechanism.
+
+The specs are written: `docs/specs/rhizome/03-server-sent-events.md` and
+`docs/specs/tram/streaming-responses.md`, decided by ADRs 0009 through 0012.
+Phase 3 below implements them and writes no new spec.
 
 Update the README milestone table when this plan lands. The renumbering below is
 the plan's own; specs keep their file names.
@@ -32,13 +37,16 @@ the plan's own; specs keep their file names.
 | 0     | Delete, scaffold, test infra   | part of 1       |
 | 1     | Mount and the command registry | 1               |
 | 2     | The wire protocol              | 2               |
-| 3     | The signal store               | 4               |
-| 4     | Expressions                    | 5               |
-| 5     | Bindings                       | 6               |
-| 6     | Signals on the wire            | 7               |
-| 7     | Navigation                     | 8               |
-| 8     | Migration and htmx removal     | 9               |
-| 9     | Server sent events             | 3               |
+| 3     | Server sent events             | 3               |
+| 4     | The signal store               | 4               |
+| 5     | Expressions                    | 5               |
+| 6     | Bindings                       | 6               |
+| 7     | Signals on the wire            | 7               |
+| 8     | Navigation                     | 8               |
+| 9     | Migration and htmx removal     | 9               |
+
+Phases 4 through 9 keep the content the sections below give them under their old
+numbers. Only SSE moved.
 
 ## Phase 0: delete, scaffold, test infra
 
@@ -81,7 +89,7 @@ Tasks:
 
 The old repo also holds prior art to read, not port: `signals.cljs` there
 couples the store to dom elements, the shape ADR-0007 rejects, and
-`event_stream.cljs` is a phase 9 reference.
+`event_stream.cljs` is a phase 3 reference.
 
 Exit criteria: `bin/test-cljs` runs an empty suite green in headless chrome.
 
@@ -174,7 +182,37 @@ the docsite stops being broken.
 Open question to settle in the spec: are concurrent requests from one element
 cancelled, queued, or ignored? Datastar cancels by default.
 
-## Phase 3: the signal store
+## Phase 3: server sent events
+
+Specs are written. `docs/specs/rhizome/03-server-sent-events.md` owns the client,
+`docs/specs/tram/streaming-responses.md` owns the server, and ADRs 0009 through
+0012 own the decisions. This phase implements them.
+
+Order within the phase:
+
+1. **Backend.** `tram.sse`: `StreamSource` with the channel and seq
+   implementations, `sse/stream`, the event constructors, framing, keep-alive,
+   the `EventEmitter` protocol and its http-kit implementation, and the transport
+   interceptor. Add `:stream` to `response-content-schema` and make `owns-body?`
+   true for it.
+2. **Per-event rendering.** Build the synthetic ctx, run the route's `:leave`
+   side in reverse, take `[:response :body]`. Settle the open question first:
+   where on the request the compiled interceptor queue lives.
+3. **Client.** The frame parser, then dispatch through `run!`. The parser takes a
+   string and returns frames, so it tests with no network.
+4. **Docsite example.** One stream patching several ids beats several streams,
+   given the HTTP/1.1 connection cap ADR-0009 names. A row-by-row import with a
+   progress bar shows the fan-out and a terminal state in one example.
+
+Depends on phase 1 for unmount and phase 2 for content-type dispatch. Neither
+exists today. `mount.cljs` watches `addedNodes` only, and `execute-http` calls
+`.text` on every response.
+
+Exit criteria: a docsite example streams updates into several morphing elements,
+a handler in it writes hiccup and never a string, and removing the element closes
+the connection.
+
+## Phase 4: the signal store
 
 Spec to write: `03-signal-store.md` (renamed from the README's slot 4).
 Implements the store half of ADR-0007.
@@ -190,7 +228,7 @@ Implements the store half of ADR-0007.
 Exit criteria: store test suite green under node; `:signal/set` updates a
 value a subscriber observes exactly once per batch.
 
-## Phase 4: expressions
+## Phase 5: expressions
 
 Spec to write: `04-expressions.md`. Implements ADR-0008.
 
@@ -209,7 +247,7 @@ Spec to write: `04-expressions.md`. Implements ADR-0008.
 Exit criteria: interpreter suite green under node. ADR-0009 committed with
 the measured numbers.
 
-## Phase 5: bindings
+## Phase 6: bindings
 
 Spec to write: `05-bindings.md`. Implements the binding half of ADR-0007.
 
@@ -228,7 +266,7 @@ Spec to write: `05-bindings.md`. Implements the binding half of ADR-0007.
 Exit criteria: the docsite gains a client-only example, a counter or a
 show/hide, that round-trips no request.
 
-## Phase 6: signals on the wire
+## Phase 7: signals on the wire
 
 Spec to write: `06-signals-on-the-wire.md`. Completes ADR-0007.
 
@@ -247,7 +285,7 @@ Spec to write: `06-signals-on-the-wire.md`. Completes ADR-0007.
 Exit criteria: the edit-row docsite example works with no form scraping. A
 bound field reaches the server as a signal.
 
-## Phase 7: navigation
+## Phase 8: navigation
 
 Spec to write: `07-navigation.md`. Closes the gap ADR-0002 names as the
 blocker on htmx removal.
@@ -265,7 +303,7 @@ blocker on htmx removal.
 
 Exit criteria: a partial response can send the browser to a new url.
 
-## Phase 8: migration and htmx removal
+## Phase 9: migration and htmx removal
 
 Spec to write: `08-migration.md`. Executes the deletions ADR-0002 authorises.
 
@@ -291,33 +329,31 @@ Spec to write: `08-migration.md`. Executes the deletions ADR-0002 authorises.
 Exit criteria: `grep -ri htmx` over `src`, `starter-template`, and `docsite`
 finds nothing. A scaffolded app authenticates through rhizome.
 
-## Phase 9: server sent events
+## ADRs
 
-Spec to write: `09-server-sent-events.md`, adapted from the README's slot 3.
+0009 through 0012 are taken, by the streaming decisions:
 
-- `text/event-stream` on the response dispatch. Events carry either branch:
-  html to morph or edn to patch signals.
-- The stream is mount state: `:on-trigger` returns it, `:on-unmount` closes
-  it.
-- Reconnection policy, and the retry question spec 02 deferred.
+| ADR  | Decision                                        |
+|------|--------------------------------------------------|
+| 0009 | Streams ride fetch, not EventSource              |
+| 0010 | A stream event names a command                   |
+| 0011 | A streaming handler returns a source             |
+| 0012 | A stream event is a response through the outgoing interceptors |
 
-Exit criteria: a docsite example streams updates into a morphing element and
-closes cleanly on unmount.
+Still to write:
 
-## ADRs this plan schedules
-
-| ADR  | Question                                   | Phase |
-|------|--------------------------------------------|-------|
-| 0009 | Interpreter: hand-written or SCI, with numbers | 4 |
-| 0010 | Client-private signal convention           | 6     |
-| 0011 | Failed requests: what renders, what errors | 7     |
+| ADR  | Question                                       | Phase |
+|------|------------------------------------------------|-------|
+| 0013 | Interpreter: hand-written or SCI, with numbers | 5     |
+| 0014 | Client-private signal convention               | 7     |
+| 0015 | Failed requests: what renders, what errors     | 8     |
 
 Numbers are provisional; take the next free slot at writing time.
 
 ## Standing rules for every phase
 
-- Specs 03 through 09 do not exist yet. Writing the spec is the first commit
-  of its phase.
+- Specs 01, 02, and 03 are drafted. Specs 04 through 09 do not exist yet, and
+  writing one is the first commit of its phase.
 - Small conventional commits; format with zprint and lint before each.
 - A framework change that touches generated apps lands in `starter-template/`
   in the same phase.
