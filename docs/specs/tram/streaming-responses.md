@@ -2,7 +2,8 @@
 
 ## Status
 
-drafted, not implemented. Decided by ADR-0009, ADR-0010, ADR-0011, and ADR-0012.
+basic implementation landed in `tram.sse` and `tram.sse.async`. Decided by
+ADR-0009, ADR-0010, ADR-0011, and ADR-0012.
 
 ## Summary
 

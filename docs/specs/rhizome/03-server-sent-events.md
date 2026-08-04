@@ -2,7 +2,9 @@
 
 ## Status
 
-drafted, not implemented. Decided by ADR-0009, ADR-0010, and ADR-0011.
+basic implementation landed: the frame parser, the reader loop, and the
+`text/event-stream` branch in the response dispatch. Abort on unmount waits for
+the unmount lifecycle. Decided by ADR-0009, ADR-0010, and ADR-0011.
 
 ## Summary
 

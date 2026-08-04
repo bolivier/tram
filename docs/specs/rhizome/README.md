@@ -42,7 +42,7 @@ One milestone per commit series. Do not start the next until the last runs.
 | 0  | Vocabulary and decisions                               | done        |
 | 1  | [Mount and the command registry](01-mount-and-registry.md) | drafted |
 | 2  | [The wire protocol](02-wire-protocol.md)               | drafted     |
-| 3  | [Server sent events](03-server-sent-events.md)         | drafted     |
+| 3  | [Server sent events](03-server-sent-events.md)         | basic build |
 | 4  | The signal store                                       | not written |
 | 5  | Expressions                                            | not written |
 | 6  | Bindings                                               | not written |
