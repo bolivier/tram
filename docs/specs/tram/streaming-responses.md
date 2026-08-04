@@ -124,13 +124,14 @@ more traversal of every fragment to catch a mistake the client already names.
 ## Rendering an event
 
 Per ADR-0012, an event is a partial response that arrives late. The transport
-builds a ctx from the request that opened the stream and runs the render
-concern-group over it.
+builds a ctx from the request that opened the stream and runs that route's
+outgoing interceptors over it.
 
 ```clojure
-{:request  <the request that opened the stream>
- :response {:hiccup (:dom/content event) :locals (:locals event)}
- :layouts  <from the opening ctx>}
+{:request    <the request that opened the stream>
+ :response   {:hiccup (:dom/content event) :locals (:locals event)}
+ :layouts    <from the opening ctx>
+ ::sse/event true}
 ```
 
 `:dom/content` becomes `:hiccup`, or `:html` when it is already a string. An
@@ -142,28 +143,39 @@ the event as `:dom/content`. What reaches the frame is a string.
 
 ### Which interceptors run
 
-An interceptor opts in with `:tram/stream-event true` on its map. The transport
-reads the route's interceptors from `[::r/match :data :interceptors]`, keeps the
-marked ones in chain order, and calls each `:leave`.
+All of them, on the `:leave` side only. The transport reads the route's
+interceptors off the request, reverses them, and calls each `:leave` in turn.
+That is the order a real response goes out in.
 
-| Interceptor              | Marked | Why                                         |
-|--------------------------|--------|----------------------------------------------|
-| `:tram/expand-headers`   | yes    | An event's content holds route references.   |
-| `:tram/render-template`  | yes    | It turns hiccup into html.                   |
-| `:tram/wrap-page`        | no     | An event is a partial. It never gets a page. |
-| `:tram/format`           | no     | The frame is the encoding.                   |
+Nothing opts in and nothing is filtered by name. The transport keeps only
+`[:response :body]`, so an interceptor that sets a header, a status, or a cookie
+on the way out cannot affect an event. Only the ones that build a body can, and
+those are the render path.
 
-Opt-in is the direction that is safe. The chain also holds sessions, CSRF, and
-transactions, and running any of those once per event is wrong in its own way.
+The ones that would be wrong exclude themselves for reasons that predate
+streaming:
 
-An application's own render interceptor adds the key and needs nothing else. An
-application that forgets the key sees its interceptor silently skipped on
-streams, so the development-mode check at start reports a `:leave` interceptor
-that sits in the render group and carries no marker.
+| Interceptor             | Per event                | Why                                            |
+|-------------------------|--------------------------|-------------------------------------------------|
+| `:tram/render-template` | Renders hiccup to html   | The one doing the work.                         |
+| `:tram/expand-headers`  | Expands route references | Wanted.                                         |
+| `:tram/wrap-page`       | Nothing                  | `needs-full-page?` is false for a rhizome request. |
+| `:tram/format`          | Nothing                  | Muuntaja has no encoder for `text/html`.        |
+| Layouts                 | None                     | `uses-layout?` is `(not (rhizome-request? req))`. |
 
-`uses-layout?` needs no special case. It is already
-`(not (rhizome-request? req))`, the synthetic ctx carries the real request, and a
-stream request is a rhizome request.
+An application's render interceptor is on the route, so it runs. There is nothing
+to register.
+
+The ctx carries `::sse/event true`. An interceptor whose `:leave` has a side
+effect that must not repeat per event reads it and returns early:
+
+```clojure
+{:name  :app/audit
+ :leave (fn [ctx] (if (::sse/event ctx) ctx (audit! ctx)))}
+```
+
+Tram ships no interceptor that needs this. It is here for the application that
+commits a transaction, records a metric, or writes an access log on the way out.
 
 ### When rendering fails
 
@@ -258,7 +270,7 @@ thousand parked threads and no pool exhaustion. This needs JDK 21. Tram is on 26
   the same fetch.
 - **Interceptors.** Every `:enter` runs normally, once, for the request that
   opens the stream. On the `:leave` side, `owns-body?` makes the render group
-  step aside for the response itself. The marked ones then run again per event,
+  step aside for the response itself. Every `:leave` then runs again per event,
   against a synthetic ctx. Nothing runs the `:enter` side twice.
 
 ## Out of scope
@@ -289,12 +301,13 @@ thousand parked threads and no pool exhaustion. This needs JDK 21. Tram is on 26
   learns only when `drain!` stops pulling, which is the right behaviour but not an
   obvious one.
 
-- **Is `[::r/match :data :interceptors]` the right place to read the chain?**
-  reitit merges `:interceptors` down the route tree, so route data should hold the
-  whole declared chain as plain maps, markers included. The compiled chain on
-  `:result` is the other candidate and may have lost the marker by then. Check
-  this against reitit before building on it; the answer decides whether the marker
-  can live on the interceptor map at all.
+- **Where on the request does the chain live?** `[::r/match :data :interceptors]`
+  holds what the route declared, merged down the tree by reitit. The compiled
+  queue on `:result` is the other candidate and is what actually ran. They can
+  differ, because reitit compiles an interceptor and may replace it. The compiled
+  one is the honest answer to "what runs on a response", so prefer it and confirm
+  it is reachable from the request. Check this against reitit before building on
+  it.
 
 - **Does an event's `:locals` merge with the opening response's locals?** A
   handler sets locals for its own response. An event that names a view supplies
