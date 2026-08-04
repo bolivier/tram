@@ -1,7 +1,8 @@
 (ns rhizome.directives
   (:require ["idiomorph" :refer [Idiomorph]]
             [clojure.string :as str]
-            [rhizome.dom :as dom]))
+            [rhizome.dom :as dom]
+            [rhizome.sse :as sse]))
 
 (defmulti execute
   :do)
@@ -19,6 +20,27 @@
           dom/form->map
           pr-str))
 
+(defn content-type
+  "The response's media type, without its parameters."
+  [response]
+  (-> (.. response -headers (get "content-type"))
+      (or "")
+      (str/split ";")
+      first
+      str/trim))
+
+(defn handle-response
+  "Reads a response the way its content type says to.
+
+  Any endpoint can stream, because the response decides and not the element."
+  [response]
+  (if (= "text/event-stream" (content-type response))
+    (sse/consume! response execute)
+    (-> (.text response)
+        (.then (fn [html]
+                 (execute {:do          :dom/morph
+                           :dom/content html}))))))
+
 (defn execute-http [{:keys [http/method http/url event el]
                      :as   _directive}]
   (when event
@@ -33,10 +55,7 @@
                                           "application/edn"))}
                  body (assoc :body body))]
     (-> (js/fetch url (clj->js params))
-        (.then (fn [resp] (.text resp)))
-        (.then (fn [html]
-                 (execute {:do :dom/morph
-                           :dom/content html}))))))
+        (.then handle-response))))
 
 (defmethod execute :http/get
   [directive]
@@ -68,6 +87,11 @@
   [element]
   (some-> (not-empty (.-id element))
           js/document.getElementById))
+
+(defmethod execute :dom/remove
+  [{:keys [dom/id]}]
+  (some-> (js/document.getElementById id)
+          .remove))
 
 (defmethod execute :dom/morph
   [{:keys [dom/content]}]

@@ -13,6 +13,7 @@
             [rhizome.fake-server :as fake-server]
             rhizome.mount-test
             rhizome.smoke-test
+            rhizome.sse-test
             [shadow.test :as st]
             [shadow.test.env :as env]))
 
