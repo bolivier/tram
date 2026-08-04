@@ -478,3 +478,32 @@ textarea.input {
     background-color: var(--surface);
     font-size: var(--text-base);
 }
+
+#passenger-list {
+    display: grid;
+    gap: 0.25rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.passenger-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.passenger-status {
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.passenger-status.cleared {
+    color: var(--success, var(--text-muted));
+}
+
+.passenger-status.detained {
+    color: var(--danger);
+}

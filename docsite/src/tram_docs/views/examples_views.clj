@@ -54,6 +54,9 @@
      [:li
       [:a {:href :route/examples.lazy-load}
        "Lazy Load"]]
+     [:li
+      [:a {:href :route/examples.streaming}
+       "Streaming"]]
     ]]
    [:section#examples-content children]])
 
@@ -109,6 +112,39 @@
                                              :route/examples.lazy-load.dossier}}
      [:dt "Status"]
      [:dd "Asking around…"]]]])
+
+(defn passenger-row
+  "One passenger. The stream morphs this by id as each clearance lands, so the
+  page renders every row up front and the stream only changes them."
+  [{:keys [id label status]}]
+  [:li.passenger-row {:id (str "passenger-" id)}
+   [:span.passenger-name label]
+   [:span.passenger-status {:class status}
+    status]])
+
+(defn clearance-progress [{:keys [cleared total]}]
+  [:p#clearance-progress (str cleared " of " total " seen to")])
+
+(defn start-clearance-button [{:keys [running?]}]
+  [:button#start-clearance.btn.primary {:disabled running?
+                                        ::rz/click
+                                        {:do :http/post
+                                         :http/url
+                                         :route/examples.streaming.run}}
+   (if running?
+     "Working through the list…"
+     "Begin clearances")])
+
+(defn streaming-example [{:keys [manifest]}]
+  [:div#streaming-example
+   [demo-card
+    [:h3 "Clearing the manifest"]
+    [start-clearance-button {}]
+    [clearance-progress {:cleared 0
+                         :total   (count manifest)}]
+    [:ol#passenger-list
+     (for [passenger manifest]
+       [passenger-row (assoc passenger :status "waiting")])]]])
 
 (defn applicant-error [errors]
   [:p#applicant-error.field-error (:applicant errors)])

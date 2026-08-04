@@ -1,13 +1,17 @@
 (ns tram-docs.handlers.examples-handlers
-  (:require [tram-docs.concerns.active-search-example :as squadron]
+  (:require [clojure.core.async :refer [>!!]]
+            [tram-docs.concerns.active-search-example :as squadron]
             [tram-docs.concerns.click-to-edit-example :as patron]
             [tram-docs.concerns.click-to-load-example :as visas]
             [tram-docs.concerns.edit-row-example :as rowex]
+            [tram-docs.concerns.import-example :as manifest]
             [tram-docs.concerns.inline-validation-example :as transit]
             [tram-docs.concerns.lazy-load-example :as dossier]
             [tram-docs.handlers.example-signal-handlers :as examples.signals]
             [tram-docs.views.examples-views :as v]
-            [tram.routes :as tr]))
+            [tram.routes :as tr]
+            [tram.sse :as sse]
+            [tram.sse.async :as sse.async]))
 
 (defonce global
   (atom 420))
@@ -89,6 +93,31 @@
   {:status 200
    :locals {:crew (squadron/search (get-in req [:parameters :body :query]))}})
 
+(defn streaming-example [req]
+  {:status 200
+   :locals {:manifest manifest/manifest}})
+
+(defn run-clearances
+  "One stream patching several ids: every row, the progress line, and the button
+  that started it."
+  [req]
+  {:status 200
+   :stream (sse.async/stream
+             req
+             (fn [ch]
+               (>!! ch
+                    (sse/morph [v/start-clearance-button {:running? true}]))
+               (doseq [[seen passenger] (map-indexed vector manifest/manifest)]
+                 (>!! ch
+                      (sse/morph [v/passenger-row
+                                  (manifest/clear-passenger! passenger)]))
+                 (>!! ch
+                      (sse/morph [v/clearance-progress
+                                  {:cleared (inc seen)
+                                   :total   (count manifest/manifest)}])))
+               (>!! ch
+                    (sse/morph [v/start-clearance-button {}]))))})
+
 (defn edit-row-example [req]
   {:status 200
    :locals {:people (rowex/get-people)}})
@@ -123,6 +152,13 @@
                                        [:name :string]
                                        [:email :string]]}}
       :parameters {:path [:map [:id :int]]}}]]
+   ["/streaming"
+    [""
+     {:name :route/examples.streaming
+      :get  streaming-example}]
+    ["/run"
+     {:name :route/examples.streaming.run
+      :post run-clearances}]]
    ["/lazy-load"
     [""
      {:name :route/examples.lazy-load
