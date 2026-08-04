@@ -15,6 +15,7 @@
             [tram.html :as tram.html]
             [tram.impl.http :refer [html-request? rhizome-request?]]
             [tram.rendering.template-renderer :as renderer]
+            [tram.sse :as sse]
             [tram.vars :refer [*current-user* *req* *res*]]))
 
 (def expand-header-routes-interceptor
@@ -104,6 +105,7 @@
                          (me/humanize (m/explain render-opts-schema
                                                  opts)))
                     {:opts opts})))
-  [expand-header-routes-interceptor
+  [sse/stream-response-interceptor
+   expand-header-routes-interceptor
    (wrap-page-interceptor page-wrapper)
    render-template-interceptor])

@@ -98,7 +98,7 @@
                :template])))
 
 (def ^:private content-key?
-  #{:hiccup :html :body})
+  #{:hiccup :html :body :stream})
 
 (def response-content-schema
   "The mutually exclusive ways a handler hands content back.
@@ -107,6 +107,8 @@
   emitted verbatim — from a markdown renderer, a cache, another template engine
   — and still wrapped in the layout, so it is a fragment rather than a document.
   `:body` is a Ring body the handler produced itself and owns outright.
+  `:stream` is a source of events, sent as `text/event-stream` by
+  `tram.sse/stream-response-interceptor`.
 
   A response with none of them — including no response at all — resolves a
   `:template` instead."
@@ -118,8 +120,11 @@
      [:html {:optional true}
       :string]
      [:body {:optional true}
+      :any]
+     [:stream {:optional true}
       :any]]
-    [:fn {:error/message "only one of :hiccup, :html, or :body may be set"}
+    [:fn {:error/message
+          "only one of :hiccup, :html, :body, or :stream may be set"}
      (fn [response] (>= 1 (count (filter content-key? (keys response)))))]]])
 
 (defn- validate-content! [uri response]
@@ -136,9 +141,11 @@
 (defn owns-body?
   "A handler that set `:body` produced the bytes itself — a stream, a file, a
   string from another renderer — so rendering and page wrapping both step
-  aside and it reaches the client untouched."
+  aside and it reaches the client untouched.
+
+  A handler that set `:stream` owns the whole response the same way."
   [response]
-  (contains? response :body))
+  (or (contains? response :body) (contains? response :stream)))
 
 (defn rendered?
   "True once `render` has built a body from `:hiccup`, `:html`, or a template.
