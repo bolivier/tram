@@ -1,5 +1,7 @@
 (ns tram-docs.handlers.examples-handlers
   (:require [tram-docs.concerns.active-search-example :as squadron]
+            [tram-docs.concerns.click-to-edit-example :as patron]
+            [tram-docs.concerns.click-to-load-example :as visas]
             [tram-docs.concerns.edit-row-example :as rowex]
             [tram-docs.handlers.example-signal-handlers :as examples.signals]
             [tram-docs.views.examples-views :as v]
@@ -27,6 +29,28 @@
    :hiccup [:<>
             [v/user-button @user]
             [v/global-button @global]]})
+
+(defn click-to-load-example [req]
+  (let [loaded (or (get-in req [:parameters :query :loaded]) visas/page-size)]
+    {:status 200
+     :locals {:queue     (visas/queue loaded)
+              :next-page (visas/next-page loaded)}}))
+
+(defn click-to-edit-example [req]
+  {:status 200
+   :locals {:patron (patron/current)}})
+
+(defn edit-patron [req]
+  {:status   200
+   :locals   {:patron   (patron/current)
+              :editing? true}
+   :template v/click-to-edit-example})
+
+(defn save-patron [req]
+  (patron/update-patron! (get-in req [:parameters :body]))
+  {:status   200
+   :locals   {:patron (patron/current)}
+   :template v/click-to-edit-example})
 
 (defn active-search-example [req]
   {:status 200
@@ -70,6 +94,21 @@
                                        [:name :string]
                                        [:email :string]]}}
       :parameters {:path [:map [:id :int]]}}]]
+   ["/click-to-load"
+    {:name       :route/examples.click-to-load
+     :get        click-to-load-example
+     :parameters {:query [:map
+                          [:loaded {:optional true}
+                           :int]]}}]
+   ["/click-to-edit"
+    [""
+     {:name  :route/examples.click-to-edit
+      :get   click-to-edit-example
+      :patch {:handler    save-patron
+              :parameters {:body [:map [:name :string] [:role :string]]}}}]
+    ["/edit"
+     {:name :route/examples.click-to-edit.form
+      :get  edit-patron}]]
    ["/active-search"
     [""
      {:name :route/examples.active-search

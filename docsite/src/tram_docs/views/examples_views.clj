@@ -34,6 +34,12 @@
      [:li
       [:a {:href :route/examples.active-search}
        "Active Search"]]
+     [:li
+      [:a {:href :route/examples.click-to-load}
+       "Click to Load"]]
+     [:li
+      [:a {:href :route/examples.click-to-edit}
+       "Click to Edit"]]
     ]]
    [:section#examples-content children]])
 
@@ -71,6 +77,52 @@
       "Edit"]]])
   ([person]
    (row {} person)))
+
+(defn click-to-load-example [{:keys [queue next-page]}]
+  [:div#click-to-load-example
+   [:table.table#visa-queue
+    [:thead
+     [:tr
+      [:th "Name"]
+      [:th "Nationality"]
+      [:th "Papers"]]]
+    [:tbody
+     (for [refugee queue]
+       [:tr.person-row
+        [:td (:name refugee)]
+        [:td (:nationality refugee)]
+        [:td (:papers refugee)]])]]
+   (if next-page
+     [:button.btn.primary {::rz/click {:do       :http/get
+                                       :http/url (tr/make-route
+                                                   :route/examples.click-to-load
+                                                   {:tram.routes/query
+                                                    {:loaded next-page}})}}
+      "Load 3 more"]
+     [:p "Everyone is on the list. Nobody is on the plane."])])
+
+(defn click-to-edit-example [{:keys [patron editing?]}]
+  [:div#click-to-edit-example
+   (if editing?
+     [:form#patron-form {::rz/submit {:do       :http/patch
+                                      :http/url :route/examples.click-to-edit}}
+      [:input.input {:name  :name
+                     :value (:name patron)}]
+      [:input.input {:name  :role
+                     :value (:role patron)}]
+      [:div.flex.gap-2
+       [:button.btn {:type      :button
+                     ::rz/click {:do       :http/get
+                                 :http/url :route/examples.click-to-edit}}
+        "Cancel"]
+       [:button.btn.primary {:type :submit}
+        "Save"]]]
+     [:div
+      [:h3 (:name patron)]
+      [:p (:role patron)]
+      [:button.btn {::rz/click {:do       :http/get
+                                :http/url :route/examples.click-to-edit.form}}
+       "Edit"]])])
 
 (defn search-results [{:keys [crew]}]
   [:tbody#search-results
