@@ -387,6 +387,30 @@ nav {
     padding: 1rem;
 }
 
+.demo-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 24rem;
+}
+
+.field-label {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Always in the dom, empty when the field is good, so a morph has a target. */
+.field-error {
+    min-height: var(--text-base);
+    color: var(--danger);
+    font-size: var(--text-sm);
+    font-weight: 700;
+}
+
 .input {
     display: block;
     width: 100%;

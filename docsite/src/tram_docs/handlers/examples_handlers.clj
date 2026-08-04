@@ -3,6 +3,7 @@
             [tram-docs.concerns.click-to-edit-example :as patron]
             [tram-docs.concerns.click-to-load-example :as visas]
             [tram-docs.concerns.edit-row-example :as rowex]
+            [tram-docs.concerns.inline-validation-example :as transit]
             [tram-docs.handlers.example-signal-handlers :as examples.signals]
             [tram-docs.views.examples-views :as v]
             [tram.routes :as tr]))
@@ -29,6 +30,26 @@
    :hiccup [:<>
             [v/user-button @user]
             [v/global-button @global]]})
+
+(defn inline-validation-example [req]
+  {:status 200
+   :locals {:errors {}}})
+
+(defn check-transit [req]
+  {:status   200
+   :locals   {:errors (transit/errors (get-in req [:parameters :body]))}
+   :template v/transit-validation})
+
+(defn apply-for-transit [req]
+  (let [application (get-in req [:parameters :body])
+        errors      (transit/errors application)]
+    (if (seq errors)
+      {:status   422
+       :locals   {:errors errors}
+       :template v/transit-validation}
+      {:status   200
+       :locals   {:approved application}
+       :template v/transit-approved})))
 
 (defn click-to-load-example [req]
   (let [loaded (or (get-in req [:parameters :query :loaded]) visas/page-size)]
@@ -94,6 +115,15 @@
                                        [:name :string]
                                        [:email :string]]}}
       :parameters {:path [:map [:id :int]]}}]]
+   ["/inline-validation"
+    {:parameters {:body [:map [:applicant :string] [:destination :string]]}}
+    [""
+     {:name :route/examples.inline-validation
+      :get  inline-validation-example
+      :post apply-for-transit}]
+    ["/check"
+     {:name :route/examples.inline-validation.check
+      :post check-transit}]]
    ["/click-to-load"
     {:name       :route/examples.click-to-load
      :get        click-to-load-example

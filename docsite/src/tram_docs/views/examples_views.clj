@@ -48,6 +48,9 @@
      [:li
       [:a {:href :route/examples.click-to-edit}
        "Click to Edit"]]
+     [:li
+      [:a {:href :route/examples.inline-validation}
+       "Inline Validation"]]
     ]]
    [:section#examples-content children]])
 
@@ -85,6 +88,62 @@
       "Edit"]]])
   ([person]
    (row {} person)))
+
+(defn applicant-error [errors]
+  [:p#applicant-error.field-error (:applicant errors)])
+
+(defn destination-error [errors]
+  [:p#destination-error.field-error (:destination errors)])
+
+(defn transit-submit [errors]
+  [:button#transit-submit.btn.primary {:type     :submit
+                                       :disabled (boolean (seq errors))}
+   "Apply for transit"])
+
+(defn transit-validation
+  "Everything a keystroke can change, each piece matched by its own id."
+  [{:keys [errors]}]
+  [:<>
+   [applicant-error errors]
+   [destination-error errors]
+   [transit-submit errors]])
+
+(defn transit-approved [{:keys [approved]}]
+  [:div#inline-validation-example
+   [demo-card
+    [:h3 "Signed by General de Gaulle."]
+    [:p
+     (str (:applicant approved)
+          " is on the plane to "
+          (:destination approved)
+          ".")]]])
+
+(defn inline-validation-example [{:keys [errors]}]
+  [:div#inline-validation-example
+   [demo-card
+    [:form#transit-form.demo-form {::rz/submit
+                                   {:do :http/post
+                                    :http/url
+                                    :route/examples.inline-validation}}
+     [:label.field-label {:for "applicant"}
+      "Name"]
+     [:input.input {:autocomplete "off"
+                    :id           :applicant
+                    :name         :applicant
+                    ::rz/input    {:do :http/post
+                                   :http/url
+                                   :route/examples.inline-validation.check}}]
+     [applicant-error errors]
+     [:label.field-label {:for "destination"}
+      "Destination"]
+     [:input.input {:autocomplete "off"
+                    :id           :destination
+                    :name         :destination
+                    ::rz/input    {:do :http/post
+                                   :http/url
+                                   :route/examples.inline-validation.check}}]
+     [destination-error errors]
+     [transit-submit errors]]]])
 
 (defn click-to-load-example [{:keys [queue next-page]}]
   [:div#click-to-load-example
