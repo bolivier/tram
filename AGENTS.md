@@ -261,7 +261,11 @@ one — with conventional commit messages:
 - `test:` adding or updating tests
 - `docs:` documentation
 
-Do NOT add "Co-Authored-By: Claude" or similarg in the description.
+A commit message is one line. No body, no bullet list, no trailers. If one line
+cannot describe the change, the commit is too big — split it.
+
+Never mention the agent session in a commit: no "Co-Authored-By: Claude", no
+"Generated with", no tool or model names.
 
 ## Agent skills
 
