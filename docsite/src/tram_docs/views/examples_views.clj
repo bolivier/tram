@@ -1,33 +1,7 @@
 (ns tram-docs.views.examples-views
   (:require [rhizome.core :as rz]
+            [tram-docs.components.examples :refer [demo-card]]
             [tram.routes :as tr]))
-
-(defn demo-card
-  "Chrome that marks the running demo off from the prose around it.
-
-  Goes inside an example's morph target, so a swap replaces the demo and
-  leaves the card alone."
-  [& children]
-  [:div.demo-card
-   [:p.demo-card-label "Demo"]
-   [:div.demo-card-body children]])
-
-(defn global-button [count]
-  [:button#global-counter.btn.primary {::rz/click
-                                       {:do :http/post
-                                        :http/url
-                                        "/rhizome/examples/counter/global"}}
-   (str "Increment Global: " count)])
-
-(defn user-button [count]
-  [:button#user-counter.btn.primary {::rz/click
-                                     {:do :http/post
-                                      :http/url
-                                      "/rhizome/examples/counter/user"}}
-   (str "Increment User: " count)])
-
-(defn counter-example [{:keys [global-count user-count]}]
-  [demo-card [global-button global-count] [user-button user-count]])
 
 (defn layout [children]
   [:main#main

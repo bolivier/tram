@@ -7,34 +7,12 @@
             [tram-docs.concerns.import-example :as manifest]
             [tram-docs.concerns.inline-validation-example :as transit]
             [tram-docs.concerns.lazy-load-example :as dossier]
+            [tram-docs.handlers.example-counter-handlers :as examples.counter]
             [tram-docs.handlers.example-signal-handlers :as examples.signals]
             [tram-docs.views.examples-views :as v]
             [tram.routes :as tr]
             [tram.sse :as sse]
             [tram.sse.async :as sse.async]))
-
-(defonce global
-  (atom 420))
-(defonce user
-  (atom 67))
-
-(defn counter-example [req]
-  {:status 200
-   :locals {:user-count   @user
-            :global-count @global}})
-
-(defn click-global [req]
-  (swap! global inc)
-  {:status 200
-   :hiccup [:<> [v/global-button @global]]})
-
-(defn click-user [req]
-  (swap! user inc)
-  (swap! global inc)
-  {:status 200
-   :hiccup [:<>
-            [v/user-button @user]
-            [v/global-button @global]]})
 
 (defn lazy-load-example [req]
   {:status 200})
@@ -140,6 +118,7 @@
   ["/examples"
    {:layout v/layout}
    examples.signals/routes
+   examples.counter/routes
    ["/edit-row"
     [""
      {:name :route/examples.edit-row
@@ -197,14 +176,4 @@
     ["/results"
      {:name :route/examples.active-search.results
       :post {:handler    search-results
-             :parameters {:body [:map [:query :string]]}}}]]
-   ["/counter"
-    [""
-     {:name :route/examples.counter
-      :get  counter-example}]
-    ["/global"
-     {:name :route/examples.counter.global
-      :post click-global}]
-    ["/user"
-     {:name :route/examples.counter.user
-      :post click-user}]]])
+             :parameters {:body [:map [:query :string]]}}}]]])
