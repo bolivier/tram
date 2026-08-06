@@ -132,7 +132,7 @@
    "Apply for transit"])
 
 (defn transit-validation
-  "Everything a keystroke can change, each piece matched by its own id."
+  "Everythignm ea keystroke can change, each piece matched by its own id."
   [{:keys [errors]}]
   [:<>
    [applicant-error errors]

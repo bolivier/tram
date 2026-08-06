@@ -5,13 +5,11 @@
   An event is a command map, per ADR-0010. `morph`, `remove-element`, and
   `render` build the ones Tram ships; an application writes the map itself for a
   command it registered. Each event is rendered as a partial response through the
-  route's outgoing interceptors, per ADR-0012.
+  route's outgoing interceptors.
 
   `StreamSource` is extended here for a seq. The channel implementation lives in
   `tram.sse.async`, alongside `stream`, so this namespace does not require
-  core.async.
-
-  Spec: `docs/specs/tram/streaming-responses.md`."
+  core.async."
   (:require [org.httpkit.server :as hk]
             [reitit.core :as r]
             [rhizome.html :as h]
@@ -69,10 +67,8 @@
 (extend-protocol StreamSource
   clojure.lang.Seqable
   (drain! [events emit!]
-    (loop [events (seq events)]
-      (when (and events
-                 (emit! (first events)))
-        (recur (next events))))))
+    (doseq [evt (seq events)]
+      (emit! evt))))
 
 ;;;; Rendering an event
 
