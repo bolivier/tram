@@ -1,11 +1,22 @@
 (ns tram-cli.entry
+  "Entrypoint for the tram cli.
+
+  Builtin commands:
+  `new` - make a new project (copies template)
+  `hiccup` - convert html to hiccup (reads from clipboard)
+  `html` - alias for `hiccup`
+  `dev` - Run the commands in ./tasks/dev
+  `test` Run tests, supports using bin/test or clj -X:test. Supports watch with --watch.
+         Watch either appends `:watch` alias, or passes flag to bin/test."
   (:require [babashka.cli :as cli]
             [babashka.fs :as fs]
             [babashka.process :as p]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.walk :refer [prewalk]]
             [hickory.core :as hc]
+            [rhizome.html :as html]
             [tram-cli.generator.new :refer [render-new-project-template]]
             [tram.tram-config :refer [get-tram-config]]))
 
@@ -16,11 +27,6 @@
                 #(assoc %
                    :continue true
                    :dir      user-project-dir))
-(def cmd-spec
-  {:spec     {:help {:coerce :boolean
-                     :alias  :h
-                     :desc   "Print this help menu."}}
-   :restrict true})
 
 (defn do-show-help [_]
   (println
@@ -32,9 +38,12 @@ Usage:
 
 tram start              start the application
 tram new <name>         create a new project in this directory
-tram test               run unit tests (--watch to watch)
+tram run <name>         runs an executable from bin
+tram dev                alias for `tram run dev`
+tram test               alias for `tram run test`
 tram hiccup             convert clipboard contents from html to hiccup (alias html)
-tram dev                run dev commands (tasks)
+tram html               alias for `tram hiccup`
+
 tram help               print this menu
 ")))
 
@@ -42,30 +51,10 @@ tram help               print this menu
   (let [{:keys [new-project-name]} opts]
     (render-new-project-template new-project-name)))
 
-(defn do-test [{:keys [opts]}]
-  (let [watch     (:watch opts)
-        test-type (if (fs/exists? (io/resource "bin/test"))
-                    :kaocha
-                    :clojure)
-        cmd       (case test-type
-                    :kaocha  "bin/test"
-                    :clojure "clojure -X:test")
-        watch-cmd (case test-type
-                    :kaocha  " --watch"
-                    :clojure ":watch")
-        cmd       (if watch
-                    (str cmd
-                         watch-cmd)
-                    cmd)]
-    (if watch
-      (println "Watching tests...")
-      (println "Running tests..."))
-    (let [result (p/shell {:continue true} [cmd])]
-      (System/exit (:exit result)))))
+
 
 (defn empty-coll? [x]
   (and (coll? x) (empty? x)))
-
 
 (defn hiccup-has-prop? [node prop]
   (and (vector? node) (map? (second node)) (some? (get-in node [1 prop]))))
@@ -111,14 +100,17 @@ tram help               print this menu
             node))
     node))
 
-(defn do-html-conversion [{:keys [args]}]
-  (let [html (or (second args)
+(defn get-clipboard-contents []
+  (str/trim (:out (p/shell {:out :string}
+                           (if (= "Darwin\n"
+                                  (:out (p/shell {:out :string} "uname")))
+                             "pbpaste"
+                             "wl-paste")))))
+
+(defn do-convert-html-to-hiccup [{:keys [args]}]
+  (let [html (or (first args)
                  (str/trim (:out (p/shell {:out :string}
-                                          (if (= "Darwin\n"
-                                                 (:out (p/shell {:out :string}
-                                                                "uname")))
-                                            "pbpaste"
-                                            "wl-paste")))))
+                                          (get-clipboard-contents)))))
         remove-html-whitespace #(str/replace % #">\s*[\r\n]+\s*<" "><")]
     (try
       (->> html
@@ -132,53 +124,37 @@ tram help               print this menu
                           convert-classes-to-dot-notation))
            prn)
       (catch Exception e
-        (println "Could not convert into html: ")
+        (println "Could not convert into hiccup: ")
         (prn e)
         (prn html)))))
-
-(defn task-file->ns
-  "Convert an io/file into a namespace that is compatible with bb -m."
-  [file]
-  (let [rev-path  (reverse (str/split (str file) #"/"))
-        filename  (first rev-path)
-        ns-suffix (-> filename
-                      (str/replace #"\.clj$" "")
-                      (str/replace "_" "-"))]
-    (loop [rev-path (rest rev-path)
-           path     (list ns-suffix)]
-      (cond
-        (or (empty? rev-path) (= "tasks" (first rev-path))) (str/join "." path)
-        (empty? (first rev-path)) (recur (rest rev-path) (first rev-path))
-        :else (recur (rest rev-path) (conj path (first rev-path)))))))
-
-(defn do-dev [_]
-  (println "Starting development environment...")
-  (let [task-files (map task-file->ns
-                     (fs/list-dir (io/file user-project-dir "tasks" "dev")))
-        processes  (mapv (fn [task]
-                           (p/process {:dir user-project-dir
-                                       :err :inherit
-                                       :out :inherit}
-                                      (str "bb -cp 'tasks' -m " task)))
-                     task-files)]
-    (doseq [process processes]
-      (deref process))))
-
-(defn do-db-migrate [_]
-  (let [p (p/process {:out       :inherit
-                      :err       :inherit
-                      :extra-env {"TRAM_ENV" (or (System/getenv "TRAM_ENV")
-                                                 "development")}}
-                     "clojure -X tram.db/migrate-from-cli")]
-    (println "Migrating database.")
-    (println "Starting JVM...")
-    (println
-      "Did you know you can run migrations from the dev/migrations.clj namespace?")
-    @p))
 
 (defn do-start [_]
   (p/shell (format "clojure -M:tram -m %s.core"
                    (name (:project/name (get-tram-config user-project-dir))))))
+
+(defn run [fd]
+  (cond
+    (not (fs/exists? fd)) (println "File" (fs/absolutize fd) "does not exist")
+    (fs/directory? fd)
+    (let [ps (mapv (comp run str) (fs/list-dir fd))]
+      (doseq [p ps]
+        @p))
+
+    :else
+    (p/process {:dir user-project-dir
+                :err :inherit
+                :out :inherit}
+               fd)))
+
+(defn do-run [{:keys [args]}]
+  (run (io/file (str user-project-dir "/bin/" (first args)))))
+
+(defn do-dev [_]
+  (println "Starting development environment...")
+  (run (io/file (str user-project-dir "/bin/dev"))))
+
+(defn do-test [_]
+  (run (io/file (str user-project-dir "/bin/test"))))
 
 (def cmd-table
   [{:cmds       ["new"]
@@ -189,15 +165,15 @@ tram help               print this menu
    {:cmds ["help"]
     :fn   do-show-help}
    {:cmds ["hiccup"]
-    :fn   do-html-conversion}
+    :fn   do-convert-html-to-hiccup}
    {:cmds ["html"]
-    :fn   do-html-conversion}
-   {:cmds ["db:migrate"]
-    :fn   do-db-migrate}
+    :fn   do-convert-html-to-hiccup}
    {:cmds ["dev"]
     :fn   do-dev}
    {:cmds ["start"]
     :fn   do-start}
+   {:cmds ["run"]
+    :fn   do-run}
    {:cmds []
     :fn   (fn [{:keys [args]}]
             (if (empty? args)
