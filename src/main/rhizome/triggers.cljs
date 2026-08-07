@@ -1,5 +1,6 @@
 (ns rhizome.triggers
   (:require [rhizome.directives :refer [execute]]
+            [rhizome.dom :as dom]
             [rhizome.signals :as signals]))
 
 (defonce registry
@@ -11,18 +12,18 @@
     config))
 
 (def bind
+  "Two-way: the control seeds the signal, then each follows the other."
   {:attribute     :rhizome.core/bind
    :on-mount      (fn [directive el]
                     (let [[signal-name signal-init] directive]
-                      (signals/register! signal-name signal-init)
-                      (set! (.-value el) signal-init)
                       (signals/listen! signal-name
                                        (fn [new-value]
-                                         (set! (.-value el) new-value)))))
+                                         (dom/set-bound-value! el new-value)))
+                      (signals/put! signal-name signal-init)))
    :default-event :event/input
-   :listener      (fn [e directive _el]
+   :listener      (fn [_e directive el]
                     (let [[signal-name] directive]
-                      (signals/put! signal-name (.. e -target -value))))})
+                      (signals/put! signal-name (dom/bound-value el))))})
 
 (def text
   {:attribute :rhizome.core/text
@@ -30,7 +31,37 @@
                 (let [signal-key directive]
                   (signals/listen! signal-key
                                    (fn [new-value]
-                                     (set! (.-textContent el) new-value)))))})
+                                     (set! (.-textContent el)
+                                           (str new-value))))))})
+
+(def show
+  "Hides the element while its signal is falsey.
+
+  Clearing `display` hands the element back to the stylesheet rather than
+  forcing a value the sheet did not ask for."
+  {:attribute :rhizome.core/show
+   :on-mount  (fn [directive el]
+                (let [signal-key directive]
+                  (prn 'show-key signal-key directive)
+                  (signals/listen! signal-key
+                                   (fn [new-value]
+                                     (set! (.. el -style -display)
+                                           (if new-value
+                                             ""
+                                             "none"))))))})
+
+(def debug
+  "Development aid: prints the whole signal registry into the element."
+  {:attribute :rhizome.core/debug
+   :on-mount  (fn [_directive el]
+                (let [render! (fn [entries]
+                                (set! (.-textContent el)
+                                      (pr-str (update-vals entries :value))))]
+                  (render! @signals/registry)
+                  (cljs.pprint/pprint @signals/registry)
+                  (add-watch signals/registry
+                             el
+                             (fn [_ _ _ entries] (render! entries)))))})
 
 (defn- event-trigger
   "A trigger whose whole job is to run its directive when one dom event fires."

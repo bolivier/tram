@@ -1,13 +1,9 @@
 (ns tram-docs.handlers.example-signal-handlers
-  (:require [rhizome.core :as rz]
+  (:require [tram-docs.views.example-signal-views]
             [tram.routes :as tr]))
 
 (defn signals-page [req]
-  {:status 200
-   :hiccup [:div
-            [:h3 "Basic Signal"]
-            [:input.input {::rz/bind [:example-text "text"]}]
-            [:div.signal-example-space {::rz/text :example-text}]]})
+  {:status 200})
 
 (tr/defroutes routes
   [""

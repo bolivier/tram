@@ -57,6 +57,29 @@
       (array-seq (.-selectedOptions control)))
     (.-value control)))
 
+(defn- checkbox? [control]
+  (= "checkbox" (.-type control)))
+
+(defn bound-value
+  "The value a control contributes to the signal it binds.
+
+  A checkbox holds its state in `checked`, every other control in `value`."
+  [control]
+  (if (checkbox? control)
+    (.-checked control)
+    (control-value control)))
+
+(defn set-bound-value!
+  "Writes a signal's value back onto the control bound to it."
+  [control value]
+  (if (checkbox? control)
+    (set! (.-checked control)
+          (boolean value))
+    (set! (.-value control)
+          (if (nil? value)
+            ""
+            value))))
+
 (defn- collect-value [acc control-name value]
   (if (contains? acc
                  control-name)

@@ -140,9 +140,19 @@
 
 (defmethod h/emit-attr :rhizome.core/text
   [append! key value]
-  (append! (h/stringify key) "=\"")
-  (append! (str value))
-  (append! "\""))
+  (emit-directive-attr append! key value))
+
+(defmethod h/emit-attr :rhizome.core/bind
+  [append! key value]
+  (emit-directive-attr append! key value))
+
+(defmethod h/emit-attr :rhizome.core/show
+  [append! key value]
+  (emit-directive-attr append! key value))
+
+(defmethod h/emit-attr :rhizome.core/debug
+  [append! key value]
+  (emit-directive-attr append! key value))
 
 (defmethod h/emit-attr :href
   [append! key value]

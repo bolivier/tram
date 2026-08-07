@@ -5,6 +5,8 @@
 (defn init []
   (triggers/register! triggers/bind)
   (triggers/register! triggers/text)
+  (triggers/register! triggers/show)
+  (triggers/register! triggers/debug)
   (triggers/register! triggers/click)
   (triggers/register! triggers/submit)
   (triggers/register! triggers/input)

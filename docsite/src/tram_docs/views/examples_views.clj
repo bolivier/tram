@@ -11,6 +11,9 @@
       [:a {:href :route/examples.counter}
        "Counter"]]
      [:li
+      [:a {:href :route/examples.signals}
+       "Signals"]]
+     [:li
       [:a {:href :route/examples.edit-row}
        "Edit Row"]]
      [:li

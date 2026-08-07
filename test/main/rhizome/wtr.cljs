@@ -12,6 +12,7 @@
             rhizome.dom-test
             [rhizome.fake-server :as fake-server]
             rhizome.mount-test
+            rhizome.signals-test
             rhizome.smoke-test
             rhizome.sse-test
             [shadow.test :as st]

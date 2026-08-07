@@ -8,31 +8,32 @@
    :value     value
    :listeners []})
 
-(defn register! [key value]
-  (swap! registry assoc
-    key
-    (->registry-entry key value)))
+(defn- ensure-entry
+  "Adds an empty entry for `key` when nothing has claimed it yet.
+
+  A listener can mount before the element that owns the signal, because trigger
+  order is registry order and not document order."
+  [registry key]
+  (if (contains? registry
+                 key)
+    registry
+    (assoc registry
+      key (->registry-entry key
+                            nil))))
+
+(defn put! [key value]
+  (swap! registry (fn [r] (assoc-in (ensure-entry r key) [key :value] value)))
+  (doseq [cb (get-in @registry [key :listeners])]
+    (cb value)))
 
 (defn retire! [key]
   (swap! registry dissoc
     key))
 
-(defn put! [key value]
-  (when-let [entry (get @registry key)]
-    (swap! registry assoc-in
-      [key :value]
-      value)
-    (when-let [listener-cbs (:listeners entry)]
-      (doseq [cb listener-cbs]
-        (cb value)))))
-
 (defn listen! [key cb]
-  (when-let [entry (get @registry key)]
-    (cb (:value entry))
-    (swap! registry update-in
-      [key :listeners]
-      conj
-      cb)))
+  (swap! registry (fn [r]
+                    (update-in (ensure-entry r key) [key :listeners] conj cb)))
+  (cb (get-in @registry [key :value])))
 
 (comment
   @registry
