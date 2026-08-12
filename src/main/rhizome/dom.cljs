@@ -107,6 +107,12 @@
     {}
     (filter submittable? (array-seq (.-elements form)))))
 
+(defn visit!
+  "Full page load. A fn rather than an inline `location.assign` so tests can
+  stub navigation, which browsers make unforgeable on `location` itself."
+  [url]
+  (.assign js/window.location url))
+
 (defn add-event-listener
   "Wrapper for .addEventListener
 

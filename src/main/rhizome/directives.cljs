@@ -32,13 +32,22 @@
 (defn handle-response
   "Reads a response the way its content type says to.
 
-  Any endpoint can stream, because the response decides and not the element."
+  Any endpoint can stream, because the response decides and not the element.
+  A followed redirect becomes a full page load, so a handler answers a
+  rhizome post with the same 303 it answers a plain form post with."
   [response]
-  (if (= "text/event-stream" (content-type response))
+  (cond
+    (.-redirected response)
+    (execute {:do      :dom/navigate
+              :dom/url (.-url response)})
+
+    (= "text/event-stream" (content-type response))
     (sse/consume! response execute)
+
+    :else
     (-> (.text response)
         (.then (fn [html]
-                 (execute {:do          :dom/morph
+                 (execute {:do :dom/morph
                            :dom/content html}))))))
 
 (defn execute-http [{:keys [http/method http/url event el]
@@ -87,6 +96,10 @@
   [element]
   (some-> (not-empty (.-id element))
           js/document.getElementById))
+
+(defmethod execute :dom/navigate
+  [{:keys [dom/url]}]
+  (dom/visit! url))
 
 (defmethod execute :dom/remove
   [{:keys [dom/id]}]
