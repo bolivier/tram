@@ -45,37 +45,31 @@ Three coordinated pieces:
 
 ---
 
-## Pick the Submit Mode First
+## How Submission Works
 
-Two modes. The success path decides.
+Forms submit through rhizome with `::rz/submit`. Rhizome sends the form's
+fields as edn. On success the handler returns `(full-redirect
+:route/name)`, which rhizome follows into a full page load, or an updated
+fragment when the form stays on the page. On failure the handler returns
+`{:status 422 :body (views/form values errors)}`, and rhizome morphs it in
+by the form's id. Give the form an id and return the whole form partial
+under that id.
 
-**Success navigates somewhere else** (sign-up, create-then-show): use a
-plain HTML form. The handler returns `(full-redirect :route/name)` on
-success. On failure it returns `{:status 422 :body (views/form values
-errors)}`, and Tram wraps the body as a full page because the request did
-not come from rhizome.
-
-**Success stays on the page** (inline edit, settings panel): use a rhizome
-form with `::rz/submit`. Rhizome sends the form as edn and morphs the
-response by id, so give the form an id and return the whole form partial —
-same id — from both the success and error paths. Rhizome has no navigation
-yet, so do not return a redirect to a rhizome request.
+Require `[rhizome.core :as rz]` in the view namespace.
 
 ---
 
 ## 1. Hiccup Form
-
-Plain mode:
 
 ```clojure
 (defn <form-name>-form
   ([]
    (<form-name>-form {} {}))
   ([values errors]
-   [:form {:id     "<form-name>-form"
-           :method "post"
-           :action :route/<resource>.<action>
-           :class  "space-y-4"}
+   [:form {:id         "<form-name>-form"
+           ::rz/submit {:do       :http/post
+                        :http/url :route/<resource>.<action>}
+           :class      "space-y-4"}
     [:div {:id "<form-name>-errors"}
      (when (seq errors)
        [:div {:class "text-red-500 text-sm"}
@@ -124,16 +118,8 @@ Plain mode:
      "<Submit Label>"]]))
 ```
 
-Rhizome mode changes only the form attributes. Require
-`[rhizome.core :as rz]` in the view namespace:
-
-```clojure
-[:form {:id         "<form-name>-form"
-        ::rz/submit {:do       :http/post
-                     :http/url :route/<resource>.<action>}
-        :class      "space-y-4"}
- ...]
-```
+A plain HTML form (`:method "post"` and `:action`) also works and needs no
+JavaScript. Its 422 body renders as a full page rather than morphing in.
 
 ### Form Arity Pattern
 
@@ -232,9 +218,9 @@ The route/handler pattern for forms with validation:
     (assoc :password-confirm "Passwords do not match")))
 ```
 
-In rhizome mode the error path is the same. The 422 body morphs into the
-page by the form's id, so the user keeps their place. The success path
-returns an updated fragment instead of a redirect.
+The 422 body morphs into the page by the form's id, so the user keeps
+their place. When the form stays on the page, return an updated fragment
+on success instead of a redirect.
 
 ### How Malli Coercion Errors Work
 
@@ -258,6 +244,9 @@ For `/tram-form sign-up email:email! password:password! username:string!`:
 
 **View** (`src/<app>/views/authentication_views.clj`):
 ```clojure
+(ns <app>.views.authentication-views
+  (:require [rhizome.core :as rz]))
+
 (defn sign-up-form
   ([]
    (sign-up-form {} {}))
@@ -265,10 +254,10 @@ For `/tram-form sign-up email:email! password:password! username:string!`:
    [:div {:class "max-w-md mx-auto mt-10"}
     [:div {:class "p-6 border rounded shadow bg-blue-50 space-y-6"}
      [:h1 {:class "text-2xl"} "Create an Account"]
-     [:form {:id     "sign-up-form"
-             :method "post"
-             :action :route/sign-up
-             :class  "space-y-4"}
+     [:form {:id         "sign-up-form"
+             ::rz/submit {:do       :http/post
+                          :http/url :route/sign-up}
+             :class      "space-y-4"}
       [:div#sign-up-errors
        (when (seq errors)
          [:div {:class "text-red-500 text-sm"}
@@ -330,7 +319,7 @@ For `/tram-form sign-up email:email! password:password! username:string!`:
 ## Instructions
 
 1. Parse the field list and infer types, labels, and required status
-2. Pick the submit mode from the success path — plain form when success navigates, `::rz/submit` when it stays on the page
+2. Wire the form with `::rz/submit` and give it an id the error path reuses
 3. Generate all three pieces — form view function, Malli schema, handler error path
 4. Use the app's existing namespace conventions (check existing handler/view files)
 5. For the form action route, use the route name from context or ask the user to supply it

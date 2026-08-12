@@ -90,7 +90,8 @@ A trigger names an event and holds a directive map. `:do` names the command.
                   :http/url :route/posts.comments}}]
 ```
 
-Commands: `:http/get`, `:http/post`, `:http/patch`, `:dom/remove`.
+Commands: `:http/get`, `:http/post`, `:http/patch`, `:dom/remove`,
+`:dom/navigate`.
 
 **Form data rides non-GET requests.** A `:http/post` or `:http/patch` sends
 the closest enclosing form as edn. GET sends no body, so use POST whenever
@@ -132,6 +133,19 @@ that rhizome runs (a morph, for instance). Open a stream with `::rz/load`:
 ```
 
 The stream closes when the element unmounts.
+
+### Navigation
+
+A handler that redirects works the same for rhizome and plain requests.
+Return `(full-redirect :route/name)`. Fetch follows the 303, rhizome sees
+the followed redirect, and loads the final URL as a full page.
+
+A stream can also navigate by naming the command:
+
+```
+event: dom/navigate
+data: {:dom/url "/dashboard"}
+```
 
 ---
 
@@ -238,9 +252,8 @@ the morph.
 
 ## What Rhizome Does Not Do Yet
 
-- **Navigation.** No redirect command, no `pushState`. When success must
-  navigate, use a plain HTML form (`:method "post"` and `:action`) and
-  return `(full-redirect :route/name)` from the handler.
+- **Partial-page navigation.** `:dom/navigate` is a full page load. No
+  `pushState`, no history integration.
 - **Confirmation dialogs.** No `hx-confirm` equivalent.
 
 ---

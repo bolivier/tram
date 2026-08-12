@@ -97,7 +97,7 @@ File: `src/<app>/handlers/<singular>_handlers.clj`
 **Key handler patterns:**
 - `{:status 200}` — Tram auto-resolves the view by matching namespace/function names
 - `{:status 200 :locals {:key val}}` — passes data to the view as the `ctx` argument
-- `(full-redirect :route/name)` — 303 redirect the browser follows
+- `(full-redirect :route/name)` — 303 redirect; the browser follows it, and rhizome loads the final URL as a full page
 - `(full-redirect :route/name {:id id})` — redirect with path params
 
 ---
@@ -108,7 +108,8 @@ File: `src/<app>/views/<singular>_views.clj`
 
 ```clojure
 (ns <app>.views.<singular>-views
-  (:require [tram.vars :refer [*current-user*]]))
+  (:require [rhizome.core :as rz]
+            [tram.vars :refer [*current-user*]]))
 
 (defn index-page [ctx]
   (let [<resource> (:<resource> ctx)]
@@ -136,8 +137,9 @@ File: `src/<app>/views/<singular>_views.clj`
 (defn new-form-page [_ctx]
   [:div
    [:h1 "New <singular>"]
-   [:form {:method "post"
-           :action :route/<resource>-index}
+   [:form {:id         "<singular>-form"
+           ::rz/submit {:do       :http/post
+                        :http/url :route/<resource>-index}}
     [:div#errors]
     ;; form fields here
     <form-fields>
@@ -147,8 +149,10 @@ File: `src/<app>/views/<singular>_views.clj`
   (let [<singular> (:<singular> ctx)]
     [:div
      [:h1 "Edit <singular>"]
-     [:form {:method "post"
-             :action (tram.routes/make-route :route/<resource>-edit {:id (:id <singular>)})}
+     [:form {:id         "<singular>-form"
+             ::rz/submit {:do       :http/post
+                          :http/url (tram.routes/make-route :route/<resource>-edit
+                                                            {:id (:id <singular>)})}}
       [:div#errors]
       ;; form fields with current values
       <form-fields-with-values>
