@@ -38,6 +38,10 @@ Rhizome is Tram's client runtime, loaded as `/assets/js/rhizome.js` in
 `rhizome-request: true`. Tram reads that header to return a partial rather
 than a full page.
 
+**CSRF is automatic.** The layout's `(tr/csrf-meta-tag)` holds the token,
+and rhizome sends it as `x-csrf-token` on every non-GET request. Rhizome
+forms need no `csrf-hidden-field`; only plain HTML forms do.
+
 Check whether a request came from rhizome in a handler:
 
 ```clojure
