@@ -16,6 +16,7 @@
              :href "/assets/css/index.css"}]
 
      [:link {:rel  :stylesheet
-             :href "/assets/index.css"}]]
+             :href "/assets/index.css"}]
+     (tr/csrf-meta-tag)]
     [:body
      body]]))

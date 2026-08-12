@@ -28,6 +28,6 @@
                        :interceptors [(tr/format-interceptor)
                                       (tr/exception-interceptor)
                                       (tr/wire-format)
-                                      #_(tr/security {:secret csrf-secret})
+                                      (tr/security {:secret csrf-secret})
                                       (tr/render {:page-wrapper
                                                   as-full-page})]}}))
