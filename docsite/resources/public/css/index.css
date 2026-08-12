@@ -54,7 +54,6 @@ video {
 /* End Preflight */
 
 :root {
-    --border-default: 1px solid black;
     --sidebar-width: 24rem;
     --text-xs: 0.75rem;
     --text-sm: 0.875rem;
@@ -66,33 +65,41 @@ video {
     /* Theme Colors */
 
     /* Base */
-    --bg: oklch(97% 0.015 100);
+    --bg: oklch(98% 0.003 250);
     --surface: oklch(100% 0 0);
-    --text: oklch(22% 0.02 250);
-    --text-muted: oklch(48% 0.015 250);
+    --surface-muted: oklch(96% 0.004 250);
+    --text: oklch(25% 0.02 250);
+    --text-muted: oklch(52% 0.012 250);
 
     /* Brand */
-    --primary: oklch(68% 0.18 150);
+    --primary: oklch(56% 0.13 150);
+    --primary-hover: oklch(50% 0.13 150);
 
     /* Accents */
-    --secondary: oklch(74% 0.16 70); /* warm yellow */
-    --accent: oklch(70% 0.17 250); /* playful blue */
-    --danger: oklch(66% 0.2 25); /* coral red */
+    --secondary: oklch(70% 0.1 70);
+    --accent: oklch(58% 0.13 250);
+    --accent-hover: oklch(52% 0.13 250);
+    --danger: oklch(58% 0.18 25);
+    --danger-hover: oklch(52% 0.18 25);
 
     /* UI */
-    --border: oklch(22% 0.02 250);
-    --shadow: oklch(22% 0.02 250);
+    --border: oklch(89% 0.006 250);
+    --border-strong: oklch(80% 0.008 250);
+    --border-default: 1px solid var(--border);
 
     /* Text on colored surfaces */
     --text-on-primary: oklch(98% 0 0);
-    --text-on-secondary: oklch(22% 0.02 250);
+    --text-on-secondary: oklch(25% 0.02 250);
     --text-on-danger: oklch(98% 0 0);
 
-    /* Shadow geometry */
-    --shadow-sm: 2px 2px 0 0 var(--shadow);
-    --shadow-md: 4px 4px 0 0 var(--shadow);
-    --shadow-lg: 6px 6px 0 0 var(--shadow);
-    --shadow-xl: 8px 8px 0 0 var(--shadow);
+    /* Shape */
+    --radius-field: 0.5rem;
+    --radius-box: 0.75rem;
+
+    /* Elevation */
+    --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.05);
+    --shadow-md: 0 1px 3px oklch(0% 0 0 / 0.08), 0 1px 2px oklch(0% 0 0 / 0.05);
+    --shadow-lg: 0 4px 12px oklch(0% 0 0 / 0.08), 0 2px 4px oklch(0% 0 0 / 0.05);
 }
 
 .debug {
@@ -101,13 +108,14 @@ video {
 
 body {
     background: var(--bg);
-    text: var(--text);
+    color: var(--text);
 }
 
 nav {
     min-height: var(--text-2xl);
     min-width: 100%;
     border-bottom: var(--border-default);
+    background-color: var(--surface);
 }
 
 .btn {
@@ -115,89 +123,103 @@ nav {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.5rem;
-    border: 3px solid var(--border);
-    box-shadow: var(--shadow-md);
-    background-color: var(--surface);
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-field);
+    box-shadow: var(--shadow-sm);
+    background-color: var(--surface-muted);
     color: var(--text);
     /* Form controls opt out of font inheritance. */
     font-family: inherit;
-    font-size: var(--text-base);
-    font-weight: 700;
-    line-height: 1;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    line-height: 1.25;
     text-decoration: none;
     cursor: pointer;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
 
-    /* &:hover { */
-    /*     transform: translate(2px, 2px); */
-    /*     box-shadow: var(--shadow-sm); */
-    /* } */
+    &:hover {
+        background-color: oklch(93% 0.005 250);
+    }
 
     &:active {
-        transform: translate(4px, 4px);
         box-shadow: none;
     }
 
     &:focus-visible {
-        outline: 3px solid var(--accent);
-        outline-offset: 3px;
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
     }
 
     &:disabled,
     &[aria-disabled="true"] {
-        background-color: var(--bg);
+        background-color: var(--surface-muted);
+        border-color: var(--border);
         color: var(--text-muted);
         box-shadow: none;
-        transform: none;
         cursor: not-allowed;
     }
 
     &.primary {
         background-color: var(--primary);
+        border-color: var(--primary);
         color: var(--text-on-primary);
+
+        &:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
     }
 
     &.secondary {
         background-color: var(--secondary);
+        border-color: var(--secondary);
         color: var(--text-on-secondary);
     }
 
     &.accent {
         background-color: var(--accent);
+        border-color: var(--accent);
         color: var(--text-on-primary);
+
+        &:hover {
+            background-color: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
     }
 
     &.danger {
         background-color: var(--danger);
+        border-color: var(--danger);
         color: var(--text-on-danger);
+
+        &:hover {
+            background-color: var(--danger-hover);
+            border-color: var(--danger-hover);
+        }
     }
 
     &.flat {
+        border-color: transparent;
+        background-color: transparent;
         box-shadow: none;
 
-        &:active {
-            transform: none;
+        &:hover {
+            background-color: var(--surface-muted);
         }
     }
 
     &.small {
-        padding: 0.3125rem 0.5rem;
+        padding: 0.3125rem 0.625rem;
         font-size: var(--text-xs);
-        box-shadow: var(--shadow-sm);
-
-        &:active {
-            transform: translate(2px, 2px);
-        }
     }
 
     &.large {
         padding: 0.75rem 1.25rem;
-        font-size: var(--text-lg);
-        box-shadow: var(--shadow-lg);
-
-        &:active {
-            transform: translate(6px, 6px);
-        }
+        font-size: var(--text-base);
     }
 
     &.block {
@@ -211,48 +233,42 @@ nav {
     border-collapse: separate;
     border-spacing: 0;
     background-color: var(--surface);
-    border: 3px solid var(--border);
-    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-box);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
     font-size: var(--text-sm);
     text-align: left;
 
     caption {
         padding: 0.5rem 0.75rem;
-        border: 3px solid var(--border);
+        border: 1px solid var(--border);
         border-bottom: 0;
-        background-color: var(--secondary);
-        color: var(--text-on-secondary);
+        border-radius: var(--radius-box) var(--radius-box) 0 0;
+        background-color: var(--surface);
+        color: var(--text);
         font-size: var(--text-lg);
-        font-weight: 700;
+        font-weight: 600;
         text-align: left;
     }
 
     thead {
-        background-color: var(--primary);
-        color: var(--text-on-primary);
+        background-color: var(--surface-muted);
+        color: var(--text-muted);
 
         th {
             padding: 0.625rem 0.75rem;
-            border-bottom: 3px solid var(--border);
-            font-weight: 700;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             font-size: var(--text-xs);
-
-            & + th {
-                border-left: 3px solid var(--border);
-            }
         }
     }
 
     tbody {
-        tr:nth-child(even) {
-            background-color: var(--bg);
-        }
-
         tr:hover {
-            background-color: var(--secondary);
-            color: var(--text-on-secondary);
+            background-color: var(--surface-muted);
         }
 
         tr + tr td {
@@ -261,21 +277,17 @@ nav {
 
         td {
             padding: 0.625rem 0.75rem;
-
-            & + td {
-                border-left: 3px solid var(--border);
-            }
         }
     }
 
     tfoot {
-        background-color: var(--bg);
-        font-weight: 700;
+        background-color: var(--surface-muted);
+        font-weight: 600;
 
         td,
         th {
             padding: 0.625rem 0.75rem;
-            border-top: 3px solid var(--border);
+            border-top: 1px solid var(--border);
         }
     }
 
@@ -314,38 +326,37 @@ nav {
     width: var(--sidebar-width);
     height: 100vh;
     border-right: 1px solid var(--border);
+    background-color: var(--surface);
     padding: 1rem;
     overflow-y: auto;
 
     ul {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.25rem;
     }
 
     a {
         display: block;
         padding: 0.5rem 0.75rem;
-        border: 3px solid var(--border);
-        background-color: var(--surface);
-        font-size: var(--text-base);
-        font-weight: 700;
+        border-radius: var(--radius-field);
+        color: var(--text);
+        font-size: var(--text-sm);
+        font-weight: 500;
         text-decoration: none;
 
         &:hover {
-            background-color: var(--secondary);
-            color: var(--text-on-secondary);
+            background-color: var(--surface-muted);
         }
 
         &:focus-visible {
-            outline: 3px solid var(--accent);
+            outline: 2px solid var(--accent);
             outline-offset: 2px;
         }
 
         &[aria-current="page"] {
             background-color: var(--primary);
             color: var(--text-on-primary);
-            box-shadow: var(--shadow-sm);
         }
     }
 }
@@ -363,18 +374,20 @@ nav {
 
 .demo-card {
     margin: 1.5rem 0;
-    border: 3px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-box);
+    overflow: hidden;
     box-shadow: var(--shadow-md);
     background-color: var(--surface);
 }
 
 .demo-card-label {
-    padding: 0.25rem 0.75rem;
-    border-bottom: 3px solid var(--border);
-    background-color: var(--secondary);
-    color: var(--text-on-secondary);
-    font-size: var(--text-sm);
-    font-weight: 700;
+    padding: 0.375rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background-color: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
@@ -403,18 +416,15 @@ nav {
 
     dt {
         font-size: var(--text-sm);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        font-weight: 600;
         color: var(--text-muted);
     }
 }
 
 .field-label {
     font-size: var(--text-sm);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-weight: 500;
+    color: var(--text);
 }
 
 /* Always in the dom, empty when the field is good, so a morph has a target. */
@@ -422,39 +432,40 @@ nav {
     min-height: var(--text-base);
     color: var(--danger);
     font-size: var(--text-sm);
-    font-weight: 700;
+    font-weight: 500;
 }
 
 .input {
     display: block;
     width: 100%;
     padding: 0.5rem 0.75rem;
-    border: 3px solid var(--border);
-    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-field);
     background-color: var(--surface);
     color: var(--text);
     /* Form controls opt out of font inheritance. */
     font-family: inherit;
-    font-size: var(--text-base);
-    font-weight: 700;
-    line-height: 1;
+    font-size: var(--text-sm);
+    font-weight: 400;
+    line-height: 1.25;
     text-decoration: none;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
 
     &::placeholder {
         color: var(--text-muted);
-        font-weight: 400;
     }
 
     &:focus-visible {
-        outline: 3px solid var(--accent);
+        outline: 2px solid var(--accent);
         outline-offset: 2px;
     }
 
     &:disabled,
     &[readonly] {
-        background-color: var(--bg);
+        background-color: var(--surface-muted);
         color: var(--text-muted);
-        box-shadow: none;
         cursor: not-allowed;
     }
 
@@ -474,7 +485,8 @@ textarea.input {
     height: 8rem;
     width: 20rem;
     padding: 0.5rem 0.75rem;
-    border: 3px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-field);
     background-color: var(--surface);
     font-size: var(--text-base);
 }
