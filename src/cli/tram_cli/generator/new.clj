@@ -22,12 +22,13 @@
        (filter #(.isFile (io/file template-root %)))))
 
 (defn get-bin-file-paths
-  "Get string relative path of all files in `template-root`'s /bin.
+  "Get string relative path of all files under `template-root`'s /bin,
+  nested directories like bin/dev included.
 
   Resolved against `template-root` rather than the working directory because
   outside development mode the template is a clone in a temp dir."
   [template-root]
-  (->> (fs/list-dir (io/file template-root "bin"))
+  (->> (file-seq (io/file template-root "bin"))
        (remove fs/directory?)
        (map #(fs/relativize (str template-root) (str %)))
        (map str)))
@@ -96,11 +97,11 @@
           (System/exit 1)))
       (println "Copying files")
       (doseq [tracked (get-template-file-paths template-root)
-              :let [src      (io/file template-root tracked)
-                    relative (str/replace tracked
-                                          "sample_app"
-                                          (ns->path project-name))
-                    dest     (io/file project-root relative)]]
+              :let    [src      (io/file template-root tracked)
+                       relative (str/replace tracked
+                                             "sample_app"
+                                             (ns->path project-name))
+                       dest     (io/file project-root relative)]]
         (io/make-parents dest)
         (spit dest
               (-> src
@@ -108,6 +109,7 @@
                   (str/replace "sample_app" (->snake_case project-name))
                   (str/replace "sample-app" project-name))))
       (doseq [bin (get-bin-file-paths template-root)]
+        (io/make-parents (io/file project-root bin))
         (fs/copy (io/file template-root bin)
                  (io/file project-root bin)
                  {:copy-attributes  true
@@ -117,15 +119,16 @@
                   slurp
                   (str/replace "sample_app" (->snake_case project-name))
                   (str/replace "sample-app" project-name))))
-      ;; bin/css installs the node deps and builds the stylesheet, so the app
-      ;; serves a styled page before `tram dev` starts Tailwind's watcher.
+      ;; bin/css installs the node deps and builds the stylesheet, so the
+      ;; app serves a styled page before `tram dev` starts Tailwind's
+      ;; watcher.
       (println "Installing node deps and building CSS")
       (p/shell "bin/css")
       (println "Importing lint configs (this warms the dependency cache too)")
       (p/shell "bin/copy-lint-configs")
-      ;; Renaming sample-app to the project's name shifts identifier lengths,
-      ;; which zprint aligns on. Without this the first commit is already
-      ;; misformatted.
+      ;; Renaming sample-app to the project's name shifts identifier
+      ;; lengths, which zprint aligns on. Without this the first commit is
+      ;; already misformatted.
       (println "Formatting")
       (p/shell "bin/format")
       (println "Initializing a git repo.")
