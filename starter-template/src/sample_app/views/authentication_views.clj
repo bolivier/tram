@@ -1,18 +1,17 @@
 (ns sample-app.views.authentication-views
-  (:require [tram.routes :as tr]
+  (:require [rhizome.core :as rz]
+            [tram.routes :as tr]
             [tram.vars :refer [*current-user*]]))
 
 (defn sign-up [_locals]
   [:div {:class "max-w-md mx-auto mb-1 mt-10"}
-   [:div {:class  "p-6 border rounded shadow bg-blue-50 space-y-6"
-          :hx-ext "response-targets"
-          "hx-on::after-request" "this.classList.add('animate-shake')"}
+   [:div {:class "p-6 border rounded shadow bg-blue-50 space-y-6"}
     [:h1 {:class "text-2xl"}
      "Create an Account"]
     [:div#error]
-    [:form {:hx-post   :route/sign-up
-            :hx-target "#error"
-            :class     "space-y-4"}
+    [:form {::rz/submit {:do       :http/post
+                         :http/url :route/sign-up}
+            :class      "space-y-4"}
      (tr/csrf-hidden-field)
      [:div {:class "flex flex-col space-y-1"}
       [:label {:for   "email"
@@ -40,15 +39,13 @@
 
 (defn sign-in [_locals]
   [:div {:class "max-w-md mx-auto mb-1 mt-10"}
-   [:div {:class  "p-6 border rounded shadow bg-blue-50 space-y-6"
-          :hx-ext "response-targets"
-          "hx-on::after-request" "this.classList.add('animate-shake')"}
+   [:div {:class "p-6 border rounded shadow bg-blue-50 space-y-6"}
     [:h1 {:class "text-2xl"}
      "Sign In"]
     [:div#error]
-    [:form {:hx-post   :route/sign-in
-            :hx-target "#error"
-            :class     "space-y-4"}
+    [:form {::rz/submit {:do       :http/post
+                         :http/url :route/sign-in}
+            :class      "space-y-4"}
      (tr/csrf-hidden-field)
      [:div {:class "flex flex-col space-y-1"}
       [:label {:for   "email"
@@ -74,12 +71,11 @@
        "w-full rounded-sm py-2 px-4 border-2 text-white bg-blue-600 hover:bg-blue-700 cursor-pointer transition-colors"}
       "Sign In"]]]])
 
-
 (defn sign-in-form-error []
-  [:div.text-red-500 "Incorrect email or password."])
+  [:div#error.text-red-500 "Incorrect email or password."])
 
 (defn sign-up-form-error []
-  [:div.text-red-500 "User with that email already exists"])
+  [:div#error.text-red-500 "User with that email already exists"])
 
 (defn dashboard [_locals]
   [:div
