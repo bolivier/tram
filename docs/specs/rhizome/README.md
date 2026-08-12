@@ -47,7 +47,7 @@ One milestone per commit series. Do not start the next until the last runs.
 | 5  | Expressions                                            | not written |
 | 6  | Bindings                                               | not written |
 | 7  | Signals on the wire                                    | not written |
-| 8  | Navigation                                             | not written |
+| 8  | Navigation                                             | basic build |
 | 9  | Migration and htmx removal                             | not written |
 
 Milestone 0 is the `### Rhizome` section of `CONTEXT.md` plus ADRs 0003 through
