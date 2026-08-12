@@ -36,6 +36,24 @@
 (def called-from-dir
   (io/file (System/getenv "TRAM_CLI_CALLED_FROM")))
 
+(defn template-repo-sha
+  "HEAD of the repo the template came from."
+  [template-root]
+  (-> (p/shell {:dir (str template-root)
+                :out :string}
+               "git rev-parse HEAD")
+      :out
+      str/trim))
+
+(defn stamp-tram-sha
+  "Points the generated deps.edn at `sha`, so the app depends on the exact
+  framework commit its template came from.
+
+  The tram coordinate holds the only 40-char hex string in the file."
+  [project-root sha]
+  (let [deps (io/file project-root "deps.edn")]
+    (spit deps (str/replace (slurp deps) #"[0-9a-f]{40}" sha))))
+
 (defn ns->path [ns]
   (-> ns
       (str/replace "-" "_")
@@ -119,6 +137,7 @@
                   slurp
                   (str/replace "sample_app" (->snake_case project-name))
                   (str/replace "sample-app" project-name))))
+      (stamp-tram-sha project-root (template-repo-sha template-root))
       ;; bin/css installs the node deps and builds the stylesheet, so the
       ;; app serves a styled page before `tram dev` starts Tailwind's
       ;; watcher.

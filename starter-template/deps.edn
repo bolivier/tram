@@ -32,6 +32,8 @@
  ;; Tram is batteries-included: reitit, malli, integrant, toucan2,
  ;; honeysql, next.jdbc, migratus, buddy, telemere and friends arrive with
  ;; it. Only add a dep here if Tram does not already bring it.
+ ;; `tram new` stamps the sha with the commit the template came from, so
+ ;; there is nothing to bump by hand here.
  :deps    {bolivier/tram          {:git/sha
                                    "939165fd1088b779617241cb3b06fbd4312bad5c"
 
