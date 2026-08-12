@@ -33,7 +33,7 @@ File: `src/<app>/handlers/<singular>_handlers.clj`
   (:require [<app>.views.<singular>-views :as views]
             [tram.core :refer [defroutes]]
             [tram.db :as db]
-            [tram.routes :refer [redirect]]))
+            [tram.routes :refer [full-redirect]]))
 
 (defn index-page [req]
   {:status 200
@@ -50,7 +50,7 @@ File: `src/<app>/handlers/<singular>_handlers.clj`
 (defn create [req]
   (let [params (get-in req [:parameters :body])]
     (db/insert-returning-instance! :models/<resource> params)
-    (redirect :route/<resource>-index)))
+    (full-redirect :route/<resource>-index)))
 
 (defn edit-page [req]
   (let [id (get-in req [:parameters :path :id])]
@@ -61,12 +61,12 @@ File: `src/<app>/handlers/<singular>_handlers.clj`
   (let [id     (get-in req [:parameters :path :id])
         params (get-in req [:parameters :body])]
     (db/update! :models/<resource> id params)
-    (redirect :route/<resource>-show {:id id})))
+    (full-redirect :route/<resource>-show {:id id})))
 
 (defn delete [req]
   (let [id (get-in req [:parameters :path :id])]
     (db/delete! :models/<resource> id)
-    (redirect :route/<resource>-index)))
+    (full-redirect :route/<resource>-index)))
 
 (defroutes routes
   [["/<resource>"
@@ -97,8 +97,8 @@ File: `src/<app>/handlers/<singular>_handlers.clj`
 **Key handler patterns:**
 - `{:status 200}` — Tram auto-resolves the view by matching namespace/function names
 - `{:status 200 :locals {:key val}}` — passes data to the view as the `ctx` argument
-- `(redirect :route/name)` — HTMX-compatible redirect (uses `hx-redirect` header)
-- `(redirect :route/name {:id id})` — redirect with path params
+- `(full-redirect :route/name)` — 303 redirect the browser follows
+- `(full-redirect :route/name {:id id})` — redirect with path params
 
 ---
 
@@ -136,8 +136,8 @@ File: `src/<app>/views/<singular>_views.clj`
 (defn new-form-page [_ctx]
   [:div
    [:h1 "New <singular>"]
-   [:form {:hx-post   :route/<resource>-index
-           :hx-target "#errors"}
+   [:form {:method "post"
+           :action :route/<resource>-index}
     [:div#errors]
     ;; form fields here
     <form-fields>
@@ -147,8 +147,8 @@ File: `src/<app>/views/<singular>_views.clj`
   (let [<singular> (:<singular> ctx)]
     [:div
      [:h1 "Edit <singular>"]
-     [:form {:hx-post   (tram.routes/make-route :route/<resource>-edit {:id (:id <singular>)})
-             :hx-target "#errors"}
+     [:form {:method "post"
+             :action (tram.routes/make-route :route/<resource>-edit {:id (:id <singular>)})}
       [:div#errors]
       ;; form fields with current values
       <form-fields-with-values>

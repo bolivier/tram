@@ -39,24 +39,43 @@ Modifiers:
 
 Three coordinated pieces:
 
-1. **Hiccup form** — with HTMX wiring, input names, and error display
+1. **Hiccup form** — input names, error display, and submit wiring
 2. **Malli schema** — for the route's `:parameters {:body ...}`
 3. **Handler error path** — re-rendering the form on validation failure
 
 ---
 
+## Pick the Submit Mode First
+
+Two modes. The success path decides.
+
+**Success navigates somewhere else** (sign-up, create-then-show): use a
+plain HTML form. The handler returns `(full-redirect :route/name)` on
+success. On failure it returns `{:status 422 :body (views/form values
+errors)}`, and Tram wraps the body as a full page because the request did
+not come from rhizome.
+
+**Success stays on the page** (inline edit, settings panel): use a rhizome
+form with `::rz/submit`. Rhizome sends the form as edn and morphs the
+response by id, so give the form an id and return the whole form partial —
+same id — from both the success and error paths. Rhizome has no navigation
+yet, so do not return a redirect to a rhizome request.
+
+---
+
 ## 1. Hiccup Form
 
-The form uses HTMX to post and display validation errors inline without a page reload.
+Plain mode:
 
 ```clojure
 (defn <form-name>-form
   ([]
    (<form-name>-form {} {}))
   ([values errors]
-   [:form {:hx-post   :route/<resource>/<action>
-           :hx-target "#<form-name>-errors"
-           :class     "space-y-4"}
+   [:form {:id     "<form-name>-form"
+           :method "post"
+           :action :route/<resource>.<action>
+           :class  "space-y-4"}
     [:div {:id "<form-name>-errors"}
      (when (seq errors)
        [:div {:class "text-red-500 text-sm"}
@@ -103,6 +122,17 @@ The form uses HTMX to post and display validation errors inline without a page r
     [:button {:type  :submit
               :class "rounded py-2 px-4 bg-blue-600 text-white hover:bg-blue-700"}
      "<Submit Label>"]]))
+```
+
+Rhizome mode changes only the form attributes. Require
+`[rhizome.core :as rz]` in the view namespace:
+
+```clojure
+[:form {:id         "<form-name>-form"
+        ::rz/submit {:do       :http/post
+                     :http/url :route/<resource>.<action>}
+        :class      "space-y-4"}
+ ...]
 ```
 
 ### Form Arity Pattern
@@ -166,18 +196,18 @@ The route/handler pattern for forms with validation:
 ```clojure
 ;; Route definition with Malli schema
 ["/<resource>"
- {:name :route/<resource>/create
+ {:name :route/<resource>.create
   :post {:handler    create-handler
          :parameters {:body [:map
                               [:title :string]
                               [:body {:optional true} :string]]}}}]
 
-;; Handler — success path redirects, error path re-renders form
+;; Handler — success path redirects, error path re-renders the form
 (defn create-handler [req]
   (let [params (get-in req [:parameters :body])]
     (try
       (db/insert-returning-instance! :models/<resource> params)
-      (redirect :route/<resource>/index)
+      (full-redirect :route/<resource>.index)
       (catch Exception e
         {:status 422
          :body   (views/<form-name>-form params {"base" (ex-message e)})}))))
@@ -191,7 +221,7 @@ The route/handler pattern for forms with validation:
        :body   (views/<form-name>-form params errors)}
       (do
         (db/insert-returning-instance! :models/<resource> params)
-        (redirect :route/<resource>/index)))))
+        (full-redirect :route/<resource>.index)))))
 
 (defn validate-params [params]
   (cond-> {}
@@ -202,31 +232,23 @@ The route/handler pattern for forms with validation:
     (assoc :password-confirm "Passwords do not match")))
 ```
 
+In rhizome mode the error path is the same. The 422 body morphs into the
+page by the form's id, so the user keeps their place. The success path
+returns an updated fragment instead of a redirect.
+
 ### How Malli Coercion Errors Work
 
 When a request body fails Malli validation, Tram's `exception-interceptor` calls the route's `:error` handler (if defined) or the default error handler. To customize:
 
 ```clojure
 ["/<resource>"
- {:name :route/<resource>/create
+ {:name :route/<resource>.create
   :post {:handler    create-handler
          :error      (fn [schema req]
                        {:status 422
                         :body   (views/<form-name>-form (:body req) {:base "Invalid input"})})
          :parameters {:body [...]}}}]
 ```
-
----
-
-## HTMX Config for 422 Swap
-
-Tram's `as-full-page` includes this HTMX config that enables swapping on 422 responses:
-
-```json
-{"code":"422", "swap": true}
-```
-
-This means returning `{:status 422 :body html}` from a handler will swap the content into the target — no special setup needed.
 
 ---
 
@@ -243,9 +265,10 @@ For `/tram-form sign-up email:email! password:password! username:string!`:
    [:div {:class "max-w-md mx-auto mt-10"}
     [:div {:class "p-6 border rounded shadow bg-blue-50 space-y-6"}
      [:h1 {:class "text-2xl"} "Create an Account"]
-     [:form {:hx-post   :route/sign-up
-             :hx-target "#sign-up-errors"
-             :class     "space-y-4"}
+     [:form {:id     "sign-up-form"
+             :method "post"
+             :action :route/sign-up
+             :class  "space-y-4"}
       [:div#sign-up-errors
        (when (seq errors)
          [:div {:class "text-red-500 text-sm"}
@@ -297,7 +320,7 @@ For `/tram-form sign-up email:email! password:password! username:string!`:
 (defn sign-up-post-handler [req]
   (let [params (get-in req [:parameters :body])]
     (if-let [user (register-new-account params)]
-      (redirect :route/dashboard)
+      (full-redirect :route/dashboard)
       {:status 422
        :body   (views/sign-up-form params {:base "An account with that email already exists"})})))
 ```
@@ -307,7 +330,8 @@ For `/tram-form sign-up email:email! password:password! username:string!`:
 ## Instructions
 
 1. Parse the field list and infer types, labels, and required status
-2. Generate all three pieces — form view function, Malli schema, handler error path
-3. Use the app's existing namespace conventions (check existing handler/view files)
-4. For the form action route, use the route name from context or ask the user to supply it
-5. Apply Tailwind classes consistent with existing forms in the project (check authentication views for the style)
+2. Pick the submit mode from the success path — plain form when success navigates, `::rz/submit` when it stays on the page
+3. Generate all three pieces — form view function, Malli schema, handler error path
+4. Use the app's existing namespace conventions (check existing handler/view files)
+5. For the form action route, use the route name from context or ask the user to supply it
+6. Apply Tailwind classes consistent with existing forms in the project (check authentication views for the style)
