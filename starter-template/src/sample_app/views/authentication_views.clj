@@ -1,6 +1,5 @@
 (ns sample-app.views.authentication-views
   (:require [rhizome.core :as rz]
-            [tram.routes :as tr]
             [tram.vars :refer [*current-user*]]))
 
 (defn sign-up [_locals]
@@ -12,7 +11,6 @@
     [:form {::rz/submit {:do       :http/post
                          :http/url :route/sign-up}
             :class      "space-y-4"}
-     (tr/csrf-hidden-field)
      [:div {:class "flex flex-col space-y-1"}
       [:label {:for   "email"
                :class "text-sm"}
@@ -46,7 +44,6 @@
     [:form {::rz/submit {:do       :http/post
                          :http/url :route/sign-in}
             :class      "space-y-4"}
-     (tr/csrf-hidden-field)
      [:div {:class "flex flex-col space-y-1"}
       [:label {:for   "email"
                :class "text-sm"}
