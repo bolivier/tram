@@ -13,7 +13,7 @@ run_zprint() {
 
 # Every Clojure and EDN source file zprint owns, as a newline-separated list.
 zprint_targets() {
-  for dir in src test dev tasks; do
+  for dir in src test dev bin/dev; do
     [ -d "$dir" ] && find "$dir" -type f \( -name '*.clj' -o -name '*.cljc' \)
   done
   for file in build.clj deps.edn tests.edn tram.edn; do
