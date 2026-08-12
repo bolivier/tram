@@ -1,6 +1,5 @@
 (ns sample-app.concerns.http
-  (:require [tram.routes :as tr]
-            [tram.vars :refer [*req*]]))
+  (:require [tram.routes :as tr]))
 
 (defn as-full-page
   ([body]
@@ -9,29 +8,12 @@
    [:html
     [:head
      [:title title]
-     [:meta
-      {:name "htmx-config"
-       :content
-       "{
-        \"responseHandling\":[
-            {\"code\":\"204\", \"swap\": false},
-            {\"code\":\"[23]..\", \"swap\": true},
-            {\"code\":\"422\", \"swap\": true},
-            {\"code\":\"[45]..\", \"swap\": true, \"error\":true},
-            {\"code\":\"...\", \"swap\": true}
-        ]
-    }"}]
-     [:script
-      {:src "https://unpkg.com/htmx.org@2.0.4"
-       :integrity
-       "sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
 
-       :crossorigin "anonymous"}]
+     [:script {:defer true
+               :src   "/assets/js/rhizome.js"}]
+
      [:link {:rel  :stylesheet
              :href "/assets/index.css"}]
-     [:script {:src         "https://unpkg.com/htmx-ext-response-targets@2.0.2"
-               :crossorigin "anonymous"}]
      (tr/csrf-meta-tag)]
-    [:body {:hx-headers (format "{\"X-CSRF-Token\": \"%s\"}"
-                                (:csrf-token *req*))}
+    [:body
      body]]))
