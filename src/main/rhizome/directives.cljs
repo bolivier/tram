@@ -58,10 +58,14 @@
   (let [body   (when (not= :get
                            method)
                  (request-body el))
+        token  (when (not= :get
+                           method)
+                 (dom/csrf-token))
         params (cond-> {:method  (str/upper-case (name method))
                         :headers (cond-> {"rhizome-request" "true"}
-                                   body (assoc "content-type"
-                                          "application/edn"))}
+                                   body  (assoc "content-type"
+                                           "application/edn")
+                                   token (assoc "x-csrf-token" token))}
                  body (assoc :body body))]
     (-> (js/fetch url (clj->js params))
         (.then handle-response))))

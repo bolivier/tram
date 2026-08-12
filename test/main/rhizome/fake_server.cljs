@@ -20,8 +20,11 @@
 
 (defn HttpRequest->ring [http-req]
   (p/let [text (.text http-req)]
-    {:body (when (seq text)
-             (edn/read-string text))}))
+    {:body    (when (seq text)
+                (edn/read-string text))
+     :headers (into {}
+                    (map vec)
+                    (es6-iterator-seq (.entries (.-headers http-req))))}))
 
 (defn make-handlers [endpoint handler-defs]
   (mapv (fn [[method ring-handler]]

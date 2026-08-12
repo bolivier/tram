@@ -107,6 +107,12 @@
     {}
     (filter submittable? (array-seq (.-elements form)))))
 
+(defn csrf-token
+  "The token the layout's csrf meta tag carries, nil without one."
+  []
+  (some-> (js/document.querySelector "meta[name=csrf-token]")
+          (.getAttribute "content")))
+
 (defn visit!
   "Full page load. A fn rather than an inline `location.assign` so tests can
   stub navigation, which browsers make unforgeable on `location` itself."
