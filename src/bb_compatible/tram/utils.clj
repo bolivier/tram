@@ -1,4 +1,7 @@
 (ns ^:public tram.utils
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io])
+  (:import [java.io PushbackReader])
   (:refer-clojure :exclude [ensure]))
 
 (defn map-keys [f coll]
@@ -101,3 +104,10 @@
   Think of this like `filter-vals` a la `map-vals`"
   [f m]
   (omit-by (complement f) m))
+
+(defn read-edn
+  "Takes a path and returns edn in the file at that path.
+
+  Mostly for handling pushback reader annoyances."
+  [path]
+  (edn/read (PushbackReader. (io/reader path))))
