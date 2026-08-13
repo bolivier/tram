@@ -10,6 +10,7 @@
   Reexported from `tram.routes` for external use."
   (:require [camel-snake-kebab.core :as csk]
             [camel-snake-kebab.extras :refer [transform-keys]]
+            [clojure.edn :as edn]
             [malli.transform :as mt]
             [muuntaja.core :as muuntaja]
             [reitit.coercion.malli :as rcm]
@@ -143,6 +144,62 @@
   []
   (assoc (multipart/multipart-interceptor) :name :tram/multipart))
 
+(def File
+  "An uploaded file, as ring's multipart temp-file store hands it over.
+
+  `:tempfile` is deleted once the response finishes, so a handler that wants
+  to keep the bytes must copy or stream them while it runs."
+  [:map
+   [:filename :string]
+   [:content-type :string]
+   [:size :int]
+   [:tempfile :any]])
+
+(def params-part
+  "The multipart part rhizome puts a form's non-file fields in, as edn."
+  "rhizome-params")
+
+(defn- uploaded-file? [value]
+  (and (map? value) (contains? value :tempfile)))
+
+(defn- file-part?
+  "Whether a multipart value is an upload. A control with `multiple` set
+  arrives as a vector, because ring collects repeated part names."
+  [value]
+  (if (sequential? value)
+    (and (seq value)
+         (every? uploaded-file?
+                 value))
+    (uploaded-file? value)))
+
+(defn- merge-file-parts [params edn-part]
+  (into (edn/read-string edn-part)
+        (keep (fn [[part-name value]]
+                (when (file-part? value)
+                  [(keyword part-name) value])))
+        params))
+
+(def rhizome-multipart-interceptor
+  "Rebuilds `:body-params` from a rhizome multipart submission.
+
+  A form carrying files cannot ride as edn, so rhizome splits it: the fields
+  go in one edn part and each file gets its own. This puts them back together
+  so a handler sees the same `:body-params` either way. Files arrive as ring's
+  `{:filename :content-type :size :tempfile}`, and the tempfile is deleted once
+  the response finishes.
+
+  A multipart request without the edn part is left alone, so plain HTML form
+  uploads still reach `[:parameters :multipart]` the way reitit puts them."
+  {:name  :tram/rhizome-multipart
+   :must-run-after [:tram/multipart]
+   :enter (fn [ctx]
+            (let [params (get-in ctx [:request :multipart-params])]
+              (if-let [edn-part (get params params-part)]
+                (assoc-in ctx
+                  [:request :body-params]
+                  (merge-file-parts params edn-part))
+                ctx)))})
+
 (defn coerce-request-interceptor
   "reitit's request-coercion interceptor, named `:tram/coerce-request`."
   []
@@ -170,6 +227,7 @@
   []
   [(parameters-interceptor)
    (multipart-interceptor)
+   rhizome-multipart-interceptor
    (coerce-request-interceptor)
    (coerce-exceptions-interceptor)
    (coerce-response-interceptor)

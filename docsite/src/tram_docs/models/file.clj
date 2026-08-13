@@ -1,9 +1,6 @@
-(ns tram-docs.models.file)
+(ns tram-docs.models.file
+  (:require [tram.routes :as tr]))
 
 (def File
   "Schema for multipart file upload"
-  [:map
-   [:tempfile :any]
-   [:size :int]
-   [:content-type :string]
-   [:filename :string]])
+  tr/File)

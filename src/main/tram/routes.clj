@@ -23,6 +23,7 @@
   [tram.impl.http htmx-request? html-request? full-redirect redirect]
   [tram.html make-route make-path]
   [tram.wire-format
+   File
    make-muuntaja-instance
    coercion
    string->vector-transformer
@@ -30,6 +31,7 @@
    json-casing-interceptor
    parameters-interceptor
    multipart-interceptor
+   rhizome-multipart-interceptor
    coerce-request-interceptor
    coerce-exceptions-interceptor
    coerce-response-interceptor
