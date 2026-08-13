@@ -153,7 +153,7 @@ The stream closes when the element unmounts.
 ### Navigation
 
 A handler that redirects works the same for rhizome and plain requests.
-Return `(full-redirect :route/name)`. Fetch follows the 303, rhizome sees
+Return `(redirect :route/name)`. Fetch follows the 303, rhizome sees
 the followed redirect, and loads the final URL as a full page.
 
 A stream can also navigate by naming the command:

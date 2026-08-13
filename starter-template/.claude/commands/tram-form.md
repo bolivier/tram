@@ -49,7 +49,7 @@ Three coordinated pieces:
 
 Forms submit through rhizome with `::rz/submit`. Rhizome sends the form's
 fields as edn, or as multipart when the form carries a file. Either way the
-handler reads `[:parameters :body]`. On success the handler returns `(full-redirect
+handler reads `[:parameters :body]`. On success the handler returns `(redirect
 :route/name)`, which rhizome follows into a full page load, or an updated
 fragment when the form stays on the page. On failure the handler returns
 `{:status 422 :body (views/form values errors)}`, and rhizome morphs it in
@@ -194,7 +194,7 @@ The route/handler pattern for forms with validation:
   (let [params (get-in req [:parameters :body])]
     (try
       (db/insert-returning-instance! :models/<resource> params)
-      (full-redirect :route/<resource>.index)
+      (redirect :route/<resource>.index)
       (catch Exception e
         {:status 422
          :body   (views/<form-name>-form params {"base" (ex-message e)})}))))
@@ -208,7 +208,7 @@ The route/handler pattern for forms with validation:
        :body   (views/<form-name>-form params errors)}
       (do
         (db/insert-returning-instance! :models/<resource> params)
-        (full-redirect :route/<resource>.index)))))
+        (redirect :route/<resource>.index)))))
 
 (defn validate-params [params]
   (cond-> {}
@@ -310,7 +310,7 @@ For `/tram-form sign-up email:email! password:password! username:string!`:
 (defn sign-up-post-handler [req]
   (let [params (get-in req [:parameters :body])]
     (if-let [user (register-new-account params)]
-      (full-redirect :route/dashboard)
+      (redirect :route/dashboard)
       {:status 422
        :body   (views/sign-up-form params {:base "An account with that email already exists"})})))
 ```

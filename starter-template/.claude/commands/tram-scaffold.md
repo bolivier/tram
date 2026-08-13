@@ -33,7 +33,7 @@ File: `src/<app>/handlers/<singular>_handlers.clj`
   (:require [<app>.views.<singular>-views :as views]
             [tram.core :refer [defroutes]]
             [tram.db :as db]
-            [tram.routes :refer [full-redirect]]))
+            [tram.routes :refer [redirect]]))
 
 (defn index-page [req]
   {:status 200
@@ -50,7 +50,7 @@ File: `src/<app>/handlers/<singular>_handlers.clj`
 (defn create [req]
   (let [params (get-in req [:parameters :body])]
     (db/insert-returning-instance! :models/<resource> params)
-    (full-redirect :route/<resource>-index)))
+    (redirect :route/<resource>-index)))
 
 (defn edit-page [req]
   (let [id (get-in req [:parameters :path :id])]
@@ -61,12 +61,12 @@ File: `src/<app>/handlers/<singular>_handlers.clj`
   (let [id     (get-in req [:parameters :path :id])
         params (get-in req [:parameters :body])]
     (db/update! :models/<resource> id params)
-    (full-redirect :route/<resource>-show {:id id})))
+    (redirect :route/<resource>-show {:id id})))
 
 (defn delete [req]
   (let [id (get-in req [:parameters :path :id])]
     (db/delete! :models/<resource> id)
-    (full-redirect :route/<resource>-index)))
+    (redirect :route/<resource>-index)))
 
 (defroutes routes
   [["/<resource>"
@@ -97,8 +97,8 @@ File: `src/<app>/handlers/<singular>_handlers.clj`
 **Key handler patterns:**
 - `{:status 200}` — Tram auto-resolves the view by matching namespace/function names
 - `{:status 200 :locals {:key val}}` — passes data to the view as the `ctx` argument
-- `(full-redirect :route/name)` — 303 redirect; the browser follows it, and rhizome loads the final URL as a full page
-- `(full-redirect :route/name {:id id})` — redirect with path params
+- `(redirect :route/name)` — 303 redirect; the browser follows it, and rhizome loads the final URL as a full page
+- `(redirect :route/name {:id id})` — redirect with path params
 
 ---
 
