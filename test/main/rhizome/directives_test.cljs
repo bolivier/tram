@@ -137,6 +137,10 @@
                    (is (= "visa.txt"
                           (get-in @seen
                                   [:multipart-params "papers" :filename])))
+                   (p/let [text (.text (get-in @seen
+                                               [:multipart-params "papers"
+                                                :tempfile]))]
+                     (is (= "letters of transit" text)))
                    (done))))))
 
 (deftest a-multipart-post-still-carries-the-csrf-token-test

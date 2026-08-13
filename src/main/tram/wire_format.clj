@@ -15,9 +15,9 @@
             [muuntaja.core :as muuntaja]
             [reitit.coercion.malli :as rcm]
             [reitit.http.coercion :as rhc]
-            [reitit.http.interceptors.multipart :as multipart]
             [reitit.http.interceptors.parameters :as parameters]
             [tram.html :as tram.html]
+            [tram.impl.multipart-interceptor :as impl.multipart]
             [tram.vars :refer [*current-user* *req* *res*]]))
 
 (defn make-muuntaja-instance
@@ -140,9 +140,12 @@
   (assoc (parameters/parameters-interceptor) :name :tram/parameters))
 
 (defn multipart-interceptor
-  "reitit's multipart interceptor, named `:tram/multipart`."
+  "Tram's multipart interceptor, named `:tram/multipart`.
+
+  Parses multipart params on any request with a multipart Content-Type. See
+  `tram.impl.multipart-interceptor/multipart-interceptor`."
   []
-  (assoc (multipart/multipart-interceptor) :name :tram/multipart))
+  (impl.multipart/multipart-interceptor))
 
 (def File
   "An uploaded file, as ring's multipart temp-file store hands it over.
