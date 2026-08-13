@@ -1,6 +1,7 @@
 (ns rhizome.dom-test
   (:require [cljs.test :refer [deftest is]]
-            [rhizome.dom :as sut])
+            [rhizome.dom :as sut]
+            [rhizome.test-utils :refer [attach-files! fake-file]])
   (:require-macros [rhizome.macros :refer [with-html]]))
 
 (deftest form->map-reads-named-controls-test
@@ -108,3 +109,61 @@
                         :value "Victor Laszlo"}]]]
              (is (= {:applicant "Victor Laszlo"}
                     (sut/form->map (.querySelector root "form"))))))
+
+(deftest form->files-reads-a-selected-file-test
+  (with-html
+    [form
+     [:form
+      [:input {:name  "applicant"
+               :value "Ilsa Lund"}]
+      [:input {:name "papers"
+               :type "file"}]]]
+    (attach-files! (.querySelector form "[type=file]") [(fake-file "visa.txt")])
+    (is (= ["visa.txt"] (mapv #(.-name %) (:papers (sut/form->files form)))))))
+
+(deftest form->files-skips-an-empty-file-input-test
+  (with-html [form
+              [:form
+               [:input {:name "papers"
+                        :type "file"}]]]
+             (is (= {} (sut/form->files form)))))
+
+(deftest form->files-skips-an-unnamed-file-input-test
+  (with-html [form
+              [:form
+               [:input {:type "file"}]]]
+             (attach-files! (.querySelector form "[type=file]")
+                            [(fake-file "visa.txt")])
+             (is (= {} (sut/form->files form)))))
+
+(deftest form->files-skips-a-disabled-file-input-test
+  (with-html [form
+              [:form
+               [:input {:disabled true
+                        :name     "papers"
+                        :type     "file"}]]]
+             (attach-files! (.querySelector form "[type=file]")
+                            [(fake-file "visa.txt")])
+             (is (= {} (sut/form->files form)))))
+
+(deftest form->files-reads-a-multiple-file-input-test
+  (with-html [form
+              [:form
+               [:input {:multiple true
+                        :name     "papers"
+                        :type     "file"}]]]
+             (attach-files! (.querySelector form "[type=file]")
+                            [(fake-file "visa.txt") (fake-file "exit.txt")])
+             (is (= ["visa.txt" "exit.txt"]
+                    (mapv #(.-name %) (:papers (sut/form->files form)))))))
+
+(deftest form->map-still-leaves-files-out-test
+  (with-html [form
+              [:form
+               [:input {:name  "applicant"
+                        :value "Ilsa Lund"}]
+               [:input {:name "papers"
+                        :type "file"}]]]
+             (attach-files! (.querySelector form "[type=file]")
+                            [(fake-file "visa.txt")])
+             (is (= {:applicant "Ilsa Lund"} (sut/form->map form)))))

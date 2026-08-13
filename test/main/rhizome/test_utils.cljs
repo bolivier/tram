@@ -33,3 +33,15 @@
   [el text]
   (set! (.-value el) (str (.-value el) text))
   (fire! el "input"))
+
+(defn fake-file [filename]
+  (js/File. #js ["letters of transit"] filename #js {:type "text/plain"}))
+
+(defn attach-files!
+  "Simulate a user picking `files` in a file input. A `FileList` is not
+  constructible, so it has to come from a `DataTransfer`."
+  [el files]
+  (let [transfer (js/DataTransfer.)]
+    (doseq [file files]
+      (.add (.-items transfer) file))
+    (set! (.-files el) (.-files transfer))))

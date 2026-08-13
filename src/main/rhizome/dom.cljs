@@ -36,7 +36,7 @@
 
 (def ^:private unsubmittable-types
   "Control types a browser leaves out of a form submission, plus `file`, which
-  has no edn representation."
+  has no edn representation and rides as its own multipart part instead."
   #{"button" "file" "image" "reset" "submit"})
 
 (defn submittable?
@@ -106,6 +106,26 @@
                            (control-value control)))
     {}
     (filter submittable? (array-seq (.-elements form)))))
+
+(defn- file-control? [control]
+  (= "file" (.-type control)))
+
+(defn form->files
+  "A form's file controls as a map of keyword name to a vector of `File`s.
+
+  A control with nothing selected contributes no entry, so an untouched file
+  input leaves its key absent rather than sending an empty part."
+  [form]
+  (reduce (fn [acc control]
+            (let [files (array-seq (.-files control))]
+              (if (or (str/blank? (.-name control))
+                      (.-disabled control)
+                      (empty? files))
+                acc
+                (assoc acc
+                  (keyword (.-name control)) (vec files)))))
+    {}
+    (filter file-control? (array-seq (.-elements form)))))
 
 (defn csrf-token
   "The token the layout's csrf meta tag carries, nil without one."

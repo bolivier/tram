@@ -3,8 +3,9 @@
             [promesa.core :as p]
             [rhizome.directives :as sut]
             [rhizome.dom :as dom]
-            [rhizome.fake-server :as fake-server])
-  (:require-macros [rhizome.macros]))
+            [rhizome.fake-server :as fake-server]
+            [rhizome.test-utils :refer [attach-files! fake-file]])
+  (:require-macros [rhizome.macros :refer [with-html]]))
 
 (deftest dom-navigate-visits-its-url-test
   (let [visited  (atom nil)
@@ -84,3 +85,84 @@
                  (set! dom/visit!
                        original)
                  (done)))))
+
+(deftest a-form-without-files-still-posts-edn-test
+  (let [seen (atom nil)]
+    (fake-server/use-handlers fake-server/server
+                              (fake-server/make-handlers
+                                "/directives-test/no-files"
+                                {:post (fn [req]
+                                         (reset! seen req)
+                                         {:body [:p "ok"]})}))
+    (with-html [form
+                [:form
+                 [:input {:name  "applicant"
+                          :value "Ilsa Lund"}]
+                 [:button {:type "button"}]]]
+               (sut/execute {:do       :http/post
+                             :el       (.querySelector form "button")
+                             :http/url "/directives-test/no-files"})
+               (async done
+                      (p/do (is (eventually (= {:applicant "Ilsa Lund"}
+                                               (:body @seen))))
+                            (is (= "application/edn"
+                                   (get-in @seen [:headers "content-type"])))
+                            (done))))))
+
+(deftest a-form-with-a-file-posts-multipart-test
+  (let [seen (atom nil)]
+    (fake-server/use-handlers fake-server/server
+                              (fake-server/make-handlers
+                                "/directives-test/upload"
+                                {:post (fn [req]
+                                         (reset! seen req)
+                                         {:body [:p "ok"]})}))
+    (with-html
+      [form
+       [:form
+        [:input {:name  "applicant"
+                 :value "Ilsa Lund"}]
+        [:input {:name "papers"
+                 :type "file"}]
+        [:button {:type "button"}]]]
+      (attach-files! (.querySelector form "[type=file]")
+                     [(fake-file "visa.txt")])
+      (sut/execute {:do       :http/post
+                    :el       (.querySelector form "button")
+                    :http/url "/directives-test/upload"})
+      (async done
+             (p/do (is (eventually (some? @seen)))
+                   (is (= "{:applicant \"Ilsa Lund\"}"
+                          (get-in @seen [:multipart-params sut/params-part])))
+                   (is (= "visa.txt"
+                          (get-in @seen
+                                  [:multipart-params "papers" :filename])))
+                   (done))))))
+
+(deftest a-multipart-post-still-carries-the-csrf-token-test
+  (let [meta-el (js/document.createElement "meta")
+        seen    (atom nil)]
+    (.setAttribute meta-el "name" "csrf-token")
+    (.setAttribute meta-el "content" "tok-123")
+    (.appendChild js/document.head meta-el)
+    (fake-server/use-handlers
+      fake-server/server
+      (fake-server/make-handlers
+        "/directives-test/upload-csrf"
+        {:post (fn [req]
+                 (reset! seen (get-in req [:headers "x-csrf-token"]))
+                 {:body [:p "ok"]})}))
+    (with-html [form
+                [:form
+                 [:input {:name "papers"
+                          :type "file"}]
+                 [:button {:type "button"}]]]
+               (attach-files! (.querySelector form "[type=file]")
+                              [(fake-file "visa.txt")])
+               (sut/execute {:do       :http/post
+                             :el       (.querySelector form "button")
+                             :http/url "/directives-test/upload-csrf"})
+               (async done
+                      (p/do (is (eventually (= "tok-123" @seen)))
+                            (.remove meta-el)
+                            (done))))))

@@ -18,13 +18,51 @@
 (defn ring->HttpResponse [res]
   (.html HttpResponse (h/html (:body res)) (clj->js (dissoc res :body))))
 
+(defn- multipart? [http-req]
+  (-> (.. http-req -headers (get "content-type"))
+      (or "")
+      (.startsWith "multipart/form-data")))
+
+(defn- part-value [value]
+  (if (instance? js/File
+                 value)
+    {:filename     (.-name value)
+     :content-type (.-type value)
+     :size         (.-size value)
+     :tempfile     value}
+    value))
+
+(defn- multipart-params
+  "The request's parts, keyed by name the way ring's multipart middleware
+  keys them. Repeated names collect into a vector."
+  [form-data]
+  (reduce (fn [acc [part-name value]]
+            (let [value (part-value value)]
+              (if (contains? acc
+                             part-name)
+                (update acc
+                        part-name
+                        (fn [seen]
+                          (conj (if (vector? seen)
+                                  seen
+                                  [seen])
+                                value)))
+                (assoc acc
+                  part-name value))))
+    {}
+    (es6-iterator-seq (.entries form-data))))
+
 (defn HttpRequest->ring [http-req]
-  (p/let [text (.text http-req)]
-    {:body    (when (seq text)
-                (edn/read-string text))
-     :headers (into {}
-                    (map vec)
-                    (es6-iterator-seq (.entries (.-headers http-req))))}))
+  (let [headers
+        (into {} (map vec) (es6-iterator-seq (.entries (.-headers http-req))))]
+    (if (multipart? http-req)
+      (p/let [form-data (.formData http-req)]
+        {:headers headers
+         :multipart-params (multipart-params form-data)})
+      (p/let [text (.text http-req)]
+        {:body    (when (seq text)
+                    (edn/read-string text))
+         :headers headers}))))
 
 (defn make-handlers [endpoint handler-defs]
   (mapv (fn [[method ring-handler]]

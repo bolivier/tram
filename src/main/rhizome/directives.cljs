@@ -12,13 +12,36 @@
   (println "rhizome.core/execute not implemented for operation"
            (:do directive)))
 
+(def params-part
+  "The multipart part carrying a form's non-file fields as edn."
+  "rhizome-params")
+
+(defn form-data
+  "A form's fields as one edn part plus one part per selected file."
+  [form files]
+  (let [data (js/FormData.)]
+    (.append data params-part (pr-str (dom/form->map form)))
+    (doseq [[control-name control-files] files
+            file control-files]
+      (.append data (name control-name) file))
+    data))
+
 (defn request-body
-  "The form `el` belongs to, as edn. An element outside a form sends no body."
+  "The form `el` belongs to, as `{:body _ :content-type _}`.
+
+  Fields alone go as edn. A form carrying files goes as multipart instead,
+  with the fields still edn in one part, because a `File` has no edn
+  representation. A `FormData` sets its own content type, boundary included,
+  so that case reports none. An element outside a form sends no body."
   [el]
-  (some-> el
-          dom/closest-form
-          dom/form->map
-          pr-str))
+  (when-let [form (some-> el
+                          dom/closest-form)]
+    (let [files (dom/form->files form)]
+      (if (empty? files)
+        {:body         (pr-str (dom/form->map form))
+         :content-type "application/edn"}
+        {:body (form-data form
+                          files)}))))
 
 (defn content-type
   "The response's media type, without its parameters."
@@ -55,17 +78,17 @@
   (when event
     (.preventDefault event)
     (.stopPropagation event))
-  (let [body   (when (not= :get
-                           method)
-                 (request-body el))
+  (let [{:keys [body content-type]} (when (not= :get
+                                                method)
+                                      (request-body el))
         token  (when (not= :get
                            method)
                  (dom/csrf-token))
         params (cond-> {:method  (str/upper-case (name method))
                         :headers (cond-> {"rhizome-request" "true"}
-                                   body  (assoc "content-type"
-                                           "application/edn")
-                                   token (assoc "x-csrf-token" token))}
+                                   content-type (assoc "content-type"
+                                                  content-type)
+                                   token        (assoc "x-csrf-token" token))}
                  body (assoc :body body))]
     (-> (js/fetch url (clj->js params))
         (.then handle-response))))
