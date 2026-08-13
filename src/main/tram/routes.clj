@@ -20,7 +20,7 @@
     [tram.wire-format]))
 
 (import-vars
-  [tram.impl.http htmx-request? html-request? full-redirect redirect]
+  [tram.impl.http html-request? redirect]
   [tram.html make-route make-path]
   [tram.wire-format
    File

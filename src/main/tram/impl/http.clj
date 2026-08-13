@@ -6,9 +6,6 @@
   (:require [clojure.string :as str]
             [tram.html :refer [make-route]]))
 
-(defn htmx-request? [req]
-  (some? (get-in req [:headers "hx-request"])))
-
 (defn rhizome-request?
   "True when the rhizome runtime drove this request, rather than the browser
   loading a page. Rhizome sets the header on every fetch it makes."
@@ -29,32 +26,11 @@
      :params route-or-params
      :resp   {}}))
 
-(defn full-redirect
-  "Returns a resp for a 303 redirect. Not via htmx, this causes a full page
-  reload.
+(defn redirect
+  "Returns a resp for a 303 redirect. Browsers follow it as a full page load;
+  rhizome follows it and navigates.
 
   Can be called in any of these ways:
-
-  (full-redirect :route/name)
-  (full-redirect resp :route/name)
-  (full-redirect :route/name {:id 2})
-  (full-redirect resp :route/name {:id 2})"
-  ([route]
-   (full-redirect route {}))
-  ([resp-or-route route-or-params]
-   (full-redirect resp-or-route route-or-params {}))
-  ([resp-or-route route-or-params only-params]
-   (let [{:keys [route resp params]}
-         (parse-inputs [resp-or-route route-or-params only-params])]
-     (-> resp
-         (assoc :status 303)
-         (assoc-in [:headers "location"] (make-route route params))))))
-
-(defn redirect
-  "Returns a resp for a htmx redirect. These use a 301 status, and have a htmx
-  header to indicate a redirect.
-
-Can be called in any of these ways:
 
   (redirect :route/name)
   (redirect resp :route/name)
@@ -67,6 +43,6 @@ Can be called in any of these ways:
   ([resp-or-route route-or-params only-params]
    (let [{:keys [route resp params]}
          (parse-inputs [resp-or-route route-or-params only-params])]
-     (assoc-in (assoc resp :status 301)
-       [:headers "hx-redirect"]
-       (make-route route params)))))
+     (-> resp
+         (assoc :status 303)
+         (assoc-in [:headers "location"] (make-route route params))))))
