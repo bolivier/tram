@@ -303,7 +303,7 @@
   (append! "\""))
 
 (defn emittable-attr [attr-value]
-  (not (or (contains? #{"" nil false} attr-value)
+  (not (or (contains? #{nil false} attr-value)
            (and (coll? attr-value) (empty? attr-value)))))
 
 (defn emit-attrs [append! attrs]
