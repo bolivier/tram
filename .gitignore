@@ -9,4 +9,4 @@
 resources/test.db
 node_modules
 /test/browser/browser-tests/
-/starter-template/resources/public/js/cljs-runtime
+/starter-template/resources/public/js/*
