@@ -24,9 +24,20 @@ Every request carries `rhizome-request: true`, which is what
 than a page. That header is the whole contract between the runtime and the render
 concern-group, and it does not change.
 
-**Requests are bodyless in this milestone.** ADR-0007 makes the body the signal
-map, and there are no signals yet. This is enough for the docsite counter, which
-posts to increment and gets html back.
+**A non-GET request carries the closest enclosing form as its body.** Fields go
+as `application/edn`. A form holding a selected file goes as
+`multipart/form-data` instead, because a `File` has no edn representation: the
+fields ride in one part named `rhizome-params`, still edn, and each file gets
+its own part.
+
+`tram.wire-format/rhizome-multipart-interceptor` reverses that split, so
+`:body-params` looks the same either way and a handler reads
+`[:parameters :body]` without caring which transport ran. Files land there as
+`tram.wire-format/File`, whose `:tempfile` ring deletes once the response
+finishes.
+
+A multipart request without a `rhizome-params` part is left alone, so a plain
+HTML form upload still reaches `[:parameters :multipart]`.
 
 An in-flight request aborts when its element unmounts. `:on-trigger` returns the
 abort controller and `:on-unmount` calls it, which is what those hooks exist for.

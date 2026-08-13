@@ -101,6 +101,18 @@ Commands: `:http/get`, `:http/post`, `:http/patch`, `:dom/remove`,
 the closest enclosing form as edn. GET sends no body, so use POST whenever
 the server needs input values. An element outside a form sends no body.
 
+**File inputs work with no extra wiring.** A form carrying a selected file
+goes as multipart instead of edn, and the server puts it back together. The
+handler reads files from `[:parameters :body]` next to every other field. A
+file arrives as `tram.routes/File`:
+
+```clojure
+{:filename "visa.png" :content-type "image/png" :size 3401 :tempfile #object[java.io.File]}
+```
+
+`:tempfile` is deleted once the response finishes. Copy or stream it inside
+the handler if you want to keep the bytes.
+
 Route keywords like `:route/name` expand to URL paths anywhere in hiccup,
 including inside directive maps. Use `tram.routes/make-route` for routes
 with path params:

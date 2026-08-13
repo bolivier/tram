@@ -48,7 +48,8 @@ Three coordinated pieces:
 ## How Submission Works
 
 Forms submit through rhizome with `::rz/submit`. Rhizome sends the form's
-fields as edn. On success the handler returns `(full-redirect
+fields as edn, or as multipart when the form carries a file. Either way the
+handler reads `[:parameters :body]`. On success the handler returns `(full-redirect
 :route/name)`, which rhizome follows into a full page load, or an updated
 fragment when the form stays on the page. On failure the handler returns
 `{:status 422 :body (views/form values errors)}`, and rhizome morphs it in
