@@ -75,21 +75,41 @@ tram help               print this menu
             children))
     node))
 
+(defn keyword-safe-class?
+  "Tailwind classes may contain characters, like `/` and `:`, that a keyword
+  cannot hold. Those have to stay in the `:class` prop."
+  [class]
+  (re-matches #"[A-Za-z0-9_-]+" class))
+
 (defn convert-classes-to-dot-notation [node]
   (if (hiccup-has-prop? node
                         :class)
-    (let [tag      (first node)
-          props    (second node)
-          new-tag  (keyword (str (name tag)
-                                 "."
-                                 (str/replace (:class props)
-                                              #" "
-                                              ".")))
+    (let [tag (first node)
+          props (second node)
+          classes (remove str/blank?
+                    (str/split (:class props)
+                               #"\s+"))
+          {safe   true
+           unsafe false}
+          (group-by (comp boolean
+                          keyword-safe-class?)
+                    classes)
+
+          new-tag (if (seq safe)
+                    (keyword (str (name tag)
+                                  "."
+                                  (str/join "."
+                                            safe)))
+                    tag)
+          new-props (if (seq unsafe)
+                      (assoc props
+                        :class (str/join " "
+                                         unsafe))
+                      (dissoc props
+                        :class))
           children (drop 2
                          node)]
-      (into [new-tag
-             (dissoc props
-               :class)]
+      (into [new-tag new-props]
             children))
     node))
 
@@ -120,8 +140,8 @@ tram help               print this menu
            first
            hc/as-hiccup
            (prewalk (comp remove-empty-from-hiccup
-                          convert-id-to-hash-notation
-                          convert-classes-to-dot-notation))
+                          convert-classes-to-dot-notation
+                          convert-id-to-hash-notation))
            prn)
       (catch Exception e
         (println "Could not convert into hiccup: ")
