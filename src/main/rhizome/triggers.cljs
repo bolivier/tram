@@ -1,7 +1,8 @@
 (ns rhizome.triggers
   (:require [rhizome.directives :refer [execute]]
             [rhizome.dom :as dom]
-            [rhizome.signals :as signals]))
+            [rhizome.signals :as signals])
+  (:refer-clojure :exclude [drop]))
 
 (defonce registry
   (atom {}))
@@ -81,6 +82,12 @@
 
 (def input
   (event-trigger :rhizome.core/input :event/input))
+
+(def drop
+  (event-trigger :rhizome.core/drop :event/drop))
+
+(def dragover
+  (event-trigger :rhizome.core/dragover :event/dragover))
 
 (def load
   "Runs its directive as soon as the element mounts, with no event to wait on.

@@ -9,7 +9,7 @@
 
 (defmethod execute :default
   [directive]
-  (println "rhizome.core/execute not implemented for operation"
+  (println "rhizome.directives/execute not implemented for operation"
            (:do directive)))
 
 (def params-part
@@ -132,6 +132,10 @@
   [{:keys [dom/id]}]
   (some-> (js/document.getElementById id)
           .remove))
+
+(defmethod execute :prevent-default
+  [{:keys [event]}]
+  (.preventDefault event))
 
 (defmethod execute :dom/morph
   [{:keys [dom/content]}]

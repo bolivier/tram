@@ -11,5 +11,7 @@
   (triggers/register! triggers/submit)
   (triggers/register! triggers/input)
   (triggers/register! triggers/load)
+  (triggers/register! triggers/drop)
+  (triggers/register! triggers/dragover)
   (mount/mount!)
   (mount/observe!))

@@ -14,6 +14,9 @@
    :event/mouseout    "mouseout"
    :event/mousemove   "mousemove"
    :event/contextmenu "contextmenu"
+   :event/drop        "drop"
+   :event/dragenter   "dragenter"
+   :event/dragleave   "dragleave"
    ;; keyboard
    :event/keydown     "keydown"
    :event/keyup       "keyup"
