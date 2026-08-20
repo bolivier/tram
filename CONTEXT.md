@@ -86,11 +86,23 @@ page.
 ### Rhizome
 
 **directive**:
-The edn value in one of an element's `::on/*` attributes. It holds the commands
-that run when that trigger fires, and the modifiers that govern when they run. An
-element holds one directive per trigger and as many triggers as it needs.
-_Avoid_: command (that names a verb inside a directive), binding, action,
-handler, rhizome-on
+One of an element's rhizome attributes, key and value together. The key names
+the trigger, the value is the payload. An element holds one directive per
+trigger and as many triggers as it needs.
+_Avoid_: command (that names what a directive's payload can carry), binding,
+action, handler, rhizome-on
+
+**payload**:
+The value half of a directive. An event trigger's payload is a command with its
+modifiers. A binding's payload is a signal reference.
+_Avoid_: expression, value, body, args
+
+**behavior**:
+The definition registered for one rhizome attribute. It says what an element
+carrying that attribute does at mount and which event it listens for. Event
+triggers and bindings are both behaviors.
+_Avoid_: trigger (that names the event, and not every behavior has one),
+plugin, controller, trait
 
 **trigger**:
 The event that runs a directive, named by the directive's own attribute.
@@ -105,10 +117,12 @@ A key on a directive that governs when or whether its commands run, such as
 _Avoid_: filter, wrapper, option
 
 **command**:
-The verb a directive names, under its `:command` key. A command is a namespaced
-keyword such as `:http/post` or `:dom/morph`. Rhizome ships a set of commands and
-an application registers its own.
-_Avoid_: op, operation, effect, action
+One executable instruction: the map `execute` runs, whose `:command` key names
+its verb as a namespaced keyword such as `:http/post`. Commands arrive from
+directives, from stream events, and from response handling. Rhizome ships a set
+of commands and an application registers its own.
+_Avoid_: op, operation, effect, action, directive (that names where a command
+sits on an element)
 
 **command definition**:
 The map that registers one command. It carries the command's key, its lifecycle
