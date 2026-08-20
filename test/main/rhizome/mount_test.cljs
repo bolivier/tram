@@ -1,25 +1,25 @@
 (ns rhizome.mount-test
   (:require [cljs.test :refer [deftest is]]
+            [rhizome.behaviors :as behaviors]
             [rhizome.mount :as sut]
-            [rhizome.test-utils :as tu]
-            [rhizome.triggers :as triggers])
+            [rhizome.test-utils :as tu])
   (:require-macros [rhizome.macros :refer [with-html]]))
 
 (def ^:private probe-attribute
   :rhizome.core/probe)
 
 (defn- with-probe
-  "Registers a trigger that only counts its runs, and hands `f` the counter."
+  "Registers a behavior that only counts its runs, and hands `f` the counter."
   [f]
   (let [runs (atom [])]
-    (triggers/register! {:attribute     probe-attribute
-                         :default-event :event/input
-                         :listener      (fn [_e directive _el]
-                                          (swap! runs conj
-                                            directive))})
+    (behaviors/register! {:attribute     probe-attribute
+                          :default-event :event/input
+                          :listener      (fn [_e payload _el]
+                                           (swap! runs conj
+                                             payload))})
     (try
       (f runs)
-      (finally (swap! triggers/registry dissoc
+      (finally (swap! behaviors/registry dissoc
                  probe-attribute)))))
 
 (deftest runs-on-every-event-without-debounce-test
@@ -63,7 +63,7 @@
                                (is (= 2 (count @runs))))))
       (finally (.restore clock)))))
 
-(deftest debounce-reads-the-directive-at-event-time-test
+(deftest debounce-reads-the-payload-at-event-time-test
   (let [clock (tu/fake-timers)]
     (try
       (with-probe (fn [runs]

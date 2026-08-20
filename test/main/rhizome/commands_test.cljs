@@ -1,7 +1,7 @@
-(ns rhizome.directives-test
+(ns rhizome.commands-test
   (:require [cljs.test :refer [async deftest is]]
             [promesa.core :as p]
-            [rhizome.directives :as sut]
+            [rhizome.commands :as sut]
             [rhizome.dom :as dom]
             [rhizome.fake-server :as fake-server]
             [rhizome.test-utils :refer [attach-files! fake-file]])
@@ -28,12 +28,12 @@
     (fake-server/use-handlers
       fake-server/server
       (fake-server/make-handlers
-        "/directives-test/csrf"
+        "/commands-test/csrf"
         {:post (fn [req]
                  (reset! seen (get-in req [:headers "x-csrf-token"]))
                  {:body [:p "ok"]})}))
     (sut/execute {:do       :http/post
-                  :http/url "/directives-test/csrf"})
+                  :http/url "/commands-test/csrf"})
     (async done
            (p/do (is (eventually (= "tok-123" @seen)))
                  (.remove meta-el)
@@ -48,12 +48,12 @@
     (fake-server/use-handlers
       fake-server/server
       (fake-server/make-handlers
-        "/directives-test/csrf-get"
+        "/commands-test/csrf-get"
         {:get (fn [req]
                 (reset! seen (get-in req [:headers "x-csrf-token"]))
                 {:body [:p "ok"]})}))
     (sut/execute {:do       :http/get
-                  :http/url "/directives-test/csrf-get"})
+                  :http/url "/commands-test/csrf-get"})
     (async done
            (p/do (is (eventually (nil? @seen)))
                  (.remove meta-el)
@@ -63,13 +63,13 @@
   (fake-server/use-handlers
     fake-server/server
     (concat (fake-server/make-handlers
-              "/directives-test/go"
+              "/commands-test/go"
               {:post (fn [_req]
                        {:body    [:p "redirecting"]
-                        :headers {"Location" "/directives-test/landed"}
+                        :headers {"Location" "/commands-test/landed"}
                         :status  303})})
             (fake-server/make-handlers
-              "/directives-test/landed"
+              "/commands-test/landed"
               {:get (fn [_req] {:body [:h1#landed "landed"]})})))
   (let [visited  (atom nil)
         original dom/visit!]
@@ -77,11 +77,10 @@
           (fn [url]
             (reset! visited url)))
     (sut/execute {:do       :http/post
-                  :http/url "/directives-test/go"})
+                  :http/url "/commands-test/go"})
     (async done
            (p/do (is (eventually (some-> @visited
-                                         (.endsWith
-                                           "/directives-test/landed"))))
+                                         (.endsWith "/commands-test/landed"))))
                  (set! dom/visit!
                        original)
                  (done)))))
@@ -90,7 +89,7 @@
   (let [seen (atom nil)]
     (fake-server/use-handlers fake-server/server
                               (fake-server/make-handlers
-                                "/directives-test/no-files"
+                                "/commands-test/no-files"
                                 {:post (fn [req]
                                          (reset! seen req)
                                          {:body [:p "ok"]})}))
@@ -101,7 +100,7 @@
                  [:button {:type "button"}]]]
                (sut/execute {:do       :http/post
                              :el       (.querySelector form "button")
-                             :http/url "/directives-test/no-files"})
+                             :http/url "/commands-test/no-files"})
                (async done
                       (p/do (is (eventually (= {:applicant "Ilsa Lund"}
                                                (:body @seen))))
@@ -113,7 +112,7 @@
   (let [seen (atom nil)]
     (fake-server/use-handlers fake-server/server
                               (fake-server/make-handlers
-                                "/directives-test/upload"
+                                "/commands-test/upload"
                                 {:post (fn [req]
                                          (reset! seen req)
                                          {:body [:p "ok"]})}))
@@ -129,7 +128,7 @@
                      [(fake-file "visa.txt")])
       (sut/execute {:do       :http/post
                     :el       (.querySelector form "button")
-                    :http/url "/directives-test/upload"})
+                    :http/url "/commands-test/upload"})
       (async done
              (p/do (is (eventually (some? @seen)))
                    (is (= "{:applicant \"Ilsa Lund\"}"
@@ -138,7 +137,8 @@
                           (get-in @seen
                                   [:multipart-params "papers" :filename])))
                    (p/let [text (.text (get-in @seen
-                                               [:multipart-params "papers"
+                                               [:multipart-params
+                                                "papers"
                                                 :tempfile]))]
                      (is (= "letters of transit" text)))
                    (done))))))
@@ -152,7 +152,7 @@
     (fake-server/use-handlers
       fake-server/server
       (fake-server/make-handlers
-        "/directives-test/upload-csrf"
+        "/commands-test/upload-csrf"
         {:post (fn [req]
                  (reset! seen (get-in req [:headers "x-csrf-token"]))
                  {:body [:p "ok"]})}))
@@ -165,7 +165,7 @@
                               [(fake-file "visa.txt")])
                (sut/execute {:do       :http/post
                              :el       (.querySelector form "button")
-                             :http/url "/directives-test/upload-csrf"})
+                             :http/url "/commands-test/upload-csrf"})
                (async done
                       (p/do (is (eventually (= "tok-123" @seen)))
                             (.remove meta-el)

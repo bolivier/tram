@@ -10,16 +10,16 @@
 (defn element? [node]
   (= js/Node.ELEMENT_NODE (.-nodeType node)))
 
-(defn trigger-selector [trigger]
-  (str "[" (kw->string trigger) "]"))
+(defn attribute-selector [attribute]
+  (str "[" (kw->string attribute) "]"))
 
-(defn triggered-elements
-  "Elements under `root` carrying `trigger`, `root` itself included.
+(defn elements-with-attribute
+  "Elements under `root` carrying `attribute`, `root` itself included.
 
   `querySelectorAll` never matches the node it is called on, and every node a
   `MutationObserver` reports is such a node."
-  [root trigger]
-  (let [selector    (trigger-selector trigger)
+  [root attribute]
+  (let [selector    (attribute-selector attribute)
         descendants (array-seq (.querySelectorAll root selector))]
     (if (and (element? root)
              (.matches root

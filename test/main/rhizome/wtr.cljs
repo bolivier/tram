@@ -9,7 +9,7 @@
   Test namespaces must be required here so shadow compiles them into this build
   and their `deftest`s register with shadow.test.env."
   (:require [cljs.test :as ct]
-            rhizome.directives-test
+            rhizome.commands-test
             rhizome.dom-test
             [rhizome.fake-server :as fake-server]
             rhizome.mount-test

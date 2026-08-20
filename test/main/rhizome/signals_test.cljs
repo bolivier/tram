@@ -19,7 +19,7 @@
     (is (= ["hello"] @seen))))
 
 (deftest a-listener-that-arrives-first-still-hears-the-value-test
-  (testing "trigger order is registry order, so a binding can beat its input"
+  (testing "mount order is registry order, so a binding can beat its input"
     (let [seen (atom [])]
       (sut/listen! :greeting
                    #(swap! seen conj

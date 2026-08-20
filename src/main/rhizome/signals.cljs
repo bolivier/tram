@@ -11,7 +11,7 @@
 (defn- ensure-entry
   "Adds an empty entry for `key` when nothing has claimed it yet.
 
-  A listener can mount before the element that owns the signal, because trigger
+  A listener can mount before the element that owns the signal, because mount
   order is registry order and not document order."
   [registry key]
   (if (contains? registry

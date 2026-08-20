@@ -1,22 +1,22 @@
 (ns rhizome.mount
   "The scan, the mutation observer, and listener lifecycle."
   (:require [clojure.edn :as edn]
+            [rhizome.behaviors :as behaviors]
             [rhizome.dom :as dom]
-            [rhizome.triggers :as triggers]
             [rhizome.utils :refer [kw->string]]))
 
 (defn- wired [el]
   (or (unchecked-get el "rhizomeWired") #{}))
 
-(defn- mark-wired! [el trigger]
-  (unchecked-set el "rhizomeWired" (conj (wired el) trigger)))
+(defn- mark-wired! [el attribute]
+  (unchecked-set el "rhizomeWired" (conj (wired el) attribute)))
 
-(defn- read-directive [el trigger]
+(defn- read-payload [el attribute]
   (try
-    (edn/read-string (get el trigger))
+    (edn/read-string (get el attribute))
     (catch js/Error _
       (js/console.warn "rhizome: could not parse edn in"
-                       (kw->string trigger)
+                       (kw->string attribute)
                        el)
       nil)))
 
@@ -31,12 +31,12 @@
               js/clearTimeout)
       (reset! timer (js/setTimeout f ms)))))
 
-(defn- wire! [el trigger config]
-  (let [{:keys [on-mount listener default-event]} config]
-    (mark-wired! el trigger)
+(defn- wire! [el attribute behavior]
+  (let [{:keys [on-mount listener default-event]} behavior]
+    (mark-wired! el attribute)
     (when on-mount
-      (on-mount (read-directive el
-                                trigger)
+      (on-mount (read-payload el
+                              attribute)
                 el))
     (when default-event
       ;; Read at event time, not mount time. A morph rewrites the attribute
@@ -45,12 +45,12 @@
         (dom/add-event-listener el
                                 default-event
                                 (fn [e]
-                                  (let [directive (read-directive el
-                                                                  trigger)
-                                        ms        (:debounce directive)
-                                        run!      #(listener e
-                                                             directive
-                                                             el)]
+                                  (let [payload (read-payload el
+                                                              attribute)
+                                        ms      (:debounce payload)
+                                        run!    #(listener e
+                                                           payload
+                                                           el)]
                                     (if (pos-int? ms)
                                       (do
                                         ;; The event is spent by the time
@@ -63,14 +63,14 @@
                                       (run!)))))))))
 
 (defn mount!
-  "Wires every registered trigger found on `root` or under it."
+  "Wires every registered behavior found on `root` or under it."
   ([]
    (mount! js/document))
   ([root]
-   (doseq [[trigger config] @triggers/registry
-           el    (dom/triggered-elements root trigger)
-           :when (not (contains? (wired el) trigger))]
-     (wire! el trigger config))))
+   (doseq [[attribute behavior] @behaviors/registry
+           el    (dom/elements-with-attribute root attribute)
+           :when (not (contains? (wired el) attribute))]
+     (wire! el attribute behavior))))
 
 (defonce ^:private observer
   (atom nil))

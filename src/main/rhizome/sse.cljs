@@ -1,7 +1,7 @@
 (ns rhizome.sse
   "Reading a `text/event-stream` response.
 
-  A frame is a directive: its `event` field names the operation and its `data`
+  A frame is a command: its `event` field names the operation and its `data`
   field carries the rest as edn. So a stream adds no vocabulary, and a server can
   fire anything the page already knows how to do.
 
@@ -15,9 +15,7 @@
   Chunk boundaries and frame boundaries have nothing to do with each other. One
   chunk may hold six frames or a third of one."
   [buffer]
-  (let [parts (str/split buffer
-                         #"\r?\n\r?\n"
-                         -1)]
+  (let [parts (str/split buffer #"\r?\n\r?\n" -1)]
     [(butlast parts) (last parts)]))
 
 (defn- field
@@ -27,10 +25,15 @@
   (let [colon (.indexOf line ":")]
     (if (neg? colon)
       [line ""]
-      (let [value (subs line (inc colon))]
-        [(subs line 0 colon)
-         (if (str/starts-with? value " ")
-           (subs value 1)
+      (let [value (subs line
+                        (inc colon))]
+        [(subs line
+               0
+               colon)
+         (if (str/starts-with? value
+                               " ")
+           (subs value
+                 1)
            value)]))))
 
 (defn parse-frame
@@ -43,35 +46,33 @@
             (let [[name value] (field line)]
               (case name
                 "event" (assoc frame :event value)
-                "data"  (update frame
-                                :data
-                                (fnil conj [])
-                                value)
+                "data"  (update frame :data (fnil conj []) value)
                 frame)))
     {}
     (remove str/blank? (str/split-lines text))))
 
-(defn frame->directive
-  "The directive a frame invokes, or nil when it carries none.
+(defn frame->command
+  "The command a frame invokes, or nil when it carries none.
 
   A frame with no data dispatches nothing, which is what makes a keep-alive
   free."
   [{:keys [data event]}]
   (when (and event
              (seq data))
-    (assoc (edn/read-string (str/join "\n" data))
+    (assoc (edn/read-string (str/join "\n"
+                                      data))
       :do (keyword event))))
 
 (defn- run-frame! [text execute]
   (try
-    (when-let [directive (frame->directive (parse-frame text))]
-      (execute directive))
+    (when-let [command (frame->command (parse-frame text))]
+      (execute command))
     (catch js/Error e
       ;; One bad frame is not a broken connection.
       (js/console.warn "rhizome: dropped a stream frame" text e))))
 
 (defn consume!
-  "Reads `response` to its end, running `execute` on each frame's directive.
+  "Reads `response` to its end, running `execute` on each frame's command.
 
   Returns a promise that resolves when the stream closes."
   [response execute]

@@ -1,17 +1,17 @@
 (ns rhizome.core
-  (:require [rhizome.mount :as mount]
-            [rhizome.triggers :as triggers]))
+  (:require [rhizome.behaviors :as behaviors]
+            [rhizome.mount :as mount]))
 
 (defn init []
-  (triggers/register! triggers/bind)
-  (triggers/register! triggers/text)
-  (triggers/register! triggers/show)
-  (triggers/register! triggers/debug)
-  (triggers/register! triggers/click)
-  (triggers/register! triggers/submit)
-  (triggers/register! triggers/input)
-  (triggers/register! triggers/load)
-  (triggers/register! triggers/drop)
-  (triggers/register! triggers/dragover)
+  (behaviors/register! behaviors/bind)
+  (behaviors/register! behaviors/text)
+  (behaviors/register! behaviors/show)
+  (behaviors/register! behaviors/debug)
+  (behaviors/register! behaviors/click)
+  (behaviors/register! behaviors/submit)
+  (behaviors/register! behaviors/input)
+  (behaviors/register! behaviors/load)
+  (behaviors/register! behaviors/drop)
+  (behaviors/register! behaviors/dragover)
   (mount/mount!)
   (mount/observe!))

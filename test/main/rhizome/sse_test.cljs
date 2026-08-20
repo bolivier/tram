@@ -13,10 +13,11 @@
   (is (= [["a"] "b"] (sut/split-frames "a\r\n\r\nb"))))
 
 (deftest parse-frame-reads-event-and-data-test
-  (is (= {:data  ["{:dom/content \"<p id=\\\"a\\\">a</p>\"}"]
-          :event "dom/morph"}
-         (sut/parse-frame
-           "event: dom/morph\ndata: {:dom/content \"<p id=\\\"a\\\">a</p>\"}"))))
+  (is (=
+        {:data  ["{:dom/content \"<p id=\\\"a\\\">a</p>\"}"]
+         :event "dom/morph"}
+        (sut/parse-frame
+          "event: dom/morph\ndata: {:dom/content \"<p id=\\\"a\\\">a</p>\"}"))))
 
 (deftest parse-frame-joins-several-data-lines-test
   (is (= {:data  ["one" "two"]
@@ -33,12 +34,12 @@
   (is (= {:event "dom/morph"} (sut/parse-frame "event:dom/morph")))
   (is (= {:data ["  padded"]} (sut/parse-frame "data:   padded"))))
 
-(deftest frame->directive-names-a-command-test
-  (is (= {:do          :dom/morph
+(deftest frame->command-names-a-command-test
+  (is (= {:do :dom/morph
           :dom/content "<p id=\"a\">a</p>"}
-         (sut/frame->directive {:data  ["{:dom/content \"<p id=\\\"a\\\">a</p>\"}"]
-                                :event "dom/morph"}))))
+         (sut/frame->command {:data ["{:dom/content \"<p id=\\\"a\\\">a</p>\"}"]
+                              :event "dom/morph"}))))
 
-(deftest frame->directive-ignores-a-frame-with-nothing-to-run-test
-  (is (nil? (sut/frame->directive {:data ["{}"]})))
-  (is (nil? (sut/frame->directive {:event "dom/morph"}))))
+(deftest frame->command-ignores-a-frame-with-nothing-to-run-test
+  (is (nil? (sut/frame->command {:data ["{}"]})))
+  (is (nil? (sut/frame->command {:event "dom/morph"}))))

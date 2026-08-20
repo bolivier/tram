@@ -1,5 +1,5 @@
-(ns rhizome.triggers
-  (:require [rhizome.directives :refer [execute]]
+(ns rhizome.behaviors
+  (:require [rhizome.commands :refer [execute]]
             [rhizome.dom :as dom]
             [rhizome.signals :as signals])
   (:refer-clojure :exclude [drop]))
@@ -15,21 +15,21 @@
 (def bind
   "Two-way: the control seeds the signal, then each follows the other."
   {:attribute     :rhizome.core/bind
-   :on-mount      (fn [directive el]
-                    (let [[signal-name signal-init] directive]
+   :on-mount      (fn [payload el]
+                    (let [[signal-name signal-init] payload]
                       (signals/listen! signal-name
                                        (fn [new-value]
                                          (dom/set-bound-value! el new-value)))
                       (signals/put! signal-name signal-init)))
    :default-event :event/input
-   :listener      (fn [_e directive el]
-                    (let [[signal-name] directive]
+   :listener      (fn [_e payload el]
+                    (let [[signal-name] payload]
                       (signals/put! signal-name (dom/bound-value el))))})
 
 (def text
   {:attribute :rhizome.core/text
-   :on-mount  (fn [directive el]
-                (let [signal-key directive]
+   :on-mount  (fn [payload el]
+                (let [signal-key payload]
                   (signals/listen! signal-key
                                    (fn [new-value]
                                      (set! (.-textContent el)
@@ -41,9 +41,9 @@
   Clearing `display` hands the element back to the stylesheet rather than
   forcing a value the sheet did not ask for."
   {:attribute :rhizome.core/show
-   :on-mount  (fn [directive el]
-                (let [signal-key directive]
-                  (prn 'show-key signal-key directive)
+   :on-mount  (fn [payload el]
+                (let [signal-key payload]
+                  (prn 'show-key signal-key payload)
                   (signals/listen! signal-key
                                    (fn [new-value]
                                      (set! (.. el -style -display)
@@ -54,7 +54,7 @@
 (def debug
   "Development aid: prints the whole signal registry into the element."
   {:attribute :rhizome.core/debug
-   :on-mount  (fn [_directive el]
+   :on-mount  (fn [_payload el]
                 (let [render! (fn [entries]
                                 (set! (.-textContent el)
                                       (pr-str (update-vals entries :value))))]
@@ -65,12 +65,12 @@
                              (fn [_ _ _ entries] (render! entries)))))})
 
 (defn- event-trigger
-  "A trigger whose whole job is to run its directive when one dom event fires."
+  "A behavior whose whole job is to run its command when one dom event fires."
   [attribute event]
   {:attribute     attribute
    :default-event event
-   :listener      (fn [e directive el]
-                    (execute (assoc directive
+   :listener      (fn [e command el]
+                    (execute (assoc command
                                :event e
                                :el    el)))})
 
@@ -90,9 +90,9 @@
   (event-trigger :rhizome.core/dragover :event/dragover))
 
 (def load
-  "Runs its directive as soon as the element mounts, with no event to wait on.
+  "Runs its command as soon as the element mounts, with no event to wait on.
 
   The response is expected to drop the attribute, or the new element mounts and
   fetches again."
   {:attribute :rhizome.core/load
-   :on-mount  (fn [directive el] (execute (assoc directive :el el)))})
+   :on-mount  (fn [command el] (execute (assoc command :el el)))})

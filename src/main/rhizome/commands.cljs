@@ -1,4 +1,4 @@
-(ns rhizome.directives
+(ns rhizome.commands
   (:require ["idiomorph" :refer [Idiomorph]]
             [clojure.string :as str]
             [rhizome.dom :as dom]
@@ -8,9 +8,9 @@
   :do)
 
 (defmethod execute :default
-  [directive]
-  (println "rhizome.directives/execute not implemented for operation"
-           (:do directive)))
+  [command]
+  (println "rhizome.commands/execute not implemented for operation"
+           (:do command)))
 
 (def params-part
   "The multipart part carrying a form's non-file fields as edn."
@@ -74,7 +74,7 @@
                            :dom/content html}))))))
 
 (defn execute-http [{:keys [http/method http/url event el]
-                     :as   _directive}]
+                     :as   _command}]
   (when event
     (.preventDefault event)
     (.stopPropagation event))
@@ -94,16 +94,16 @@
         (.then handle-response))))
 
 (defmethod execute :http/get
-  [directive]
-  (execute-http (assoc directive :http/method :get)))
+  [command]
+  (execute-http (assoc command :http/method :get)))
 
 (defmethod execute :http/post
-  [directive]
-  (execute-http (assoc directive :http/method :post)))
+  [command]
+  (execute-http (assoc command :http/method :post)))
 
 (defmethod execute :http/patch
-  [directive]
-  (execute-http (assoc directive :http/method :patch)))
+  [command]
+  (execute-http (assoc command :http/method :patch)))
 
 (defn parse-fragment
   "Parses an HTML string into a seq of its top-level elements.
