@@ -1,6 +1,7 @@
 (ns rhizome.behaviors
   (:require [rhizome.commands :refer [execute]]
             [rhizome.dom :as dom]
+            [rhizome.expr :as expr]
             [rhizome.signals :as signals])
   (:refer-clojure :exclude [drop]))
 
@@ -29,27 +30,37 @@
 (def text
   {:attribute :rhizome.core/text
    :on-mount  (fn [payload el]
-                (let [signal-key payload]
-                  (signals/listen! signal-key
-                                   (fn [new-value]
-                                     (set! (.-textContent el)
-                                           (str new-value))))))})
+                (expr/watch! payload
+                             (fn [new-value]
+                               (set! (.-textContent el)
+                                     (str new-value)))))})
+
+(def class
+  "Adds `:class` while `:pred` evaluates truthy, removes it otherwise."
+  {:attribute :rhizome.core/class
+   :on-mount  (fn [payload el]
+                (let [{:keys [pred class]} payload]
+                  (expr/watch! pred
+                               (fn [new-value]
+                                 (if new-value
+                                   (.add (.-classList el)
+                                         class)
+                                   (.remove (.-classList el)
+                                            class))))))})
 
 (def show
-  "Hides the element while its signal is falsey.
+  "Hides the element while its expression is falsey.
 
   Clearing `display` hands the element back to the stylesheet rather than
   forcing a value the sheet did not ask for."
   {:attribute :rhizome.core/show
    :on-mount  (fn [payload el]
-                (let [signal-key payload]
-                  (prn 'show-key signal-key payload)
-                  (signals/listen! signal-key
-                                   (fn [new-value]
-                                     (set! (.. el -style -display)
-                                           (if new-value
-                                             ""
-                                             "none"))))))})
+                (expr/watch! payload
+                             (fn [new-value]
+                               (set! (.. el -style -display)
+                                     (if new-value
+                                       ""
+                                       "none")))))})
 
 (def debug
   "Development aid: prints the whole signal registry into the element."

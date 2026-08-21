@@ -6,6 +6,7 @@
   (behaviors/register! behaviors/bind)
   (behaviors/register! behaviors/text)
   (behaviors/register! behaviors/show)
+  (behaviors/register! behaviors/class)
   (behaviors/register! behaviors/debug)
   (behaviors/register! behaviors/click)
   (behaviors/register! behaviors/submit)

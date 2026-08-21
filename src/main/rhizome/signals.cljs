@@ -21,6 +21,9 @@
       key (->registry-entry key
                             nil))))
 
+(defn value [key]
+  (get-in @registry [key :value]))
+
 (defn put! [key value]
   (swap! registry (fn [r] (assoc-in (ensure-entry r key) [key :value] value)))
   (doseq [cb (get-in @registry [key :listeners])]

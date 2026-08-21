@@ -11,6 +11,7 @@
   (:require [cljs.test :as ct]
             rhizome.commands-test
             rhizome.dom-test
+            rhizome.expr-test
             [rhizome.fake-server :as fake-server]
             rhizome.mount-test
             rhizome.signals-test
