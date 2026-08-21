@@ -157,6 +157,40 @@
              (is (= ["visa.txt" "exit.txt"]
                     (mapv #(.-name %) (:papers (sut/form->files form)))))))
 
+(deftest bound-value-reads-a-file-inputs-filename-test
+  (with-html [form
+              [:form
+               [:input {:name "papers"
+                        :type "file"}]]]
+             (let [input (.querySelector form "[type=file]")]
+               (is (nil? (sut/bound-value input)))
+               (attach-files! input [(fake-file "visa.txt")])
+               (is (= "visa.txt" (sut/bound-value input))))))
+
+(deftest bound-value-reads-a-multiple-file-input-as-a-vector-test
+  (with-html [form
+              [:form
+               [:input {:multiple true
+                        :name     "papers"
+                        :type     "file"}]]]
+             (let [input (.querySelector form "[type=file]")]
+               (attach-files! input
+                              [(fake-file "visa.txt") (fake-file "exit.txt")])
+               (is (= ["visa.txt" "exit.txt"] (sut/bound-value input))))))
+
+(deftest set-bound-value-clears-a-file-input-on-nil-only-test
+  (with-html [form
+              [:form
+               [:input {:name "papers"
+                        :type "file"}]]]
+             (let [input (.querySelector form "[type=file]")]
+               (attach-files! input [(fake-file "visa.txt")])
+               (sut/set-bound-value! input "visa.txt")
+               (is (= 1 (.-length (.-files input)))
+                   "a non-nil write leaves the selection alone")
+               (sut/set-bound-value! input nil)
+               (is (zero? (.-length (.-files input)))))))
+
 (deftest form->map-still-leaves-files-out-test
   (with-html [form
               [:form

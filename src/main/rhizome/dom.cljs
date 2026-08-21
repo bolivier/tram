@@ -60,25 +60,45 @@
 (defn- checkbox? [control]
   (= "checkbox" (.-type control)))
 
+(defn- file-control? [control]
+  (= "file" (.-type control)))
+
 (defn bound-value
   "The value a control contributes to the signal it binds.
 
-  A checkbox holds its state in `checked`, every other control in `value`."
+  A checkbox holds its state in `checked` and a file input in the names of
+  its `files`: nil for none, the name for one, a vector under `multiple`.
+  Every other control holds it in `value`."
   [control]
-  (if (checkbox? control)
-    (.-checked control)
-    (control-value control)))
+  (cond
+    (checkbox? control) (.-checked control)
+
+    (file-control? control)
+    (let [names (mapv #(.-name %)
+                  (array-seq (.-files control)))]
+      (case (count names)
+        0 nil
+        1 (first names)
+        names))
+
+    :else (control-value control)))
 
 (defn set-bound-value!
-  "Writes a signal's value back onto the control bound to it."
+  "Writes a signal's value back onto the control bound to it.
+
+  A file input accepts no programmatic write, so nil clears it and any other
+  value leaves it alone."
   [control value]
-  (if (checkbox? control)
-    (set! (.-checked control)
-          (boolean value))
-    (set! (.-value control)
-          (if (nil? value)
-            ""
-            value))))
+  (cond
+    (checkbox? control)     (set! (.-checked control)
+                                  (boolean value))
+    (file-control? control) (when (nil? value)
+                              (set! (.-value control)
+                                    ""))
+    :else                   (set! (.-value control)
+                                  (if (nil? value)
+                                    ""
+                                    value))))
 
 (defn- collect-value [acc control-name value]
   (if (contains? acc
@@ -106,9 +126,6 @@
                            (control-value control)))
     {}
     (filter submittable? (array-seq (.-elements form)))))
-
-(defn- file-control? [control]
-  (= "file" (.-type control)))
 
 (defn form->files
   "A form's file controls as a map of keyword name to a vector of `File`s.

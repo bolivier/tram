@@ -42,6 +42,21 @@
                (tu/type! input "-more")
                (is (= "start-more" (.-textContent span))))))
 
+(deftest a-file-input-feeds-its-filename-through-bind-test
+  (core/init)
+  (with-html [el
+              [:div
+               [:span {:rhizome.core/text ":upload-name"}]
+               [:input {:rhizome.core/bind "[:upload-name]"
+                        :type "file"}]]]
+             (mount/mount! el)
+             (let [span  (.querySelector el "span")
+                   input (.querySelector el "input")]
+               (tu/attach-files! input [(tu/fake-file "book-inventory.edn")])
+               (tu/fire! input "input")
+               (is (= "book-inventory.edn" (.-textContent span))
+                   "the echo write-back must not throw on a file input"))))
+
 (deftest show-hides-while-its-checkbox-is-unchecked-test
   (core/init)
   (with-html [el
