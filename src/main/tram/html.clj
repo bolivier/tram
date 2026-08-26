@@ -75,12 +75,12 @@
 (defn route-name-expander [router node]
   (cond
     (expandable-route-ref? node)
-    (let [[_ route-name route-params] node]
-      (log/event! ::expanding-roue
-                  {:data {:route-name   route-name
-                          :route-params route-params
-                          :node         node}})
-      (make-path router route-name route-params))
+    (let [[_ route-name route-params] node
+          path (make-path router route-name route-params)]
+      (log/event! ::expanding-route
+                  {:data {:route-name route-name
+                          :path       path}})
+      path)
 
     ;; recognize routes like `:route.section/foo` as a route keyword.
     (and (keyword? node)
@@ -155,6 +155,21 @@
   (emit-directive-attr append! key value))
 
 (defmethod h/emit-attr :href
+  [append! key value]
+  (append! (h/stringify key) "=\"")
+  (append! (if *req*
+             (let [router (:reitit.core/router *req*)]
+               (route-name-expander router
+                                    value))
+             (do (log/event!
+                   ::processing-href-without-req
+                   {:data
+                    {:message "Could not find *req* while processing :href"
+                     :value   value}})
+                 value)))
+  (append! "\""))
+
+(defmethod h/emit-attr :src
   [append! key value]
   (append! (h/stringify key) "=\"")
   (append! (if *req*
