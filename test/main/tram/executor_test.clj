@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [reitit.interceptor :as interceptor]
             [tram.executor :as sut]
+            [tram.logging :as log]
             [tram.vars :refer [*current-user* *req* *res*]]))
 
 (defn- recording-interceptor
@@ -206,3 +207,20 @@
     (let [ctx (sut/run-leaves {:response {:status 200}}
                               [{:leave (fn [_] (throw (ex-info "boom" {})))}])]
       (is (= "boom" (ex-message (:error ctx)))))))
+
+(deftest stages-log-at-debug-level
+  (testing "silent by default"
+    (is (nil? (log/with-signal true
+                               (sut/execute [(fn [_] {:status 200})] {})))))
+  (testing "one signal per stage when debug is on"
+    (let [{:keys [signals]} (log/with-min-level :debug
+                                                (log/with-signals
+                                                  true
+                                                  (sut/execute
+                                                    [{:name  :outer
+                                                      :leave identity}
+                                                     (fn [_] {:status 200})]
+                                                    {})))]
+      (is (= [[:tram.executor/handler :enter] [:outer :leave]]
+             (map (juxt (comp :interceptor :data) (comp :stage :data))
+               (filter #(= ::sut/stage (:id %)) signals)))))))

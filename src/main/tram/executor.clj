@@ -5,8 +5,12 @@
   `*res*`, and `*current-user*` are bound from the context around every stage
   fn. A non-nil `:response` after an `:enter` skips the interceptors still
   queued and starts the leave phase from the interceptor that responded. Stage
-  fns run synchronously; a stage returns a context, never a future."
+  fns run synchronously; a stage returns a context, never a future.
+
+  Each stage logs a `:debug` signal with id `::stage`. Enable it with
+  `(tram.logging/set-min-level! nil \"tram.executor\" :debug)`."
   (:require [reitit.interceptor :as interceptor]
+            [tram.logging :as log]
             [tram.vars :refer [*current-user* *req* *res*]]))
 
 (defrecord Context [request response error queue stack])
@@ -77,9 +81,22 @@
     (catch Exception e
       (assoc ctx :error e))))
 
+(defn- elapsed-ms [started-at]
+  (/ (- (System/nanoTime) started-at) 1e6))
+
 (defn- run-stage [ctx interceptor stage]
   (if-let [stage-fn (get interceptor stage)]
-    (call-stage ctx stage-fn stage)
+    (let [started-at (System/nanoTime)
+          result     (call-stage ctx stage-fn stage)]
+      (log/log! {:level :debug
+                 :id    ::stage
+                 :data  {:interceptor (:name interceptor)
+                         :stage       stage
+                         :elapsed-ms  (elapsed-ms started-at)
+                         :responded?  (some? (:response result))
+                         :error?      (some? (:error result))}}
+                (str (:name interceptor) " " stage))
+      result)
     ctx))
 
 (defn- responded? [ctx]
