@@ -3,10 +3,10 @@
             [matcher-combinators.test]
             [reitit.http :as http]
             [reitit.interceptor :as interceptor]
-            [reitit.interceptor.sieppari :as sieppari]
             [reitit.ring :as ring]
             [test-app.handlers.authentication-handlers :as handlers]
             [test-app.views.authentication-views :as views]
+            [tram.executor :as executor]
             [tram.impl.router :as sut]))
 
 (deftest layout-interceptor
@@ -71,7 +71,7 @@
 (deftest redefined-handler-takes-effect-without-rebuilding-the-router
   (let [app      (http/ring-handler handlers/test-router
                                     (ring/create-default-handler)
-                                    {:executor sieppari/executor})
+                                    {:executor executor/executor})
         original @#'handlers/sign-in]
     (try
       (intern 'test-app.handlers.authentication-handlers

@@ -6,9 +6,9 @@
             [reitit.coercion :as coercion]
             [reitit.core :as r]
             [reitit.http :as http]
-            [reitit.interceptor.sieppari :as sieppari]
             [reitit.ring :as ring]
             test-app.handlers.authentication-handlers
+            [tram.executor :as executor]
             [tram.routes :as sut]
             [tram.test-fixtures :refer [sample-router]]))
 
@@ -160,7 +160,7 @@
                                           :interceptors (sut/wire-format)}})
         app      (http/ring-handler router
                                     (ring/create-default-handler)
-                                    {:executor sieppari/executor})]
+                                    {:executor executor/executor})]
     (try
       (app {:request-method :get
             :uri            "/echo"
