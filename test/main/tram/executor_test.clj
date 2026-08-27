@@ -1,0 +1,184 @@
+(ns tram.executor-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [reitit.interceptor :as interceptor]
+            [tram.executor :as sut]
+            [tram.vars :refer [*req*]]))
+
+(defn- recording-interceptor
+  "An interceptor that appends `[name stage]` to the `log` atom at every stage."
+  [log name]
+  {:name  name
+   :enter (fn [ctx]
+            (swap! log conj
+              [name :enter])
+            ctx)
+   :leave (fn [ctx]
+            (swap! log conj
+              [name :leave])
+            ctx)
+   :error (fn [ctx]
+            (swap! log conj
+              [name :error])
+            ctx)})
+
+(defn- responder
+  "An interceptor whose `:enter` sets `response`."
+  [log name response]
+  (assoc (recording-interceptor log name)
+    :enter (fn [ctx]
+             (swap! log conj
+               [name :enter])
+             (assoc ctx :response response))))
+
+(deftest enters-run-forward-and-leaves-run-backward
+  (let [log (atom [])]
+    (sut/execute [(recording-interceptor log :a)
+                  (recording-interceptor log :b)
+                  (fn [_] {:status 200})]
+                 {})
+    (is (= [[:a :enter] [:b :enter] [:b :leave] [:a :leave]] @log))))
+
+(deftest req-is-bound-at-every-stage
+  (let [seen (atom [])
+        note (fn [stage]
+               (fn [ctx]
+                 (swap! seen conj
+                   [stage *req*])
+                 ctx))]
+    (sut/execute [{:enter (note :outer-enter)
+                   :leave (note :outer-leave)
+                   :error (note :outer-error)}
+                  {:enter (fn [ctx]
+                            (swap! seen conj
+                              [:rebind-enter *req*])
+                            (assoc-in ctx [:request :changed?] true))}
+                  {:enter (note :inner-enter)
+                   :error (note :inner-error)}
+                  {:enter (fn [_] (throw (ex-info "boom" {})))}]
+                 {:uri "/"}
+                 identity
+                 identity)
+    (is (= [[:outer-enter {:uri "/"}]
+            [:rebind-enter {:uri "/"}]
+            [:inner-enter {:uri      "/"
+                           :changed? true}]
+            [:inner-error {:uri      "/"
+                           :changed? true}]
+            [:outer-error {:uri      "/"
+                           :changed? true}]]
+           @seen))
+    (is (nil? *req*))))
+
+(deftest non-nil-response-after-enter-short-circuits-the-chain
+  (let [log      (atom [])
+        response (sut/execute [(recording-interceptor log :a)
+                               (responder log :b {:status 204})
+                               (recording-interceptor log :c)
+                               (fn [_] {:status 200})]
+                              {})]
+    (is (= {:status 204} response))
+    (is (= [[:a :enter] [:b :enter] [:b :leave] [:a :leave]] @log))))
+
+(deftest leave-can-still-change-a-short-circuited-response
+  (let [response (sut/execute
+                   [{:leave (fn [ctx]
+                              (assoc-in ctx [:response :headers "x"] "y"))}
+                    {:enter (fn [ctx] (assoc ctx :response {:status 204}))}
+                    (fn [_] {:status 200})]
+                   {})]
+    (is (= {:status  204
+            :headers {"x" "y"}}
+           response))))
+
+(deftest an-error-skips-remaining-enters-and-runs-error-stages
+  (let [log      (atom [])
+        recover  {:name  :recover
+                  :error (fn [ctx]
+                           (swap! log conj
+                             [:recover :error])
+                           (-> ctx
+                               (dissoc :error)
+                               (assoc :response {:status 500})))}
+        response (sut/execute [(recording-interceptor log :a)
+                               recover
+                               (recording-interceptor log :b)
+                               (fn [_] (throw (ex-info "boom" {})))]
+                              {})]
+    (is (= {:status 500} response))
+    (is (= [[:a :enter] [:b :enter] [:b :error] [:recover :error] [:a :leave]]
+           @log))))
+
+(deftest unhandled-errors-throw-or-raise
+  (let [chain [(fn [_] (throw (ex-info "boom" {:from :handler})))]]
+    (testing "sync"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"boom"
+                            (sut/execute chain {}))))
+    (testing "async"
+      (let [raised (promise)]
+        (is (nil? (sut/execute chain
+                               {}
+                               (fn [_] (deliver raised :responded))
+                               (fn [e] (deliver raised (ex-data e))))))
+        (is (= {:from :handler} (deref raised 1000 :timeout)))))))
+
+(deftest a-handler-returning-an-exception-becomes-an-error
+  (let [raised (promise)]
+    (sut/execute [(fn [_] (ex-info "returned" {}))]
+                 {}
+                 (fn [_] (deliver raised :responded))
+                 (fn [e] (deliver raised (ex-message e))))
+    (is (= "returned" (deref raised 1000 :timeout)))))
+
+(deftest async-stages-are-awaited
+  (let [log (atom [])]
+    (testing "an :enter that returns a future"
+      (is (= {:status 200}
+             (sut/execute [(recording-interceptor log :a)
+                           {:enter (fn [ctx]
+                                     (future (assoc ctx
+                                               :response {:status 200})))}]
+                          {})))
+      (is (= [[:a :enter] [:a :leave]] @log)))
+    (testing "a handler that returns a future"
+      (is (= {:status 201} (sut/execute [(fn [_] (future {:status 201}))] {}))))
+    (testing "a future that throws becomes an error"
+      (is (thrown-with-msg?
+            clojure.lang.ExceptionInfo
+            #"async boom"
+            (sut/execute [{:enter
+                           (fn [_] (future (throw (ex-info "async boom" {}))))}]
+                         {}))))
+    (testing "respond runs after the future resolves"
+      (let [result (promise)]
+        (sut/execute [(fn [_] (future {:status 202}))]
+                     {}
+                     (fn [response] (deliver result response))
+                     (fn [e] (deliver result e)))
+        (is (= {:status 202} (deref result 1000 :timeout)))))))
+
+(deftest reitit-handler-interceptors-run-as-handlers
+  (let [handler     (fn [req]
+                      {:status 200
+                       :body   (:uri req)})
+        interceptor (interceptor/into-interceptor handler nil {})
+        queue       (interceptor/queue sut/executor [interceptor])]
+    (is (instance? clojure.lang.PersistentQueue queue))
+    (is (= {:status 200
+            :body   "/x"}
+           (interceptor/execute sut/executor queue {:uri "/x"})))
+    (is (= {:status 200
+            :body   "/x"}
+           (interceptor/execute sut/executor [interceptor] {:uri "/x"})))))
+
+(deftest an-empty-chain-yields-nil
+  (is (nil? (sut/execute [] {})))
+  (is (nil? (sut/execute nil {})))
+  (let [result (promise)]
+    (sut/execute nil {} (fn [r] (deliver result [:respond r])) identity)
+    (is (= [:respond nil] (deref result 1000 :timeout)))))
+
+(deftest a-stage-returning-a-non-context-becomes-an-error
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                        #"Unsupported Context on :enter"
+                        (sut/execute [{:enter (fn [_] nil)}] {}))))
