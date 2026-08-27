@@ -64,7 +64,7 @@
      (make-route route-name
                  nil)))
   ([route-name params]
-   [::make route-name params]))
+   (make-path (:reitit.core/router *req*) route-name params)))
 
 (defn expandable-route-ref?
   "Takes a vector rout reference, like [::make :route/home] and returns if that
