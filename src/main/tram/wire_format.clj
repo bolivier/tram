@@ -17,8 +17,7 @@
             [reitit.http.coercion :as rhc]
             [reitit.http.interceptors.parameters :as parameters]
             [tram.html :as tram.html]
-            [tram.impl.multipart-interceptor :as impl.multipart]
-            [tram.vars :refer [*current-user* *req* *res*]]))
+            [tram.impl.multipart-interceptor :as impl.multipart]))
 
 (defn make-muuntaja-instance
   "make a muuntaja instance with default options.
@@ -123,16 +122,11 @@
                                             m
                                             request))))
                     :leave (fn [ctx]
-                             (let [request  (:request ctx)
-                                   response (:response ctx)]
-                               (binding [*current-user* (:current-user request)
-                                         *req*          request
-                                         *res*          response]
-                                 (assoc ctx
-                                   :response (muuntaja/format-response
-                                               m
-                                               request
-                                               response)))))})))}))
+                             (assoc ctx
+                               :response (muuntaja/format-response
+                                           m
+                                           (:request ctx)
+                                           (:response ctx))))})))}))
 
 (defn parameters-interceptor
   "reitit's parameters interceptor, named `:tram/parameters`."

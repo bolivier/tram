@@ -15,8 +15,7 @@
             [tram.html :as tram.html]
             [tram.impl.http :refer [html-request? rhizome-request?]]
             [tram.rendering.template-renderer :as renderer]
-            [tram.sse :as sse]
-            [tram.vars :refer [*current-user* *req* *res*]]))
+            [tram.sse :as sse]))
 
 (def expand-header-routes-interceptor
   "Expands route references in response headers."
@@ -24,15 +23,11 @@
    :leave (fn [ctx]
             (let [router (get-in ctx [:request ::r/router])]
               (assert router "expand-header-routes-interceptor requires router")
-              (binding [*current-user* (get-in ctx [:request :current-user])
-                        *req*          (:request ctx)
-                        *res*          (:response ctx)]
-                (-> ctx
-                    (update-in [:response :headers]
-                               (fn [headers]
-                                 (prewalk #(tram.html/route-name-expander router
-                                                                          %)
-                                          headers)))))))})
+              (update-in ctx
+                         [:response :headers]
+                         (fn [headers]
+                           (prewalk #(tram.html/route-name-expander router %)
+                                    headers)))))})
 
 (defn wrap-page-interceptor
   "Wraps the returned html in a full html page (if it should).
@@ -79,11 +74,7 @@
                         (assoc res
                           :body (:data res))))
 
-              :else
-              (binding [*current-user* (get-in ctx [:request :current-user])
-                        *req*          (get ctx :request)
-                        *res*          (get ctx :response)]
-                (renderer/render ctx))))})
+              :else (renderer/render ctx)))})
 
 (def ^:private render-opts-schema
   [:map [:page-wrapper fn?]])

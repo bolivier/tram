@@ -1,13 +1,13 @@
 (ns ^:public tram.executor
   "Interceptor executor for reitit.
 
-  Runs a chain the way sieppari does, with these differences. `*req*` is bound
-  to the context's request around every stage fn. A non-nil `:response` after
-  an `:enter` skips the interceptors still queued and starts the leave phase
-  from the interceptor that responded. Stage fns run synchronously; a stage
-  returns a context, never a future."
+  Runs a chain the way sieppari does, with these differences. `*req*`,
+  `*res*`, and `*current-user*` are bound from the context around every stage
+  fn. A non-nil `:response` after an `:enter` skips the interceptors still
+  queued and starts the leave phase from the interceptor that responded. Stage
+  fns run synchronously; a stage returns a context, never a future."
   (:require [reitit.interceptor :as interceptor]
-            [tram.vars :refer [*req*]]))
+            [tram.vars :refer [*current-user* *req* *res*]]))
 
 (defrecord Context [request response error queue stack])
 
@@ -65,7 +65,9 @@
 
 (defn- call-stage [ctx stage-fn stage]
   (try
-    (let [result (binding [*req* (:request ctx)]
+    (let [result (binding [*current-user* (get-in ctx [:request :current-user])
+                           *req*          (:request ctx)
+                           *res*          (:response ctx)]
                    (stage-fn ctx))]
       (if (map? result)
         result

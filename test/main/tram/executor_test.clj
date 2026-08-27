@@ -2,7 +2,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [reitit.interceptor :as interceptor]
             [tram.executor :as sut]
-            [tram.vars :refer [*req*]]))
+            [tram.vars :refer [*current-user* *req* *res*]]))
 
 (defn- recording-interceptor
   "An interceptor that appends `[name stage]` to the `log` atom at every stage."
@@ -68,6 +68,29 @@
                            :changed? true}]]
            @seen))
     (is (nil? *req*))))
+
+(deftest current-user-and-res-follow-the-context
+  (let [seen (atom [])
+        note (fn [stage]
+               (fn [ctx]
+                 (swap! seen conj
+                   [stage *current-user* *res*])
+                 ctx))]
+    (sut/execute [{:enter (note :outer-enter)
+                   :leave (note :outer-leave)}
+                  {:enter (fn [ctx]
+                            (assoc-in ctx [:request :current-user] :alice))}
+                  {:enter (note :inner-enter)
+                   :leave (note :inner-leave)}
+                  (fn [_] {:status 200})]
+                 {})
+    (is (= [[:outer-enter nil nil]
+            [:inner-enter :alice nil]
+            [:inner-leave :alice {:status 200}]
+            [:outer-leave :alice {:status 200}]]
+           @seen))
+    (is (nil? *current-user*))
+    (is (nil? *res*))))
 
 (deftest non-nil-response-after-enter-short-circuits-the-chain
   (let [log      (atom [])
