@@ -2,17 +2,17 @@
   (:require [integrant.core :as ig]
             [org.httpkit.server :as hk-server]
             [reitit.http :as http]
-            [reitit.interceptor.sieppari :as sieppari]
             [reitit.ring :as ring]
             [sample-app.config :as sys]
-            [sample-app.routes]))
+            [sample-app.routes]
+            [tram.executor :as executor]))
 
 (defmethod ig/init-key ::sys/app
   [_ {:keys [router]}]
   (http/ring-handler router
                      (ring/routes (ring/create-default-handler)
                                   (ring/redirect-trailing-slash-handler))
-                     {:executor sieppari/executor}))
+                     {:executor executor/executor}))
 
 (defmethod ig/init-key ::sys/server
   [_ {:keys [app port]}]
