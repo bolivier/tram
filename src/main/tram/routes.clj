@@ -78,15 +78,6 @@
                  (error-handler-fn schema (assoc req :body body))))}
             config))))
 
-(defn early-response
-  "Helper for early returns in interceptors.
-
-  Clears the queue of interceptors and adds a response."
-  [ctx resp]
-  (assoc ctx
-    :response resp
-    :queue    []))
-
 (defmacro defroutes
   "Define routes in Tram.
 
