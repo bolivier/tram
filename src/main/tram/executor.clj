@@ -1,84 +1,23 @@
 (ns ^:public tram.executor
   "Interceptor executor for reitit.
 
-  Runs a chain the way sieppari does, with two differences. `*req*` is bound to
-  the context's request around every stage fn. A non-nil `:response` after an
-  `:enter` skips the interceptors still queued and starts the leave phase from
-  the interceptor that responded."
-  (:refer-clojure :exclude [await])
+  Runs a chain the way sieppari does, with these differences. `*req*` is bound
+  to the context's request around every stage fn. A non-nil `:response` after
+  an `:enter` skips the interceptors still queued and starts the leave phase
+  from the interceptor that responded. Stage fns run synchronously; a stage
+  returns a context, never a future."
   (:require [reitit.interceptor :as interceptor]
-            [tram.vars :refer [*req*]])
-  (:import (java.util.concurrent CompletionException
-                                 CompletionStage
-                                 ExecutionException)
-           (java.util.function Function)))
-
-(defprotocol AsyncContext
-  (async? [this])
-  (continue [this f])
-  (catch-error [this f])
-  (await [this]))
-
-(deftype FunctionWrapper [f]
-  Function
-  (apply [_ v] (f v)))
-
-(defn- unwrap-cause [e]
-  (if (or (instance? CompletionException
-                     e)
-          (instance? ExecutionException
-                     e))
-    (.getCause ^Exception e)
-    e))
-
-(extend-protocol AsyncContext
-  Object
-  (async? [_] false)
-  (continue [this f] (f this))
-  (catch-error [this _] this)
-  (await [this] this)
-
-  nil
-  (async? [_] false)
-  (continue [this f] (f this))
-  (catch-error [this _] this)
-  (await [this] this)
-
-  clojure.lang.IDeref
-  (async? [_] true)
-  (continue [this f] (future (f @this)))
-  (catch-error [this f]
-    (future (try
-              (let [value @this]
-                (if (instance? Exception
-                               value)
-                  (f value)
-                  value))
-              (catch Exception e
-                (f (unwrap-cause e))))))
-  (await [this] @this)
-
-  CompletionStage
-  (async? [_] true)
-  (continue [this f] (.thenApply this (->FunctionWrapper f)))
-  (catch-error [this f]
-    (.exceptionally this (->FunctionWrapper (comp f unwrap-cause))))
-  (await [this] (deref this)))
+            [tram.vars :refer [*req*]]))
 
 (defrecord Context [request response error queue stack])
 
 (defrecord Interceptor [name enter leave error])
 
 (defn- set-result [ctx response]
-  (cond
-    (and (some? response) (async? response))
-    (continue response (partial set-result ctx))
-
-    (instance? Exception response)
+  (if (instance? Exception
+                 response)
     (assoc ctx
       :error response)
-
-    :else
     (assoc ctx
       :response response)))
 
@@ -124,85 +63,55 @@
            {:ctx   ctx
             :stage stage}))
 
-(defn- run-stage [ctx stage-fn stage]
-  (if-not stage-fn
-    ctx
-    (try
-      (let [result (binding [*req* (:request ctx)]
-                     (stage-fn ctx))]
-        (cond
-          (async? result)
-          (catch-error result
-                       (fn [e]
-                         (assoc ctx
-                           :error e)))
+(defn- call-stage [ctx stage-fn stage]
+  (try
+    (let [result (binding [*req* (:request ctx)]
+                   (stage-fn ctx))]
+      (if (map? result)
+        result
+        (assoc ctx
+          :error (invalid-context result
+                                  stage))))
+    (catch Exception e
+      (assoc ctx :error e))))
 
-          (map? result) result
-          :else
-          (assoc ctx
-            :error (invalid-context result stage))))
-      (catch Exception e
-        (assoc ctx :error e)))))
+(defn- run-stage [ctx interceptor stage]
+  (if-let [stage-fn (get interceptor stage)]
+    (call-stage ctx stage-fn stage)
+    ctx))
 
 (defn- responded? [ctx]
   (some? (:response ctx)))
 
 (defn- enter [ctx]
-  (cond
-    (async? ctx) (continue ctx enter)
-    (map? ctx)
-    (let [{:keys [queue stack]} ctx
-          interceptor (peek queue)]
-      (if (or (nil? interceptor)
-              (:error ctx)
-              (responded? ctx))
-        ctx
-        (recur (-> ctx
-                   (assoc
-                     :queue
-                     (pop queue)
-
-                     :stack
-                     (conj stack
-                           interceptor))
-                   (run-stage (:enter interceptor)
-                              :enter)))))
-
-    :else (throw (invalid-context ctx :enter))))
+  (let [{:keys [queue stack]} ctx
+        interceptor (peek queue)]
+    (if (or (nil? interceptor)
+            (:error ctx)
+            (responded? ctx))
+      ctx
+      (recur (-> ctx
+                 (assoc
+                   :queue (pop queue)
+                   :stack (conj stack
+                                interceptor))
+                 (run-stage interceptor
+                            :enter))))))
 
 (defn- leave [ctx]
-  (cond
-    (async? ctx) (continue ctx leave)
-    (map? ctx)
-    (let [stack (:stack ctx)]
-      (if-let [interceptor (first stack)]
-        (let [stage (if (:error ctx)
-                      :error
-                      :leave)]
-          (recur (-> ctx
-                     (assoc
-                       :stack (rest stack))
-                     (run-stage (stage interceptor) stage))))
-        ctx))
+  (if-let [interceptor (first (:stack ctx))]
+    (recur (-> ctx
+               (update :stack rest)
+               (run-stage interceptor
+                          (if (:error ctx)
+                            :error
+                            :leave))))
+    ctx))
 
-    :else (throw (invalid-context ctx :leave))))
-
-(defn- await-result [ctx]
-  (if (async? ctx)
-    (recur (await ctx))
-    (if-let [error (:error ctx)]
-      (throw error)
-      (:response ctx))))
-
-(defn- deliver-result [ctx respond raise]
-  (if (async? ctx)
-    (continue ctx
-              #(deliver-result %
-                               respond
-                               raise))
-    (if-let [error (:error ctx)]
-      (raise error)
-      (respond (:response ctx)))))
+(defn- result [ctx]
+  (if-let [error (:error ctx)]
+    (throw error)
+    (:response ctx)))
 
 (defn- run-chain [queue request]
   (-> (->Context request nil nil queue nil)
@@ -212,18 +121,18 @@
 (defn execute
   "Run `interceptors` against `request`.
 
-  The two-arity form blocks and returns the response, throwing an unhandled
-  error. The four-arity form returns nil and calls `respond` with the response
-  or `raise` with an unhandled error."
+  The two-arity form returns the response and throws an unhandled error. The
+  four-arity form returns nil and calls `respond` with the response or `raise`
+  with an unhandled error."
   ([interceptors request]
    (when-let [queue (into-queue interceptors)]
-     (await-result (run-chain queue request))))
+     (result (run-chain queue request))))
   ([interceptors request respond raise]
    (if-let [queue (into-queue interceptors)]
-     (try
-       (deliver-result (run-chain queue request) respond raise)
-       (catch Exception e
-         (raise e)))
+     (let [ctx (run-chain queue request)]
+       (if-let [error (:error ctx)]
+         (raise error)
+         (respond (:response ctx))))
      (respond nil))
    nil))
 

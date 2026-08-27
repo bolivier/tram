@@ -110,52 +110,29 @@
 
 (deftest unhandled-errors-throw-or-raise
   (let [chain [(fn [_] (throw (ex-info "boom" {:from :handler})))]]
-    (testing "sync"
+    (testing "two-arity"
       (is (thrown-with-msg? clojure.lang.ExceptionInfo
                             #"boom"
                             (sut/execute chain {}))))
-    (testing "async"
-      (let [raised (promise)]
+    (testing "four-arity"
+      (let [raised (atom nil)]
         (is (nil? (sut/execute chain
                                {}
-                               (fn [_] (deliver raised :responded))
-                               (fn [e] (deliver raised (ex-data e))))))
-        (is (= {:from :handler} (deref raised 1000 :timeout)))))))
+                               (fn [_]
+                                 (reset! raised :responded))
+                               (fn [e]
+                                 (reset! raised (ex-data e))))))
+        (is (= {:from :handler} @raised))))))
 
 (deftest a-handler-returning-an-exception-becomes-an-error
-  (let [raised (promise)]
+  (let [raised (atom nil)]
     (sut/execute [(fn [_] (ex-info "returned" {}))]
                  {}
-                 (fn [_] (deliver raised :responded))
-                 (fn [e] (deliver raised (ex-message e))))
-    (is (= "returned" (deref raised 1000 :timeout)))))
-
-(deftest async-stages-are-awaited
-  (let [log (atom [])]
-    (testing "an :enter that returns a future"
-      (is (= {:status 200}
-             (sut/execute [(recording-interceptor log :a)
-                           {:enter (fn [ctx]
-                                     (future (assoc ctx
-                                               :response {:status 200})))}]
-                          {})))
-      (is (= [[:a :enter] [:a :leave]] @log)))
-    (testing "a handler that returns a future"
-      (is (= {:status 201} (sut/execute [(fn [_] (future {:status 201}))] {}))))
-    (testing "a future that throws becomes an error"
-      (is (thrown-with-msg?
-            clojure.lang.ExceptionInfo
-            #"async boom"
-            (sut/execute [{:enter
-                           (fn [_] (future (throw (ex-info "async boom" {}))))}]
-                         {}))))
-    (testing "respond runs after the future resolves"
-      (let [result (promise)]
-        (sut/execute [(fn [_] (future {:status 202}))]
-                     {}
-                     (fn [response] (deliver result response))
-                     (fn [e] (deliver result e)))
-        (is (= {:status 202} (deref result 1000 :timeout)))))))
+                 (fn [_]
+                   (reset! raised :responded))
+                 (fn [e]
+                   (reset! raised (ex-message e))))
+    (is (= "returned" @raised))))
 
 (deftest reitit-handler-interceptors-run-as-handlers
   (let [handler     (fn [req]
@@ -174,9 +151,13 @@
 (deftest an-empty-chain-yields-nil
   (is (nil? (sut/execute [] {})))
   (is (nil? (sut/execute nil {})))
-  (let [result (promise)]
-    (sut/execute nil {} (fn [r] (deliver result [:respond r])) identity)
-    (is (= [:respond nil] (deref result 1000 :timeout)))))
+  (let [result (atom nil)]
+    (sut/execute nil
+                 {}
+                 (fn [r]
+                   (reset! result [:respond r]))
+                 identity)
+    (is (= [:respond nil] @result))))
 
 (deftest a-stage-returning-a-non-context-becomes-an-error
   (is (thrown-with-msg? clojure.lang.ExceptionInfo
