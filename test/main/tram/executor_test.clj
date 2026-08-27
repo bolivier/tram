@@ -186,3 +186,23 @@
   (is (thrown-with-msg? clojure.lang.ExceptionInfo
                         #"Unsupported Context on :enter"
                         (sut/execute [{:enter (fn [_] nil)}] {}))))
+
+(deftest run-leaves-runs-only-the-response-side
+  (let [log (atom [])
+        ctx (sut/run-leaves {:request  {:uri "/"}
+                             :response {:status 200}}
+                            [(recording-interceptor log :a)
+                             (recording-interceptor log :b)
+                             {:name  :seen-req
+                              :leave (fn [ctx]
+                                       (swap! log conj
+                                         [:seen-req *req*])
+                                       ctx)}
+                             (fn [_] {:status 500})])]
+    (is (= {:status 200} (:response ctx)))
+    (is (= [[:seen-req {:uri "/"}] [:b :leave] [:a :leave]]
+           @log)))
+  (testing "a failing leave sets :error"
+    (let [ctx (sut/run-leaves {:response {:status 200}}
+                              [{:leave (fn [_] (throw (ex-info "boom" {})))}])]
+      (is (= "boom" (ex-message (:error ctx)))))))

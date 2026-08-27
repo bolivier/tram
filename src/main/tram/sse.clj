@@ -13,6 +13,7 @@
   (:require [org.httpkit.server :as hk]
             [reitit.core :as r]
             [rhizome.html :as h]
+            [tram.executor :as executor]
             [tram.logging :as log]
             [tram.vars :refer [*current-user* *req* *res*]])
   (:import (java.io InputStream)
@@ -72,16 +73,16 @@
 
 ;;;; Rendering an event
 
-(defn- leave-fns
-  "The route's compiled interceptors as `:leave` fns, in the order a response
-  goes out in.
+(defn- response-interceptors
+  "The route's compiled interceptors, without their `:error` stages so a failed
+  render drops the event instead of answering it with an error page.
 
   The compiled chain on `:result` is what actually ran, unlike the raw
   interceptors on `:data`, which reitit may have replaced."
   [req]
   (->> (get-in req [::r/match :result (:request-method req) :interceptors])
-       (keep :leave)
-       reverse))
+       (filter :leave)
+       (map #(dissoc % :error))))
 
 (defn- event-response
   "An event as the response it is: a partial that arrives late."
@@ -112,17 +113,19 @@
   pass and nothing else. Returns nil for an event that fails to render, which
   drops that event and leaves the stream open."
   [ctx]
-  (let [req    (:request ctx)
-        leaves (leave-fns req)
-        base   (-> (select-keys ctx [:request :layouts])
-                   (assoc ::event true))]
+  (let [req          (:request ctx)
+        interceptors (response-interceptors req)
+        base         (-> (select-keys ctx [:request :layouts])
+                         (assoc ::event true))]
     (fn [event]
       (if-not (or (:dom/content event) (:template event))
         event
         (try
-          (let [rendered (reduce (fn [c leave] (leave c))
+          (let [rendered (executor/run-leaves
                            (assoc base :response (event-response event))
-                           leaves)]
+                           interceptors)]
+            (when-let [error (:error rendered)]
+              (throw error))
             (assoc event
               :dom/content (->html (get-in rendered [:response :body]) req)))
           (catch Throwable t

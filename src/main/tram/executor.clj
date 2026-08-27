@@ -120,6 +120,14 @@
       enter
       leave))
 
+(defn run-leaves
+  "Run the response side of `interceptors` over `ctx`, as if each had entered.
+
+  `interceptors` are in chain order, so leaves run last to first. Returns the
+  context, with `:error` set when a stage failed and nothing recovered."
+  [ctx interceptors]
+  (leave (assoc ctx :stack (reverse (into-queue interceptors)))))
+
 (defn execute
   "Run `interceptors` against `request`.
 
