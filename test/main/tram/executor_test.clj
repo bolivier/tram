@@ -93,7 +93,7 @@
     (is (nil? *current-user*))
     (is (nil? *res*))))
 
-(deftest non-nil-response-after-enter-short-circuits-the-chain
+(deftest a-response-skips-remaining-enters-but-every-leave-runs
   (let [log      (atom [])
         response (sut/execute [(recording-interceptor log :a)
                                (responder log :b {:status 204})
@@ -101,7 +101,19 @@
                                (fn [_] {:status 200})]
                               {})]
     (is (= {:status 204} response))
-    (is (= [[:a :enter] [:b :enter] [:b :leave] [:a :leave]] @log))))
+    (is (= [[:a :enter] [:b :enter] [:c :leave] [:b :leave] [:a :leave]]
+           @log))))
+
+(deftest a-leave-without-an-enter-can-change-the-response
+  (let [response (sut/execute
+                   [{:enter (fn [ctx] (assoc ctx :response {:status 204}))}
+                    {:leave (fn [ctx]
+                              (assoc-in ctx [:response :headers "x"] "y"))}
+                    (fn [_] {:status 200})]
+                   {})]
+    (is (= {:status  204
+            :headers {"x" "y"}}
+           response))))
 
 (deftest leave-can-still-change-a-short-circuited-response
   (let [response (sut/execute

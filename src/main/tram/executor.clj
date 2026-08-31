@@ -3,9 +3,11 @@
 
   Runs a chain the way sieppari does, with these differences. `*req*`,
   `*res*`, and `*current-user*` are bound from the context around every stage
-  fn. A non-nil `:response` after an `:enter` skips the interceptors still
-  queued and starts the leave phase from the interceptor that responded. Stage
-  fns run synchronously; a stage returns a context, never a future.
+  fn. A non-nil `:response` after an `:enter` skips the `:enter` stages still
+  queued, but every interceptor's `:leave` still runs, including interceptors
+  that never entered. Write a `:leave` to tolerate a skipped `:enter`. An
+  `:error` runs `:error` stages for entered interceptors only. Stage fns run
+  synchronously; a stage returns a context, never a future.
 
   Each stage logs a `:debug` signal with id `::stage`. Enable it with
   `(tram.logging/set-min-level! nil \"tram.executor\" :debug)`."
@@ -105,17 +107,19 @@
 (defn- enter [ctx]
   (let [{:keys [queue stack]} ctx
         interceptor (peek queue)]
-    (if (or (nil? interceptor)
-            (:error ctx)
-            (responded? ctx))
-      ctx
+    (cond
+      (or (nil? interceptor) (:error ctx)) ctx
+      (responded? ctx)
+      (assoc ctx
+        :queue empty-queue
+        :stack (into stack queue))
+
+      :else
       (recur (-> ctx
                  (assoc
                    :queue (pop queue)
-                   :stack (conj stack
-                                interceptor))
-                 (run-stage interceptor
-                            :enter))))))
+                   :stack (conj stack interceptor))
+                 (run-stage interceptor :enter))))))
 
 (defn- leave [ctx]
   (if-let [interceptor (first (:stack ctx))]
