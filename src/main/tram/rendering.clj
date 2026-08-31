@@ -7,15 +7,16 @@
   The actual template resolution and rendering lives in
   `tram.rendering.template-renderer`; this namespace is the concern's public
   face, reexported from `tram.routes`."
-  (:require [clojure.string :as str]
-            [clojure.walk :refer [prewalk]]
-            [malli.core :as m]
-            [malli.error :as me]
-            [reitit.core :as r]
-            [tram.html :as tram.html]
-            [tram.impl.http :refer [html-request? rhizome-request?]]
-            [tram.rendering.template-renderer :as renderer]
-            [tram.sse :as sse]))
+  (:require
+    [clojure.string :as str]
+    [clojure.walk :refer [prewalk]]
+    [malli.core :as m]
+    [malli.error :as me]
+    [reitit.core :as r]
+    [tram.html :as tram.html]
+    [tram.impl.http :refer [html-request? lower-status rhizome-request?]]
+    [tram.rendering.template-renderer :as renderer]
+    [tram.sse :as sse]))
 
 (def expand-header-routes-interceptor
   "Expands route references in response headers."
@@ -76,6 +77,14 @@
 
               :else (renderer/render ctx)))})
 
+(def status-interceptor
+  "Lowers a keyword or redirect-vector `:status` to its numeric code, so every
+  leave behind it reads a number. Sits last in the render group, which makes
+  its leave run first."
+  {:name  :tram/status
+   :must-run-after [:tram/render-template]
+   :leave (fn [ctx] (update ctx :response lower-status (:request ctx)))})
+
 (def ^:private render-opts-schema
   [:map [:page-wrapper fn?]])
 
@@ -99,4 +108,5 @@
   [sse/stream-response-interceptor
    expand-header-routes-interceptor
    (wrap-page-interceptor page-wrapper)
-   render-template-interceptor])
+   render-template-interceptor
+   status-interceptor])

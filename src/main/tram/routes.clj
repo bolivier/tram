@@ -40,6 +40,7 @@
    expand-header-routes-interceptor
    wrap-page-interceptor
    render-template-interceptor
+   status-interceptor
    render]
   [tram.csrf csrf-interceptor csrf-hidden-field csrf-meta-tag security])
 
