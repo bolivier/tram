@@ -17,14 +17,14 @@
    ["/assets/*" {:get (ring/create-resource-handler)}]
    ["/healthcheck"
     {:name    :route/healthcheck
-     :handler (constantly {:status 200
+     :handler (constantly {:status :ok
                            :body   "Alive."})}]
    welcome.handlers/routes
    auth.handlers/routes
    ["/dashboard"
     {:name :route/dashboard
      :get  {:handler (fn [_]
-                       {:status 200
+                       {:status :ok
                         :template
                         #'sample-app.views.authentication-views/dashboard})}}]])
 

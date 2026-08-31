@@ -8,17 +8,16 @@
               set-session-cookie]]
             [sample-app.views.authentication-views :as views]
             [tram.core :refer [defroutes]]
-            [tram.db :as db]
-            [tram.routes :refer [redirect]]))
+            [tram.db :as db]))
 
 (defn sign-up-post-handler [req]
   (if-let [user (register-new-account (get-in req [:parameters :body]))]
     (let [session (db/insert-returning-instance! :models/sessions
                                                  {:user-id (:id user)})]
-      (set-session-cookie (redirect {:session {:identity (:id user)}}
-                                    :route/dashboard)
+      (set-session-cookie {:status  [:redirect :route/dashboard]
+                           :session {:identity (:id user)}}
                           (:id session)))
-    {:status 422
+    {:status :unprocessable-entity
      :hiccup (views/sign-up-form-error)}))
 
 (defn submit-sign-in-form-handler [req]
@@ -26,22 +25,22 @@
     (if-let [user (get-authenticated-user email password)]
       (let [session (db/insert-returning-instance! :models/sessions
                                                    {:user-id (:id user)})]
-        (set-session-cookie (redirect {:session {:identity (:id user)}}
-                                      :route/dashboard)
+        (set-session-cookie {:status  [:redirect :route/dashboard]
+                             :session {:identity (:id user)}}
                             (:id session)))
-      {:status 422
+      {:status :unprocessable-entity
        :hiccup (views/sign-in-form-error)})))
 
 (defn log-out-handler [req]
   (let [{:keys [session-id]} (get-cookie-value req)]
     (db/delete! :models/sessions session-id))
-  (clear-session-cookie (-> {:session nil}
-                            (redirect :route/sign-in))))
+  (clear-session-cookie {:status  [:redirect :route/sign-in]
+                         :session nil}))
 
 (defn sign-in [req]
   (if (some? (:current-user req))
-    (redirect :route/dashboard)
-    {:status 200}))
+    {:status [:redirect :route/dashboard]}
+    {:status :ok}))
 
 (defroutes routes
   [["/sign-up"
