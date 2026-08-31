@@ -186,6 +186,10 @@
   [append! {:keys [value]} _opts]
   (maybe-escape-html append! value))
 
+(defmethod emit nil
+  [_ _ _]
+  nil)
+
 (defn- empty-or-div [seen]
   (if (empty? seen)
     "div"
