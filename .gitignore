@@ -1,12 +1,16 @@
 .clj-kondo/.cache
+.clj-kondo/.lock
 .lsp
 .cpcache
 .shadow-cljs
+.DS_Store
+/.jj/
 /.nrepl-port
 /tram-daemon.log
 .postgres
 /target
-resources/test.db
+resources/test.db*
 node_modules
+cljs-runtime/
 /test/browser/browser-tests/
 /starter-template/resources/public/js/*
