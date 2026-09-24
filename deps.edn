@@ -85,8 +85,6 @@
   babashka/fs {:mvn/version "0.5.26"}
   aero/aero {:mvn/version "1.1.6"}
   com.github.vertical-blank/sql-formatter {:mvn/version "2.0.5"}
-  io.github.bolivier/declensia {:git/branch "main"
-                                :git/sha
-                                "aa52f42e0a02c7c794b763bd0c049f4d78e40baf"}}
+  io.github.bolivier/declensia {:mvn/version "0.1.0"}}
 
  :paths ["src/main" "src/bb_compatible" "resources"]}
