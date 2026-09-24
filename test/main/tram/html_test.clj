@@ -43,7 +43,7 @@
       (is (match? expected (make-q-part input))))))
 
 (deftest encode-to-output-bytes-test
-  (let [encoder (sut/huff-html-encoder nil)]
+  (let [encoder (sut/html-encoder nil)]
     (binding [*req* {:reitit.core/router sample-router}]
       (let [output (apply str
                      (map char
@@ -51,7 +51,7 @@
         (is (= output "<div>hello</div>"))))))
 
 (deftest encode-to-output-stream-test
-  (let [encoder (sut/huff-html-encoder nil)
+  (let [encoder (sut/html-encoder nil)
         baos    (java.io.ByteArrayOutputStream.)]
     (binding [*req* {:reitit.core/router sample-router}]
       (let [encode-fn
@@ -62,7 +62,7 @@
 (deftest encode-rhizome-attributes-test
   (binding [*req* {:reitit.core/router sample-router}]
     (let
-      [encoder (sut/huff-html-encoder nil)
+      [encoder (sut/html-encoder nil)
        hiccup [:button {:rhizome.core/click {:http/url :route/dashboard}}]
        expected
        "<button rhizome_core___click=\"{:http/url &quot;/dashboard&quot;}\"></button>"
@@ -76,7 +76,7 @@
                      :rhizome.core/submit
                      :rhizome.core/input
                      :rhizome.core/load]]
-      (let [encoder (sut/huff-html-encoder nil)
+      (let [encoder (sut/html-encoder nil)
             hiccup  [:div {trigger {:http/url :route/dashboard}}]
             output  (String. (mfc/encode-to-bytes encoder hiccup "UTF-8"))]
         (is (str/includes? output "&quot;/dashboard&quot;")

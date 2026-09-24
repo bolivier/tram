@@ -184,7 +184,7 @@
                  value)))
   (append! "\""))
 
-(defn huff-html-encoder [_]
+(defn html-encoder [_]
   (reify
     mfc/EncodeToBytes
     (encode-to-bytes [_ data charset]
@@ -213,7 +213,7 @@
 
   `encoder` here is wrapped in brackets because muuntaja evaluates a normal fn there."
   (mfc/map->Format {:name    "text/html"
-                    :encoder [huff-html-encoder]
+                    :encoder [html-encoder]
                     :return  nil
                     :matches nil}))
 
