@@ -249,12 +249,13 @@ entity Request {
 entity Stream {
     response: Response
     opened_by: Request
-    status: open | closed | broken
+    status: open | closed | broken | aborted
 
     transitions status {
         open -> closed
         open -> broken
-        terminal: closed, broken
+        open -> aborted
+        terminal: closed, broken, aborted
     }
 }
 
@@ -342,6 +343,32 @@ rule DirectiveMounted {
     ensures:
         directive.status = mounted
         directive.payload_at_mount = parse_payload(directive)
+}
+
+-- Unmount
+
+rule RemovedSubtreeUnmounts {
+    when: SubtreeRemoved(root)
+    for directive in Directives where inside(element, root):
+        ensures: UnmountRequested(directive: directive)
+}
+
+rule DirectiveUnmounted {
+    when: UnmountRequested(directive)
+    ensures:
+        for listener in directive.listeners:
+            not exists listener
+        not exists directive
+
+    @guidance
+        -- Removing the directive drops its dom listener and cancels its pending debounced run.
+        -- The signals it read keep their values, so an element a morph brings back finds them intact.
+}
+
+rule RemovedSubtreeAbortsStreams {
+    when: SubtreeRemoved(root)
+    for stream in Streams where status = open and opened_by.command.element != null and inside(opened_by.command.element, root):
+        ensures: stream.status = aborted
 }
 
 -- Triggers and the debounce modifier
@@ -538,11 +565,13 @@ rule PartialMorphed {
         -- One dropped element does not stop the rest.
 }
 
-rule MorphMountsAddedSubtrees {
+rule MorphReportsSubtreeChanges {
     when: PageElementMorphed(target, replacement)
     ensures:
         for root in added_subtrees(target, replacement):
             SubtreeAdded(root: root)
+        for root in removed_subtrees(target, replacement):
+            SubtreeRemoved(root: root)
 
     @guidance
         -- The target is replaced whole, attributes included, while its children are diffed.
@@ -561,6 +590,7 @@ rule ElementRemoved {
     ensures:
         if exists target:
             not exists target
+            SubtreeRemoved(root: target)
 }
 
 rule DefaultPrevented {
@@ -593,6 +623,8 @@ rule ResponseHandled {
         request.status = answered
         if response.was_redirected:
             CommandRuns(command: NavigateCommand.created(key: "dom/navigate", origin: response_handling, url: response.final_url))
+        else if response.is_stream and request.command.element != null and not on_page(request.command.element):
+            Stream.created(response: response, opened_by: request, status: aborted)
         else if response.is_stream:
             Stream.created(response: response, opened_by: request, status: open)
         else:
@@ -601,6 +633,7 @@ rule ResponseHandled {
     @guidance
         -- The response decides, not the element. Any endpoint may stream.
         -- A redirect wins over a stream. Every other response morphs, whatever its outcome or media type.
+        -- A request whose element has left the page still completes, because its response targets by id.
 }
 
 rule RequestFailed {
@@ -681,6 +714,12 @@ invariant OnlyListeningBehaviorsHaveAnEvent {
 invariant OnlyMountedEventTriggersDebounce {
     for d in Directives:
         d.debounce_due_at != null implies d.status = mounted and d.behavior.kind = event_trigger
+}
+
+invariant NoOpenStreamOutlivesItsElement {
+    for s in Streams:
+        s.status = open and s.opened_by.command.element != null
+            implies on_page(s.opened_by.command.element)
 }
 
 invariant EveryRequestAsksForPartial {
@@ -778,7 +817,6 @@ surface StreamDelivery {
 ------------------------------------------------------------
 
 -- Mount and unmount
-open question "Nothing unmounts. Listeners, signal listeners, debounced runs, requests, and streams outlive their element. Should unmount release them and abort the element's request or stream?"
 open question "An unparseable payload still mounts and runs with no payload. Should it fail to mount and reach an error sink?"
 open question "An invalid binding expression throws after its directive is marked mounted. The throw stops the scan, so later directives never mount."
 open question "Mount order is behavior registry order, so the code breaks MountOrderFree. A binding can read a signal before the two-way binding that seeds it mounts."
@@ -798,7 +836,6 @@ open question "A bare symbol in argument position evaluates to itself. Should a 
 open question "A class binding toggles one class per directive. Should it take a map from class to predicate?"
 open question "Can an application extend the expression allowlist?"
 open question "The signal inspector ships in the default behavior set. Should a debug tool be a default?"
-open question "Signal removal and observer shutdown have no caller. Are they dead code or waiting on unmount?"
 
 -- Commands and the registry
 open question "Commands dispatch through a multimethod keyed on :do. CONTEXT keys a command on :command. Should a command definition carry lifecycle fns and a schema checked at mount?"
