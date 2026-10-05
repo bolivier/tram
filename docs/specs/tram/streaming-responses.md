@@ -3,14 +3,14 @@
 ## Status
 
 basic implementation landed in `tram.sse` and `tram.sse.async`. Decided by
-ADR-0011 and ADR-0012. The client side is `docs/specs/rhizome/rhizome.allium`.
+ADR-0011 and ADR-0012.
 
 ## Summary
 
 How a Tram handler returns a stream of events instead of a body, and how those
 events reach the wire as `text/event-stream`.
 
-The client half is `docs/specs/rhizome/03-server-sent-events.md`. This document
+The client half is `docs/specs/rhizome/rhizome.allium`. This document
 stops at the frame.
 
 ## The handler

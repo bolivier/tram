@@ -5,7 +5,7 @@
   field carries the rest as edn. So a stream adds no vocabulary, and a server can
   fire anything the page already knows how to do.
 
-  Spec: `docs/specs/rhizome/03-server-sent-events.md`."
+  Spec: `docs/specs/rhizome/rhizome.allium`."
   (:require [clojure.edn :as edn]
             [clojure.string :as str]))
 
