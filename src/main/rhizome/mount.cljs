@@ -57,7 +57,6 @@
                                         ;; the timer fires, so its default
                                         ;; has to go now or not at all.
                                         (.preventDefault e)
-                                        (.stopPropagation e)
                                         (defer! ms
                                                 run!))
                                       (run!)))))))))

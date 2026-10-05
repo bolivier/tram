@@ -36,7 +36,6 @@ external entity Form {}
 external entity DomEvent {
     type: DomEventType
     default_prevented: Boolean
-    propagation_stopped: Boolean
 }
 
 external entity Value {}
@@ -371,13 +370,12 @@ rule DebouncedTriggerFires {
         requires: payload?.debounce > 0.seconds
         ensures:
             event.default_prevented = true
-            event.propagation_stopped = true
             directive.debounce_due_at = now + payload.debounce
             directive.debounced_event = event
             directive.debounced_payload = payload
 
     @guidance
-        -- The dom event is spent before the window ends, so it is cancelled at once.
+        -- The dom event is spent before the window ends, so its default is prevented at once.
 }
 
 rule DebounceWindowElapses {
@@ -508,7 +506,6 @@ rule HttpCommandSendsRequest {
     ensures:
         if command.dom_event != null:
             command.dom_event.default_prevented = true
-            command.dom_event.propagation_stopped = true
         Request.created(
             command: command,
             method: command.method,
@@ -792,7 +789,6 @@ open question "The mount trigger is a behavior named load, which collides with t
 open question "Debounce is the only modifier. CONTEXT also names once. Are key, prevent, stop, and throttle wanted?"
 open question "The trigger set is closed to five dom events. Should any trigger name pass through, so an application can add custom events?"
 open question "An event trigger's payload is one command map with modifiers mixed in. Should it be a vector of commands, with modifiers beside it?"
-open question "Every http command prevents the default and stops propagation. Is that intended, or modifier territory?"
 open question "prevent-default is a command that fails when no dom event exists, as from a stream or the mount trigger. Should it be a modifier?"
 
 -- Bindings and signals

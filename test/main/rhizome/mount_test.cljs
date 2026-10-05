@@ -48,6 +48,24 @@
                       (is (= 1 (count @runs)) "and only the last event runs"))))
       (finally (.restore clock)))))
 
+(deftest debounce-lets-the-event-reach-ancestors-test
+  (let [clock (tu/fake-timers)]
+    (try
+      (with-probe (fn [_runs]
+                    (with-html [root
+                                [:div
+                                 [:input {probe-attribute
+                                          "{:do :probe :debounce 100}"}]]]
+                               (let [input (.querySelector root "input")
+                                     heard (atom false)]
+                                 (.addEventListener root
+                                                    "input"
+                                                    #(reset! heard true))
+                                 (sut/mount! root)
+                                 (tu/fire! input "input")
+                                 (is @heard)))))
+      (finally (.restore clock)))))
+
 (deftest debounce-runs-again-after-its-window-test
   (let [clock (tu/fake-timers)]
     (try

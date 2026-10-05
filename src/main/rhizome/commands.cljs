@@ -76,8 +76,7 @@
 (defn execute-http [{:keys [http/method http/url event el]
                      :as   _command}]
   (when event
-    (.preventDefault event)
-    (.stopPropagation event))
+    (.preventDefault event))
   (let [{:keys [body content-type]} (when (not= :get
                                                 method)
                                       (request-body el))

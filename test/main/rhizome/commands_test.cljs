@@ -59,6 +59,36 @@
                  (.remove meta-el)
                  (done)))))
 
+(deftest an-http-command-lets-its-event-reach-ancestors-test
+  (let [seen  (atom false)
+        heard (atom false)]
+    (fake-server/use-handlers fake-server/server
+                              (fake-server/make-handlers
+                                "/commands-test/propagate"
+                                {:get (fn [_req]
+                                        (reset! seen true)
+                                        {:body [:p "ok"]})}))
+    (with-html [root [:div [:button]]]
+               (let [button (.querySelector root "button")
+                     event  (js/Event. "click"
+                                       #js {:bubbles    true
+                                            :cancelable true})]
+                 (.addEventListener root
+                                    "click"
+                                    #(reset! heard true))
+                 (.addEventListener button
+                                    "click"
+                                    #(sut/execute
+                                       {:do       :http/get
+                                        :http/url "/commands-test/propagate"
+                                        :event    %}))
+                 (.dispatchEvent button event)
+                 (is @heard)
+                 (is (.-defaultPrevented event))))
+    (async done
+           (p/do (is (eventually @seen))
+                 (done)))))
+
 (deftest a-followed-redirect-navigates-instead-of-morphing-test
   (fake-server/use-handlers
     fake-server/server
