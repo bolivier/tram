@@ -1,0 +1,823 @@
+-- allium: 3
+-- rhizome.allium
+
+-- Scope: the rhizome client runtime as the code behaves today.
+-- Includes: directives, triggers, the debounce modifier, behaviors, bindings, signals, mount,
+--   commands, server round trips, response handling, stream consumption, directive encoding.
+-- Excludes:
+--   - The hiccup to html encoder in rhizome.html, apart from directive encoding.
+--   - The server's stream source and emitter internals. Only the stream event contract is kept.
+--   - Logging, console output, and dev tooling.
+-- Where the code departs from CONTEXT.md, the ADRs, or docs/specs/rhizome, an open question records it.
+
+given {
+    page: Page
+}
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+external entity Page {
+    csrf_token: String?
+}
+
+external entity Element {
+    id: String?
+    text: String
+    hidden: Boolean
+    classes: Set<String>
+    control_value: Value?
+    form: Form?
+}
+
+external entity Form {}
+
+external entity DomEvent {
+    type: DomEventType
+    default_prevented: Boolean
+    propagation_stopped: Boolean
+}
+
+external entity Value {}
+
+external entity Server {}
+
+external entity Application {}
+
+external entity Response {
+    was_redirected: Boolean
+    final_url: String
+    is_stream: Boolean
+    body_html: String
+}
+
+external entity StreamEvent {
+    stream: Stream
+    command_key: String?
+    arguments: String?
+}
+
+------------------------------------------------------------
+-- Value Types
+------------------------------------------------------------
+
+value Expression {
+    reads: Set<String>
+}
+
+value Payload {
+    command: Value?
+    debounce: Duration?
+    expression: Expression?
+    class_name: String?
+    signal_name: String?
+    initial_value: Value?
+}
+
+value FormFields {}
+
+value SelectedFile {
+    control_name: String
+}
+
+value RequestBody {
+    fields: FormFields
+    files: Set<SelectedFile>
+
+    is_multipart: files.count > 0
+}
+
+------------------------------------------------------------
+-- Contracts
+------------------------------------------------------------
+
+contract DirectiveEncoding {
+    attribute_name: (key: String) -> String
+    encode_payload: (payload: Any) -> String
+    decode_payload: (text: String) -> Any
+
+    @invariant SharedNamingRule
+        -- Server render and client mount derive an attribute name from a directive key by one rule.
+        -- Mount finds an attribute by encoding the behavior's key, never by decoding a name.
+
+    @invariant PayloadIsEdn
+        -- A map or vector payload is written as edn and read back as edn.
+        -- decode_payload(encode_payload(p)) = p for those payloads.
+
+    @invariant EmptyPayloadOmitted
+        -- A nil, false, or empty payload writes no attribute.
+}
+
+contract StreamEventProtocol {
+    next_event: (stream: Stream) -> StreamEvent
+
+    @invariant EventNamesACommand
+        -- Every stream event names one command key.
+        -- It carries that command's arguments as one edn map, without the key.
+
+    @invariant ContentArrivesAsHtml
+        -- The server renders any view or content in a stream event before sending it.
+        -- It renders as a partial. The client never receives hiccup.
+
+    @invariant KeepAliveCarriesNoCommand
+        -- An idle stream gets a keep-alive every 25 seconds. A keep-alive names no command.
+
+    @invariant EventsInSourceOrder
+        -- Stream events arrive in the order the stream source yields them.
+
+    @invariant RenderFailureDropsOneEvent
+        -- A stream event that fails to render is not sent. The stream stays open.
+
+    @invariant StreamEndsWhenSourceSpent
+        -- The server ends the stream once the stream source is spent or fails.
+}
+
+------------------------------------------------------------
+-- Enumerations
+------------------------------------------------------------
+
+enum DomEventType { click | submit | input | drop | dragover }
+
+enum BehaviorKind {
+    event_trigger | mount_trigger | text_binding | show_binding | class_binding
+    | two_way_binding | signal_inspector
+}
+
+enum HttpMethod { get | post | patch }
+
+enum CommandOrigin { directive | stream_event | response_handling }
+
+------------------------------------------------------------
+-- Entities and Variants
+------------------------------------------------------------
+
+entity Runtime {
+    status: idle | started
+
+    transitions status {
+        idle -> started
+        terminal: started
+    }
+}
+
+entity Behavior {
+    attribute: String
+    kind: BehaviorKind
+    listens_for: DomEventType?
+}
+
+entity Directive {
+    element: Element
+    behavior: Behavior
+    status: pending | mounted
+    payload_at_mount: Payload? when status = mounted
+    debounce_due_at: Timestamp?
+    debounced_event: DomEvent?
+    debounced_payload: Payload?
+
+    listeners: SignalListener with directive = this
+
+    transitions status {
+        pending -> mounted
+        terminal: mounted
+    }
+}
+
+entity Signal {
+    name: String
+    value: Value?
+
+    listeners: SignalListener with signal = this
+}
+
+entity SignalListener {
+    signal: Signal
+    directive: Directive
+}
+
+entity CommandDefinition {
+    key: String
+}
+
+entity Command {
+    key: String
+    origin: CommandOrigin
+    element: Element?
+    dom_event: DomEvent?
+    kind: HttpCommand | MorphCommand | NavigateCommand | RemoveCommand | PreventDefaultCommand | ApplicationCommand
+}
+
+variant HttpCommand : Command {
+    method: HttpMethod
+    url: String
+}
+
+variant MorphCommand : Command {
+    content: String
+}
+
+variant NavigateCommand : Command {
+    url: String
+}
+
+variant RemoveCommand : Command {
+    target_id: String
+}
+
+variant PreventDefaultCommand : Command {}
+
+variant ApplicationCommand : Command {}
+
+entity Request {
+    command: HttpCommand
+    method: HttpMethod
+    url: String
+    asks_for_partial: Boolean
+    body: RequestBody?
+    carries_csrf_token: Boolean
+    carries_signals: Boolean
+    status: in_flight | answered | failed
+
+    transitions status {
+        in_flight -> answered
+        in_flight -> failed
+        terminal: answered, failed
+    }
+}
+
+entity Stream {
+    response: Response
+    opened_by: Request
+    status: open | closed | broken
+
+    transitions status {
+        open -> closed
+        open -> broken
+        terminal: closed, broken
+    }
+}
+
+------------------------------------------------------------
+-- Config
+------------------------------------------------------------
+
+config {
+    expression_allowlist: Set<String> = {
+        "signal", "not", "=", "not=", "<", ">", "<=", ">=",
+        "count", "empty?", "seq", "nil?", "some?", "str", "boolean"
+    }
+    short_circuit_forms: Set<String> = { "and", "or", "if" }
+}
+
+------------------------------------------------------------
+-- Defaults
+------------------------------------------------------------
+
+default Runtime runtime = { status: idle }
+
+default Behavior click_behavior = { attribute: "click", kind: event_trigger, listens_for: click }
+default Behavior submit_behavior = { attribute: "submit", kind: event_trigger, listens_for: submit }
+default Behavior input_behavior = { attribute: "input", kind: event_trigger, listens_for: input }
+default Behavior drop_behavior = { attribute: "drop", kind: event_trigger, listens_for: drop }
+default Behavior dragover_behavior = { attribute: "dragover", kind: event_trigger, listens_for: dragover }
+default Behavior load_behavior = { attribute: "load", kind: mount_trigger }
+default Behavior text_behavior = { attribute: "text", kind: text_binding }
+default Behavior show_behavior = { attribute: "show", kind: show_binding }
+default Behavior class_behavior = { attribute: "class", kind: class_binding }
+default Behavior bind_behavior = { attribute: "bind", kind: two_way_binding, listens_for: input }
+default Behavior debug_behavior = { attribute: "debug", kind: signal_inspector }
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+-- Registration
+
+rule BehaviorAdded {
+    when: ApplicationRegistersBehavior(attribute, kind, listens_for?)
+    let existing = Behavior{attribute}
+    ensures:
+        if exists existing:
+            not exists existing
+        Behavior.created(attribute: attribute, kind: kind, listens_for: listens_for)
+}
+
+rule CommandDefinitionAdded {
+    when: ApplicationRegistersCommand(key)
+    requires: not exists CommandDefinition{key}
+    ensures: CommandDefinition.created(key: key)
+}
+
+-- Mount
+
+rule DirectiveArrives {
+    when: ElementCarriesDirective(element, behavior)
+    requires: not exists Directive{element, behavior}
+    ensures: Directive.created(element: element, behavior: behavior, status: pending)
+}
+
+rule RhizomeStarts {
+    when: PageLoaded()
+    requires: runtime.status = idle
+    ensures:
+        runtime.status = started
+        for directive in Directives where status = pending:
+            MountRequested(directive: directive)
+
+    @guidance
+        -- Mount runs one behavior at a time in registry order, then document order within it.
+}
+
+rule AddedSubtreeMounts {
+    when: SubtreeAdded(root)
+    requires: runtime.status = started
+    for directive in Directives where status = pending and inside(element, root):
+        ensures: MountRequested(directive: directive)
+}
+
+rule DirectiveMounted {
+    when: MountRequested(directive)
+    requires: directive.status = pending
+    ensures:
+        directive.status = mounted
+        directive.payload_at_mount = parse_payload(directive)
+}
+
+-- Triggers and the debounce modifier
+
+rule MountTriggerFires {
+    when: directive: Directive.status becomes mounted
+    requires: directive.behavior.kind = mount_trigger
+    ensures: CommandRuns(command: command_from(directive.payload_at_mount?.command, directive.element, null))
+
+    @guidance
+        -- A morph that brings back an element carrying this directive mounts it and runs it again.
+}
+
+rule TriggerFires {
+    when: DomEventDispatched(target, event)
+    for directive in Directives where element = target and status = mounted and behavior.listens_for = event.type:
+        let payload = parse_payload(directive)
+        requires: not (payload?.debounce > 0.seconds)
+        ensures: DirectiveRuns(directive: directive, event: event, payload: payload)
+}
+
+rule DebouncedTriggerFires {
+    when: DomEventDispatched(target, event)
+    for directive in Directives where element = target and status = mounted and behavior.listens_for = event.type:
+        let payload = parse_payload(directive)
+        requires: payload?.debounce > 0.seconds
+        ensures:
+            event.default_prevented = true
+            event.propagation_stopped = true
+            directive.debounce_due_at = now + payload.debounce
+            directive.debounced_event = event
+            directive.debounced_payload = payload
+
+    @guidance
+        -- The dom event is spent before the window ends, so it is cancelled at once.
+}
+
+rule DebounceWindowElapses {
+    when: directive: Directive.debounce_due_at <= now
+    requires: directive.debounce_due_at != null
+    ensures:
+        directive.debounce_due_at = null
+        DirectiveRuns(directive: directive, event: directive.debounced_event, payload: directive.debounced_payload)
+}
+
+rule EventTriggerRuns {
+    when: DirectiveRuns(directive, event, payload)
+    requires: directive.behavior.kind = event_trigger
+    ensures: CommandRuns(command: command_from(payload?.command, directive.element, event))
+}
+
+-- Bindings
+
+rule BindingMounted {
+    when: directive: Directive.status becomes mounted
+    requires: directive.behavior.kind in { text_binding, show_binding, class_binding }
+    let expression = directive.payload_at_mount?.expression
+    requires: well_formed(expression, config.expression_allowlist, config.short_circuit_forms)
+    ensures:
+        if expression.reads.count = 0:
+            BindingReapplied(directive: directive)
+        for name in expression.reads:
+            SignalListened(name: name, directive: directive)
+
+    @guidance
+        -- well_formed: each signal read names one literal signal. Each call head is allowlisted or short-circuits.
+}
+
+rule TwoWayBindingMounted {
+    when: directive: Directive.status becomes mounted
+    requires: directive.behavior.kind = two_way_binding
+    let payload = directive.payload_at_mount
+    ensures:
+        SignalListened(name: payload?.signal_name, directive: directive)
+        SignalWritten(name: payload?.signal_name, value: payload?.initial_value)
+}
+
+rule TwoWayBindingFollowsControl {
+    when: DirectiveRuns(directive, event, payload)
+    requires: directive.behavior.kind = two_way_binding
+    ensures: SignalWritten(name: payload?.signal_name, value: directive.element.control_value)
+}
+
+rule SignalInspectorMounted {
+    when: directive: Directive.status becomes mounted
+    requires: directive.behavior.kind = signal_inspector
+    ensures: directive.element.text = render_values(Signals)
+}
+
+rule TextBindingReapplied {
+    when: BindingReapplied(directive)
+    requires: directive.behavior.kind = text_binding
+    ensures: directive.element.text = as_text(evaluate(directive.payload_at_mount?.expression))
+}
+
+rule ShowBindingReapplied {
+    when: BindingReapplied(directive)
+    requires: directive.behavior.kind = show_binding
+    ensures: directive.element.hidden = not truthy(evaluate(directive.payload_at_mount?.expression))
+
+    @guidance
+        -- Showing hands display back to the stylesheet rather than forcing a value.
+}
+
+rule ClassBindingReapplied {
+    when: BindingReapplied(directive)
+    requires: directive.behavior.kind = class_binding
+    let payload = directive.payload_at_mount
+    ensures:
+        if truthy(evaluate(payload?.expression)):
+            directive.element.classes.add(payload?.class_name)
+        else:
+            directive.element.classes.remove(payload?.class_name)
+}
+
+rule TwoWayBindingReapplied {
+    when: BindingReapplied(directive)
+    requires: directive.behavior.kind = two_way_binding
+    let signal = Signal{name: directive.payload_at_mount?.signal_name}
+    ensures: directive.element.control_value = signal.value
+
+    @guidance
+        -- A checkbox follows truthiness. A file control can only be cleared.
+}
+
+-- Signals
+
+rule ListenerJoinsSignal {
+    when: SignalListened(name, directive)
+    let signal = Signal{name}
+    ensures:
+        if not exists signal:
+            Signal.created(name: name, value: null)
+        SignalListener.created(signal: Signal{name}, directive: directive)
+        BindingReapplied(directive: directive)
+}
+
+rule SignalUpdated {
+    when: SignalWritten(name, value)
+    let signal = Signal{name}
+    ensures:
+        if exists signal:
+            signal.value = value
+            for listener in signal.listeners:
+                BindingReapplied(directive: listener.directive)
+        else:
+            Signal.created(name: name, value: value)
+}
+
+rule SignalInspectorRefreshes {
+    when: SignalWritten(name, value)
+    for inspector in Directives where status = mounted and behavior.kind = signal_inspector:
+        ensures: inspector.element.text = render_values(Signals)
+}
+
+-- Commands
+
+rule HttpCommandSendsRequest {
+    when: CommandRuns(command)
+    requires: command.kind = HttpCommand
+    let form = command.element?.form
+    let sends_body = command.method != get and form != null
+    ensures:
+        if command.dom_event != null:
+            command.dom_event.default_prevented = true
+            command.dom_event.propagation_stopped = true
+        Request.created(
+            command: command,
+            method: command.method,
+            url: command.url,
+            asks_for_partial: true,
+            body: if sends_body: form_body(form) else: null,
+            carries_csrf_token: command.method != get and page.csrf_token != null,
+            carries_signals: false,
+            status: in_flight
+        )
+
+    @guidance
+        -- form_body holds the form's submittable fields and the files chosen in its file controls.
+        -- An element outside any form sends no body, even on post or patch.
+}
+
+rule PartialMorphed {
+    when: CommandRuns(command)
+    requires: command.kind = MorphCommand
+    ensures:
+        for element in top_level_elements(command.content):
+            let target = Element{id: element.id}
+            if exists target:
+                PageElementMorphed(target: target, replacement: element)
+            else:
+                ResponseElementDropped(element: element)
+
+    @guidance
+        -- top_level_elements ignores text and comments. An element with no id matches nothing.
+        -- One dropped element does not stop the rest.
+}
+
+rule MorphMountsAddedSubtrees {
+    when: PageElementMorphed(target, replacement)
+    ensures:
+        for root in added_subtrees(target, replacement):
+            SubtreeAdded(root: root)
+
+    @guidance
+        -- The target is replaced whole, attributes included, while its children are diffed.
+}
+
+rule PageNavigated {
+    when: CommandRuns(command)
+    requires: command.kind = NavigateCommand
+    ensures: FullPageLoadRequested(url: command.url)
+}
+
+rule ElementRemoved {
+    when: CommandRuns(command)
+    requires: command.kind = RemoveCommand
+    let target = Element{id: command.target_id}
+    ensures:
+        if exists target:
+            not exists target
+}
+
+rule DefaultPrevented {
+    when: CommandRuns(command)
+    requires: command.kind = PreventDefaultCommand
+    requires: command.dom_event != null
+    ensures: command.dom_event.default_prevented = true
+}
+
+rule ApplicationCommandRan {
+    when: CommandRuns(command)
+    requires: command.kind = ApplicationCommand
+    requires: exists CommandDefinition{key: command.key}
+    ensures: CommandDefinitionRan(command: command)
+}
+
+rule UnregisteredCommandIgnored {
+    when: CommandRuns(command)
+    requires: command.kind = ApplicationCommand
+    requires: not exists CommandDefinition{key: command.key}
+    ensures: CommandRejected(command: command)
+}
+
+-- Server round trips
+
+rule ResponseHandled {
+    when: ResponseArrived(request, response)
+    requires: request.status = in_flight
+    ensures:
+        request.status = answered
+        if response.was_redirected:
+            CommandRuns(command: NavigateCommand.created(key: "dom/navigate", origin: response_handling, url: response.final_url))
+        else if response.is_stream:
+            Stream.created(response: response, opened_by: request, status: open)
+        else:
+            CommandRuns(command: MorphCommand.created(key: "dom/morph", origin: response_handling, content: response.body_html))
+
+    @guidance
+        -- The response decides, not the element. Any endpoint may stream.
+        -- A redirect wins over a stream. Every other response morphs, whatever its outcome or media type.
+}
+
+rule RequestFailed {
+    when: RequestLostInTransit(request)
+    requires: request.status = in_flight
+    ensures: request.status = failed
+}
+
+-- Streams
+
+rule StreamEventApplied {
+    when: StreamEventReceived(event)
+    requires: event.stream.status = open
+    requires: event.command_key != null and event.arguments != null
+    requires: is_edn_map(event.arguments)
+    ensures: CommandRuns(command: command_from_stream_event(event))
+
+    @guidance
+        -- A stream event's command has no element and no dom event.
+}
+
+rule StreamEventDropped {
+    when: StreamEventReceived(event)
+    requires: event.stream.status = open
+    requires: event.command_key != null and event.arguments != null
+    requires: not is_edn_map(event.arguments)
+    ensures: StreamEventRejected(event: event)
+
+    @guidance
+        -- One stream event is lost and the stream stays open. A command that throws is lost the same way.
+}
+
+rule StreamEnded {
+    when: StreamClosedByServer(stream)
+    requires: stream.status = open
+    ensures: stream.status = closed
+
+    @guidance
+        -- A stream event cut off by the close is discarded, never run.
+}
+
+rule StreamBroken {
+    when: StreamConnectionLost(stream)
+    requires: stream.status = open
+    ensures: stream.status = broken
+
+    @guidance
+        -- Nothing reconnects (ADR-0009).
+}
+
+------------------------------------------------------------
+-- Invariants
+------------------------------------------------------------
+
+invariant OneBehaviorPerAttribute {
+    for a in Behaviors:
+        for b in Behaviors:
+            a != b implies a.attribute != b.attribute
+}
+
+invariant OneDirectivePerBehaviorPerElement {
+    for a in Directives:
+        for b in Directives:
+            a != b and a.element = b.element implies a.behavior != b.behavior
+}
+
+invariant OneSignalPerName {
+    for a in Signals:
+        for b in Signals:
+            a != b implies a.name != b.name
+}
+
+invariant OnlyListeningBehaviorsHaveAnEvent {
+    for b in Behaviors:
+        b.listens_for != null implies b.kind in { event_trigger, two_way_binding }
+}
+
+invariant OnlyMountedEventTriggersDebounce {
+    for d in Directives:
+        d.debounce_due_at != null implies d.status = mounted and d.behavior.kind = event_trigger
+}
+
+invariant EveryRequestAsksForPartial {
+    for r in Requests:
+        r.asks_for_partial = true
+}
+
+invariant GetSendsNoBodyAndNoToken {
+    for r in Requests:
+        r.method = get implies r.body = null and not r.carries_csrf_token
+}
+
+------------------------------------------------------------
+-- Actor Declarations
+------------------------------------------------------------
+
+actor Visitor {
+    identified_by: Page where true
+}
+
+actor Developer {
+    identified_by: Application where true
+}
+
+actor TramServer {
+    identified_by: Server where true
+}
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+surface PageInteraction {
+    facing visitor: Visitor
+    context element: Element
+
+    exposes:
+        element.text
+        element.hidden
+        element.classes
+        element.control_value
+
+    provides:
+        PageLoaded()
+        ElementCarriesDirective(element, behavior)
+        DomEventDispatched(element, event)
+}
+
+surface RhizomeExtension {
+    facing developer: Developer
+
+    provides:
+        ApplicationRegistersBehavior(attribute, kind, listens_for?)
+        ApplicationRegistersCommand(key)
+}
+
+surface RhizomeRoundTrip {
+    facing server: TramServer
+    context request: Request
+
+    exposes:
+        request.method
+        request.url
+        request.asks_for_partial
+        request.body when request.method != get
+        request.carries_csrf_token
+
+    provides:
+        ResponseArrived(request, response)
+        RequestLostInTransit(request)
+
+    contracts:
+        demands DirectiveEncoding
+        demands StreamEventProtocol
+}
+
+surface StreamDelivery {
+    facing server: TramServer
+    context stream: Stream where status = open
+
+    provides:
+        StreamEventReceived(event)
+        StreamClosedByServer(stream)
+        StreamConnectionLost(stream)
+
+    contracts:
+        demands StreamEventProtocol
+}
+
+------------------------------------------------------------
+-- Open Questions
+------------------------------------------------------------
+
+-- Mount and unmount
+open question "Nothing unmounts. Listeners, signal listeners, debounced runs, requests, and streams outlive their element. CONTEXT and ADR-0009 require unmount and abort."
+open question "An unparseable payload still mounts and runs with no payload. Spec 01 says it should not mount and should reach the error sink."
+open question "An invalid binding expression throws after its directive is marked mounted. The throw stops the scan, so later directives never mount."
+open question "Mount order is behavior registry order, which is hash order. A binding can read a signal before the two-way binding that seeds it mounts. Is document order wanted?"
+open question "A morph that keeps an element never mounts directives it adds there. A removed event trigger keeps listening. A binding keeps its mount-time payload."
+
+-- Triggers and modifiers
+open question "The mount trigger is a behavior named load, which collides with the dom load event. CONTEXT and ADR-0006 name it ::on/mount."
+open question "Debounce is the only modifier. CONTEXT and spec 01 also name once, key, prevent, stop, and throttle."
+open question "The trigger set is closed to five dom events. ADR-0006 passes any trigger name through and lets an application add its own."
+open question "An event trigger's payload is one command map with modifiers mixed in. ADR-0006 says a vector of commands, with modifiers beside :do."
+open question "Every http command prevents the default and stops propagation. Is that intended, or modifier territory?"
+open question "prevent-default is a command that fails when no dom event exists, as from a stream or the mount trigger. Should it be a modifier?"
+
+-- Bindings and signals
+open question "A two-way binding seeds its signal from its payload, not its control. A missing seed blanks the signal. Each new control on a shared signal re-seeds it."
+open question "A signal write notifies every listener even when the value is unchanged. Intended?"
+open question "A bare symbol in argument position evaluates to itself. ADR-0008 says a bare symbol reads a signal and anything else errors at mount."
+open question "A class binding toggles one class per directive. ADR-0008 shows a map from class to predicate."
+open question "The signal inspector ships in the default behavior set. Should a debug tool be a default?"
+open question "Signal removal and observer shutdown have no caller. Are they dead code or waiting on unmount?"
+
+-- Commands and the registry
+open question "Commands dispatch through a multimethod keyed on :do. ADR-0004 calls for a registry of command definitions with lifecycle fns and a schema, run through run!."
+open question "No config, start!, or error sink exists. Errors print to the console or throw. Spec 01 routes them all to :on-error."
+open question "Only get, post, and patch ship. ADR-0007 and spec 02 add put and delete, and a signal-setting command."
+open question "remove requires an id. ADR-0003 and spec 02 default it to the directive's own element."
+open question "Morph searches the whole document. ADR-0003 starts the search from the directive's root node, for shadow roots."
+
+-- Server round trips
+open question "Requests carry the enclosing form's fields, never signals. CONTEXT and ADR-0007 say every request carries the signal map, with no form scraping."
+open question "Every response that is not a redirect or a stream morphs, failures and unknown media types included. Spec 02 says neither should morph."
+open question "A followed redirect navigates to the final url, so the target loads twice. ADR-0002 says rhizome has no navigation."
+open question "A network failure is an unhandled rejection. Nothing marks the request failed or reports it."
+
+-- Streams
+open question "A second trigger opens a second stream on the same ids. Spec 03 aborts the open stream on that element first."
+open question "A stream event keeps its view and locals, so the server sends locals to the client. A non-edn local makes the event unreadable."
+open question "A stream event with no command key ends the whole stream. ADR-0012 drops only that event."
+open question "A failed stream source closes the stream like a normal end. Should the client tell the two apart?"
+
+-- Directive encoding
+open question "Directive key encoding is not one-to-one. Two distinct namespaced keys can share one attribute name."
+open question "A keyword payload loses its colon when encoded and reads back as a symbol."
