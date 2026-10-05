@@ -8,7 +8,7 @@
 --   - The hiccup to html encoder in rhizome.html, apart from directive encoding.
 --   - The server's stream source and emitter internals. Only the stream event contract is kept.
 --   - Logging, console output, and dev tooling.
--- Where the code departs from CONTEXT.md, the ADRs, or docs/specs/rhizome, an open question records it.
+-- Where the code departs from CONTEXT.md, an open question records it.
 
 given {
     page: Page
@@ -131,6 +131,7 @@ contract StreamEventProtocol {
 
     @invariant StreamEndsWhenSourceSpent
         -- The server ends the stream once the stream source is spent or fails.
+        -- The client treats a failure and a completion alike.
 }
 
 ------------------------------------------------------------
@@ -326,7 +327,7 @@ rule RhizomeStarts {
             MountRequested(directive: directive)
 
     @guidance
-        -- Mount runs one behavior at a time in registry order, then document order within it.
+        -- Bindings first apply once every directive in the scan has mounted, so each signal holds its seed.
 }
 
 rule AddedSubtreeMounts {
@@ -650,7 +651,7 @@ rule StreamBroken {
     ensures: stream.status = broken
 
     @guidance
-        -- Nothing reconnects (ADR-0009).
+        -- Nothing reconnects. A dropped stream stays dropped until a trigger runs again.
 }
 
 ------------------------------------------------------------
@@ -729,6 +730,9 @@ surface PageInteraction {
         PageLoaded()
         ElementCarriesDirective(element, behavior)
         DomEventDispatched(element, event)
+
+    @guarantee MountOrderFree
+        -- The page after a mount scan does not depend on the order its directives mount.
 }
 
 surface RhizomeExtension {
@@ -777,46 +781,47 @@ surface StreamDelivery {
 ------------------------------------------------------------
 
 -- Mount and unmount
-open question "Nothing unmounts. Listeners, signal listeners, debounced runs, requests, and streams outlive their element. CONTEXT and ADR-0009 require unmount and abort."
-open question "An unparseable payload still mounts and runs with no payload. Spec 01 says it should not mount and should reach the error sink."
+open question "Nothing unmounts. Listeners, signal listeners, debounced runs, requests, and streams outlive their element. Should unmount release them and abort the element's request or stream?"
+open question "An unparseable payload still mounts and runs with no payload. Should it fail to mount and reach an error sink?"
 open question "An invalid binding expression throws after its directive is marked mounted. The throw stops the scan, so later directives never mount."
-open question "Mount order is behavior registry order, which is hash order. A binding can read a signal before the two-way binding that seeds it mounts. Is document order wanted?"
+open question "Mount order is behavior registry order, so the code breaks MountOrderFree. A binding can read a signal before the two-way binding that seeds it mounts."
 open question "A morph that keeps an element never mounts directives it adds there. A removed event trigger keeps listening. A binding keeps its mount-time payload."
 
 -- Triggers and modifiers
-open question "The mount trigger is a behavior named load, which collides with the dom load event. CONTEXT and ADR-0006 name it ::on/mount."
-open question "Debounce is the only modifier. CONTEXT and spec 01 also name once, key, prevent, stop, and throttle."
-open question "The trigger set is closed to five dom events. ADR-0006 passes any trigger name through and lets an application add its own."
-open question "An event trigger's payload is one command map with modifiers mixed in. ADR-0006 says a vector of commands, with modifiers beside :do."
+open question "The mount trigger is a behavior named load, which collides with the dom load event. CONTEXT names it ::on/mount."
+open question "Debounce is the only modifier. CONTEXT also names once. Are key, prevent, stop, and throttle wanted?"
+open question "The trigger set is closed to five dom events. Should any trigger name pass through, so an application can add custom events?"
+open question "An event trigger's payload is one command map with modifiers mixed in. Should it be a vector of commands, with modifiers beside it?"
 open question "Every http command prevents the default and stops propagation. Is that intended, or modifier territory?"
 open question "prevent-default is a command that fails when no dom event exists, as from a stream or the mount trigger. Should it be a modifier?"
 
 -- Bindings and signals
-open question "A two-way binding seeds its signal from its payload, not its control. A missing seed blanks the signal. Each new control on a shared signal re-seeds it."
+open question "Two controls that seed one signal with different values make mount order matter. Which seed wins? A missing seed blanks the signal."
 open question "A signal write notifies every listener even when the value is unchanged. Intended?"
-open question "A bare symbol in argument position evaluates to itself. ADR-0008 says a bare symbol reads a signal and anything else errors at mount."
-open question "A class binding toggles one class per directive. ADR-0008 shows a map from class to predicate."
+open question "A bare symbol in argument position evaluates to itself. Should a bare symbol read a signal, with anything unknown failing at mount?"
+open question "A class binding toggles one class per directive. Should it take a map from class to predicate?"
+open question "Can an application extend the expression allowlist?"
 open question "The signal inspector ships in the default behavior set. Should a debug tool be a default?"
 open question "Signal removal and observer shutdown have no caller. Are they dead code or waiting on unmount?"
 
 -- Commands and the registry
-open question "Commands dispatch through a multimethod keyed on :do. ADR-0004 calls for a registry of command definitions with lifecycle fns and a schema, run through run!."
-open question "No config, start!, or error sink exists. Errors print to the console or throw. Spec 01 routes them all to :on-error."
-open question "Only get, post, and patch ship. ADR-0007 and spec 02 add put and delete, and a signal-setting command."
-open question "remove requires an id. ADR-0003 and spec 02 default it to the directive's own element."
-open question "Morph searches the whole document. ADR-0003 starts the search from the directive's root node, for shadow roots."
+open question "Commands dispatch through a multimethod keyed on :do. CONTEXT keys a command on :command. Should a command definition carry lifecycle fns and a schema checked at mount?"
+open question "No config, start!, or error sink exists. Errors print to the console or throw. Should one error sink receive them all?"
+open question "Only get, post, and patch ship. Are put, delete, and a signal-setting command wanted?"
+open question "remove requires an id. Should it default to the directive's own element?"
+open question "Morph searches the whole document. Should the search start from the directive's root node, so morph works inside shadow roots?"
 
 -- Server round trips
-open question "Requests carry the enclosing form's fields, never signals. CONTEXT and ADR-0007 say every request carries the signal map, with no form scraping."
-open question "Every response that is not a redirect or a stream morphs, failures and unknown media types included. Spec 02 says neither should morph."
-open question "A followed redirect navigates to the final url, so the target loads twice. ADR-0002 says rhizome has no navigation."
+open question "Requests carry the enclosing form's fields, never signals. CONTEXT says every request carries the signals. Should signals replace form scraping?"
+open question "Should an edn response patch signals, as a third response kind beside partial and stream?"
+open question "Every response that is not a redirect or a stream morphs, failures and unknown media types included. Should either morph?"
+open question "A followed redirect navigates to the final url, so the target loads twice. Is navigation wanted, and how?"
 open question "A network failure is an unhandled rejection. Nothing marks the request failed or reports it."
 
 -- Streams
-open question "A second trigger opens a second stream on the same ids. Spec 03 aborts the open stream on that element first."
+open question "A second trigger opens a second stream on the same ids. Should a new request abort the element's open stream first?"
 open question "A stream event keeps its view and locals, so the server sends locals to the client. A non-edn local makes the event unreadable."
-open question "A stream event with no command key ends the whole stream. ADR-0012 drops only that event."
-open question "A failed stream source closes the stream like a normal end. Should the client tell the two apart?"
+open question "A stream event with no command key ends the whole stream. Should only that event drop?"
 
 -- Directive encoding
 open question "Directive key encoding is not one-to-one. Two distinct namespaced keys can share one attribute name."
