@@ -148,6 +148,11 @@ enum HttpMethod { get | post | patch }
 
 enum CommandOrigin { directive | stream_event | response_handling }
 
+enum FailureKind {
+    unparseable_payload | invalid_expression | unregistered_command | unplaced_response_element
+    | unreadable_stream_event | command_failed | network_failure
+}
+
 ------------------------------------------------------------
 -- Entities and Variants
 ------------------------------------------------------------
@@ -165,13 +170,15 @@ entity Behavior {
     attribute: String
     kind: BehaviorKind
     listens_for: DomEventType?
+
+    evaluates_expression: kind in { text_binding, show_binding, class_binding }
 }
 
 entity Directive {
     element: Element
     behavior: Behavior
-    status: pending | mounted
-    payload_at_mount: Payload? when status = mounted
+    status: pending | mounted | rejected
+    payload_at_mount: Payload when status = mounted
     debounce_due_at: Timestamp?
     debounced_event: DomEvent?
     debounced_payload: Payload?
@@ -180,7 +187,8 @@ entity Directive {
 
     transitions status {
         pending -> mounted
-        terminal: mounted
+        pending -> rejected
+        terminal: mounted, rejected
     }
 }
 
@@ -257,6 +265,14 @@ entity Stream {
         open -> aborted
         terminal: closed, broken, aborted
     }
+}
+
+entity Failure {
+    kind: FailureKind
+    element: Element?
+    command: Command?
+    stream_event: StreamEvent?
+    request: Request?
 }
 
 ------------------------------------------------------------
@@ -340,9 +356,38 @@ rule AddedSubtreeMounts {
 rule DirectiveMounted {
     when: MountRequested(directive)
     requires: directive.status = pending
+    let payload = parse_payload(directive)
+    requires: payload != null
+    requires:
+        not directive.behavior.evaluates_expression
+        or well_formed(payload.expression, config.expression_allowlist, config.short_circuit_forms)
     ensures:
         directive.status = mounted
-        directive.payload_at_mount = parse_payload(directive)
+        directive.payload_at_mount = payload
+
+    @guidance
+        -- well_formed: each signal read names one literal signal. Each call head is allowlisted or short-circuits.
+}
+
+rule UnparseablePayloadRejected {
+    when: MountRequested(directive)
+    requires: directive.status = pending
+    requires: parse_payload(directive) = null
+    ensures:
+        directive.status = rejected
+        Failure.created(kind: unparseable_payload, element: directive.element)
+}
+
+rule InvalidExpressionRejected {
+    when: MountRequested(directive)
+    requires: directive.status = pending
+    let payload = parse_payload(directive)
+    requires: payload != null
+    requires: directive.behavior.evaluates_expression
+    requires: not well_formed(payload.expression, config.expression_allowlist, config.short_circuit_forms)
+    ensures:
+        directive.status = rejected
+        Failure.created(kind: invalid_expression, element: directive.element)
 }
 
 -- Unmount
@@ -376,7 +421,7 @@ rule RemovedSubtreeAbortsStreams {
 rule MountTriggerFires {
     when: directive: Directive.status becomes mounted
     requires: directive.behavior.kind = mount_trigger
-    ensures: CommandRuns(command: command_from(directive.payload_at_mount?.command, directive.element, null))
+    ensures: CommandRuns(command: command_from(directive.payload_at_mount.command, directive.element, null))
 
     @guidance
         -- A morph that brings back an element carrying this directive mounts it and runs it again.
@@ -386,20 +431,25 @@ rule TriggerFires {
     when: DomEventDispatched(target, event)
     for directive in Directives where element = target and status = mounted and behavior.listens_for = event.type:
         let payload = parse_payload(directive)
-        requires: not (payload?.debounce > 0.seconds)
-        ensures: DirectiveRuns(directive: directive, event: event, payload: payload)
+        ensures:
+            if payload = null:
+                Failure.created(kind: unparseable_payload, element: directive.element)
+            else if payload.debounce > 0.seconds:
+                DebounceStarted(directive: directive, event: event, payload: payload)
+            else:
+                DirectiveRuns(directive: directive, event: event, payload: payload)
+
+    @guidance
+        -- The payload is read again at trigger time, because a morph can rewrite it on an element it keeps.
 }
 
-rule DebouncedTriggerFires {
-    when: DomEventDispatched(target, event)
-    for directive in Directives where element = target and status = mounted and behavior.listens_for = event.type:
-        let payload = parse_payload(directive)
-        requires: payload?.debounce > 0.seconds
-        ensures:
-            event.default_prevented = true
-            directive.debounce_due_at = now + payload.debounce
-            directive.debounced_event = event
-            directive.debounced_payload = payload
+rule DebounceWindowOpens {
+    when: DebounceStarted(directive, event, payload)
+    ensures:
+        event.default_prevented = true
+        directive.debounce_due_at = now + payload.debounce
+        directive.debounced_event = event
+        directive.debounced_payload = payload
 
     @guidance
         -- The dom event is spent before the window ends, so its default is prevented at once.
@@ -416,24 +466,20 @@ rule DebounceWindowElapses {
 rule EventTriggerRuns {
     when: DirectiveRuns(directive, event, payload)
     requires: directive.behavior.kind = event_trigger
-    ensures: CommandRuns(command: command_from(payload?.command, directive.element, event))
+    ensures: CommandRuns(command: command_from(payload.command, directive.element, event))
 }
 
 -- Bindings
 
 rule BindingMounted {
     when: directive: Directive.status becomes mounted
-    requires: directive.behavior.kind in { text_binding, show_binding, class_binding }
-    let expression = directive.payload_at_mount?.expression
-    requires: well_formed(expression, config.expression_allowlist, config.short_circuit_forms)
+    requires: directive.behavior.evaluates_expression
+    let expression = directive.payload_at_mount.expression
     ensures:
         if expression.reads.count = 0:
             BindingReapplied(directive: directive)
         for name in expression.reads:
             SignalListened(name: name, directive: directive)
-
-    @guidance
-        -- well_formed: each signal read names one literal signal. Each call head is allowlisted or short-circuits.
 }
 
 rule TwoWayBindingMounted {
@@ -441,14 +487,14 @@ rule TwoWayBindingMounted {
     requires: directive.behavior.kind = two_way_binding
     let payload = directive.payload_at_mount
     ensures:
-        SignalListened(name: payload?.signal_name, directive: directive)
-        SignalWritten(name: payload?.signal_name, value: payload?.initial_value)
+        SignalListened(name: payload.signal_name, directive: directive)
+        SignalWritten(name: payload.signal_name, value: payload.initial_value)
 }
 
 rule TwoWayBindingFollowsControl {
     when: DirectiveRuns(directive, event, payload)
     requires: directive.behavior.kind = two_way_binding
-    ensures: SignalWritten(name: payload?.signal_name, value: directive.element.control_value)
+    ensures: SignalWritten(name: payload.signal_name, value: directive.element.control_value)
 }
 
 rule SignalInspectorMounted {
@@ -460,13 +506,13 @@ rule SignalInspectorMounted {
 rule TextBindingReapplied {
     when: BindingReapplied(directive)
     requires: directive.behavior.kind = text_binding
-    ensures: directive.element.text = as_text(evaluate(directive.payload_at_mount?.expression))
+    ensures: directive.element.text = as_text(evaluate(directive.payload_at_mount.expression))
 }
 
 rule ShowBindingReapplied {
     when: BindingReapplied(directive)
     requires: directive.behavior.kind = show_binding
-    ensures: directive.element.hidden = not truthy(evaluate(directive.payload_at_mount?.expression))
+    ensures: directive.element.hidden = not truthy(evaluate(directive.payload_at_mount.expression))
 
     @guidance
         -- Showing hands display back to the stylesheet rather than forcing a value.
@@ -477,16 +523,16 @@ rule ClassBindingReapplied {
     requires: directive.behavior.kind = class_binding
     let payload = directive.payload_at_mount
     ensures:
-        if truthy(evaluate(payload?.expression)):
-            directive.element.classes.add(payload?.class_name)
+        if truthy(evaluate(payload.expression)):
+            directive.element.classes.add(payload.class_name)
         else:
-            directive.element.classes.remove(payload?.class_name)
+            directive.element.classes.remove(payload.class_name)
 }
 
 rule TwoWayBindingReapplied {
     when: BindingReapplied(directive)
     requires: directive.behavior.kind = two_way_binding
-    let signal = Signal{name: directive.payload_at_mount?.signal_name}
+    let signal = Signal{name: directive.payload_at_mount.signal_name}
     ensures: directive.element.control_value = signal.value
 
     @guidance
@@ -558,7 +604,7 @@ rule PartialMorphed {
             if exists target:
                 PageElementMorphed(target: target, replacement: element)
             else:
-                ResponseElementDropped(element: element)
+                Failure.created(kind: unplaced_response_element, command: command)
 
     @guidance
         -- top_level_elements ignores text and comments. An element with no id matches nothing.
@@ -607,11 +653,19 @@ rule ApplicationCommandRan {
     ensures: CommandDefinitionRan(command: command)
 }
 
-rule UnregisteredCommandIgnored {
+rule UnregisteredCommandReported {
     when: CommandRuns(command)
     requires: command.kind = ApplicationCommand
     requires: not exists CommandDefinition{key: command.key}
-    ensures: CommandRejected(command: command)
+    ensures: Failure.created(kind: unregistered_command, command: command, element: command.element)
+}
+
+rule CommandFailureReported {
+    when: CommandFailed(command)
+    ensures: Failure.created(kind: command_failed, command: command, element: command.element)
+
+    @guidance
+        -- A failed command stops alone. The commands after it in a directive or a stream still run.
 }
 
 -- Server round trips
@@ -639,7 +693,9 @@ rule ResponseHandled {
 rule RequestFailed {
     when: RequestLostInTransit(request)
     requires: request.status = in_flight
-    ensures: request.status = failed
+    ensures:
+        request.status = failed
+        Failure.created(kind: network_failure, request: request, element: request.command.element)
 }
 
 -- Streams
@@ -660,10 +716,10 @@ rule StreamEventDropped {
     requires: event.stream.status = open
     requires: event.command_key != null and event.arguments != null
     requires: not is_edn_map(event.arguments)
-    ensures: StreamEventRejected(event: event)
+    ensures: Failure.created(kind: unreadable_stream_event, stream_event: event)
 
     @guidance
-        -- One stream event is lost and the stream stays open. A command that throws is lost the same way.
+        -- One stream event is lost and the stream stays open.
 }
 
 rule StreamEnded {
@@ -678,7 +734,9 @@ rule StreamEnded {
 rule StreamBroken {
     when: StreamConnectionLost(stream)
     requires: stream.status = open
-    ensures: stream.status = broken
+    ensures:
+        stream.status = broken
+        Failure.created(kind: network_failure, request: stream.opened_by, element: stream.opened_by.command.element)
 
     @guidance
         -- Nothing reconnects. A dropped stream stays dropped until a trigger runs again.
@@ -777,6 +835,28 @@ surface RhizomeExtension {
     provides:
         ApplicationRegistersBehavior(attribute, kind, listens_for?)
         ApplicationRegistersCommand(key)
+        CommandFailed(command)
+}
+
+surface FailureReporting {
+    facing developer: Developer
+    context failure: Failure
+
+    exposes:
+        failure.kind
+        failure.element
+        failure.command
+        failure.stream_event
+        failure.request
+
+    @guarantee EveryFailureReachesTheSink
+        -- Every failure reaches the error sink as a Failure. Nothing throws past the sink.
+
+    @guarantee FailuresStayLocal
+        -- A failure stops only its own directive, command, stream event, or response element.
+
+    @guidance
+        -- The application supplies the error sink when rhizome starts. The default sink writes to the console.
 }
 
 surface RhizomeRoundTrip {
@@ -817,9 +897,6 @@ surface StreamDelivery {
 ------------------------------------------------------------
 
 -- Mount and unmount
-open question "An unparseable payload still mounts and runs with no payload. Should it fail to mount and reach an error sink?"
-open question "An invalid binding expression throws after its directive is marked mounted. The throw stops the scan, so later directives never mount."
-open question "Mount order is behavior registry order, so the code breaks MountOrderFree. A binding can read a signal before the two-way binding that seeds it mounts."
 open question "A morph that keeps an element never mounts directives it adds there. A removed event trigger keeps listening. A binding keeps its mount-time payload."
 
 -- Triggers and modifiers
@@ -839,7 +916,6 @@ open question "The signal inspector ships in the default behavior set. Should a 
 
 -- Commands and the registry
 open question "Commands dispatch through a multimethod keyed on :do. CONTEXT keys a command on :command. Should a command definition carry lifecycle fns and a schema checked at mount?"
-open question "No config, start!, or error sink exists. Errors print to the console or throw. Should one error sink receive them all?"
 open question "Only get, post, and patch ship. Are put, delete, and a signal-setting command wanted?"
 open question "remove requires an id. Should it default to the directive's own element?"
 open question "Morph searches the whole document. Should the search start from the directive's root node, so morph works inside shadow roots?"
@@ -849,7 +925,6 @@ open question "Requests carry the enclosing form's fields, never signals. CONTEX
 open question "Should an edn response patch signals, as a third response kind beside partial and stream?"
 open question "Every response that is not a redirect or a stream morphs, failures and unknown media types included. Should either morph?"
 open question "A followed redirect navigates to the final url, so the target loads twice. Is navigation wanted, and how?"
-open question "A network failure is an unhandled rejection. Nothing marks the request failed or reports it."
 
 -- Streams
 open question "A second trigger opens a second stream on the same ids. Should a new request abort the element's open stream first?"
