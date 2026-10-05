@@ -3,7 +3,7 @@
 ## Status
 
 basic implementation landed in `tram.sse` and `tram.sse.async`. Decided by
-ADR-0009, ADR-0010, ADR-0011, and ADR-0012.
+ADR-0011 and ADR-0012. The client side is `docs/specs/rhizome/rhizome.allium`.
 
 ## Summary
 
@@ -92,7 +92,7 @@ producer's `>!!` returns `false` and an ordinary `while` loop ends.
 
 ## Events
 
-An event is a command map, per ADR-0010.
+An event is a command map.
 
 ```clojure
 {:command :dom/morph :dom/content [:li#row-4 "imported"]}
@@ -117,7 +117,7 @@ content:
 
 The handler never builds html and never builds a frame.
 
-Every element in a rendered event needs an id, because ADR-0003 makes id the only
+Every element in a rendered event needs an id, because id is the only
 targeting mechanism. An event whose content has no id will be dropped by the
 client and reported there. Tram does not check for it on the way out; that is one
 more traversal of every fragment to catch a mistake the client already names.
@@ -276,7 +276,7 @@ thousand parked threads and no pool exhaustion. This needs JDK 21. Tram is on 26
 
 ## Out of scope
 
-- **Reconnection and `Last-Event-ID`.** ADR-0009 defers it. A server that could
+- **Reconnection and `Last-Event-ID`.** Rhizome never reconnects. A server that could
   answer a resume request needs an event log, and nothing has one.
 - **Signal events.** `:signal/set` down a stream is milestone 7's business, and
   it needs no transport change: it is one more command name.

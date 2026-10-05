@@ -15,7 +15,7 @@ What survives:
   server and has nothing to do with the client runtime.
 - `src/main/rhizome/core.clj` and `html_core.clj`, the empty namespaces that exist
   so `::rz/*` keywords resolve on the jvm. A new `rhizome/core/on.clj` joins them,
-  for the `::on/*` trigger keywords ADR-0006 introduces.
+  for the `::on/*` trigger keywords.
 - `vendor/idiomorph.esm.js`. Morph is still the right algorithm.
 - The server side: `tram.html`'s `emit-attr` methods, `tram.impl.http`'s
   `rhizome-request?`, and the render concern-group. Attribute names change, the

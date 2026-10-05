@@ -2,7 +2,7 @@
   "Server sent events: a handler returns `:stream`, and this namespace turns the
   events it produces into a `text/event-stream` response.
 
-  An event is a command map, per ADR-0010. `morph`, `remove-element`, and
+  An event is a command map. `morph`, `remove-element`, and
   `render` build the ones Tram ships; an application writes the map itself for a
   command it registered. Each event is rendered as a partial response through the
   route's outgoing interceptors.
