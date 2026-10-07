@@ -39,10 +39,13 @@
   has no edn representation and rides as its own multipart part instead."
   #{"button" "file" "image" "reset" "submit"})
 
+(defn- control-name [control]
+  (.getAttribute control "name"))
+
 (defn submittable?
   "Whether a browser would include `control` when submitting its form."
   [control]
-  (and (not (str/blank? (.-name control)))
+  (and (not (str/blank? (control-name control)))
        (not (.-disabled control))
        (not= "BUTTON" (.-tagName control))
        (not (contains? unsubmittable-types (.-type control)))
@@ -122,7 +125,7 @@
   [form]
   (reduce (fn [acc control]
             (collect-value acc
-                           (keyword (.-name control))
+                           (keyword (control-name control))
                            (control-value control)))
     {}
     (filter submittable? (array-seq (.-elements form)))))
@@ -135,12 +138,12 @@
   [form]
   (reduce (fn [acc control]
             (let [files (array-seq (.-files control))]
-              (if (or (str/blank? (.-name control))
+              (if (or (str/blank? (control-name control))
                       (.-disabled control)
                       (empty? files))
                 acc
                 (assoc acc
-                  (keyword (.-name control)) (vec files)))))
+                  (keyword (control-name control)) (vec files)))))
     {}
     (filter file-control? (array-seq (.-elements form)))))
 

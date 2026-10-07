@@ -6,6 +6,7 @@
                                               (clojure.test/is [eventually])]}}
  :lint-as      {rapid-test.core/with-stub   clojure.core/let
                 rhizome.macros/with-html    clojure.core/let
+                shadow.cljs.modern/defclass clj-kondo.lint-as/def-catch-all
                 tram.core/defroutes         clojure.core/def
                 tram.http.routing/defroutes clojure.core/def
                 tram.utils/with-same-output clojure.core/let}}

@@ -1,8 +1,24 @@
 (ns rhizome.dom-test
   (:require [cljs.test :refer [deftest is]]
             [rhizome.dom :as sut]
-            [rhizome.test-utils :refer [attach-files! fake-file]])
+            [rhizome.test-utils :refer [attach-files! fake-file]]
+            [shadow.cljs.modern :refer [defclass]])
   (:require-macros [rhizome.macros :refer [with-html]]))
+
+(defclass FormAssociatedControl
+          (extends js/HTMLElement)
+          (constructor [this] (super)))
+
+(set! (.-formAssociated FormAssociatedControl) true)
+
+(js/Object.defineProperty
+  (.-prototype FormAssociatedControl)
+  "value"
+  #js {:get (fn [] (this-as this (.getAttribute this "value")))})
+
+(when-not (js/customElements.get "form-associated-control")
+  (js/customElements.define "form-associated-control"
+                            FormAssociatedControl))
 
 (deftest form->map-reads-named-controls-test
   (with-html [form
@@ -109,6 +125,13 @@
                         :value "Victor Laszlo"}]]]
              (is (= {:applicant "Victor Laszlo"}
                     (sut/form->map (.querySelector root "form"))))))
+
+(deftest form->map-reads-form-associated-custom-elements-test
+  (with-html [form
+              [:form
+               [:form-associated-control {:name  "destination"
+                                          :value "Lisbon"}]]]
+             (is (= {:destination "Lisbon"} (sut/form->map form)))))
 
 (deftest form->files-reads-a-selected-file-test
   (with-html
