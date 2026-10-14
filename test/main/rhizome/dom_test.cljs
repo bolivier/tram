@@ -116,6 +116,30 @@
                  "piano"]]]]
              (is (= {:cargo ["letters" "piano"]} (sut/form->map form)))))
 
+(deftest form->map-reads-numeric-inputs-as-numbers-test
+  (with-html [form
+              [:form
+               [:input {:name  "passengers"
+                        :type  "number"
+                        :value "2"}]
+               [:input {:name  "fare"
+                        :type  "number"
+                        :value "12.5"}]
+               [:input {:name  "priority"
+                        :type  "range"
+                        :value "7"}]]]
+             (is (= {:passengers 2
+                     :fare       12.5
+                     :priority   7}
+                    (sut/form->map form)))))
+
+(deftest form->map-reads-an-empty-number-input-as-nil-test
+  (with-html [form
+              [:form
+               [:input {:name "passengers"
+                        :type "number"}]]]
+             (is (= {:passengers nil} (sut/form->map form)))))
+
 (deftest form->map-includes-controls-tied-by-form-attribute-test
   (with-html [root
               [:div

@@ -52,13 +52,24 @@
        (or (not (contains? #{"checkbox" "radio"} (.-type control)))
            (.-checked control))))
 
+(def ^:private numeric-types
+  #{"number" "range"})
+
 (defn control-value
-  "A control's value. A multi-select carries one per selected option."
+  "A control's value. A multi-select carries one per selected option, and a
+  number or range input carries a number, nil when empty."
   [control]
-  (if (= "select-multiple" (.-type control))
+  (cond
+    (= "select-multiple" (.-type control))
     (mapv #(.-value %)
       (array-seq (.-selectedOptions control)))
-    (.-value control)))
+
+    (contains? numeric-types (.-type control))
+    (let [number (.-valueAsNumber control)]
+      (when-not (js/isNaN number)
+        number))
+
+    :else (.-value control)))
 
 (defn- checkbox? [control]
   (= "checkbox" (.-type control)))
