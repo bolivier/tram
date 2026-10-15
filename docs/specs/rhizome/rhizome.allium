@@ -108,6 +108,40 @@ contract DirectiveEncoding {
         -- A nil, false, or empty payload writes no attribute.
 }
 
+contract FormEncoding {
+    encode_fields: (form: Form) -> FormFields
+
+    @invariant ShapeFollowsMarkup
+        -- A field's edn shape comes from its markup alone.
+        -- What the user selected, or how many controls a script added, never changes it.
+
+    @invariant OneKeyPerName
+        -- Every enabled, named control contributes its name once, as a keyword.
+        -- Buttons, file controls, disabled controls, and controls in a disabled fieldset contribute nothing.
+
+    @invariant UntypedValues
+        -- A number or range input gives a number, nil when empty.
+        -- A checkbox without a value attribute gives true or false.
+        -- A checkbox with a value attribute gives that value, nil when unchecked.
+        -- A radio group gives its checked value, nil when none is checked.
+        -- A multi-select gives a vector of its selected values.
+        -- Every other control gives its value as a string.
+
+    @invariant DeclaredType
+        -- rz/type declares a field's type as :int, :vector, :set, [:vector :int], or [:set :int].
+        -- :vector and :set collect every control's values in DOM order, empty when none.
+        -- A checkbox or radio in a collection contributes its value only when checked.
+        -- :int casts each blank value to nil and each safe-integer value to an integer.
+        -- Any other value passes unchanged, for the server's schema to reject.
+        -- A multi-select with a scalar rz/type gives a vector of that type.
+
+    @invariant AmbiguousMarkupThrows
+        -- Controls sharing a name carry the same rz/type.
+        -- Non-radio controls sharing a name declare a collection type.
+        -- rz/type names a declared type.
+        -- A name reads back as the same edn keyword.
+}
+
 contract StreamEventProtocol {
     next_event: (stream: Stream) -> StreamEvent
 
@@ -876,6 +910,7 @@ surface RhizomeRoundTrip {
 
     contracts:
         demands DirectiveEncoding
+        demands FormEncoding
         demands StreamEventProtocol
 }
 
