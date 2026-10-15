@@ -1,9 +1,12 @@
 (ns rhizome.signals)
 
 (def registry
+  "Every live signal, keyed by name, with its current value and listeners."
   (atom {}))
 
-(defn ->registry-entry [key value]
+(defn ->registry-entry
+  "A registry entry for signal `key` holding `value` and no listeners."
+  [key value]
   {:key       key
    :value     value
    :listeners []})
@@ -21,19 +24,27 @@
       key (->registry-entry key
                             nil))))
 
-(defn value [key]
+(defn value
+  "The current value of signal `key`, or nil when it has none."
+  [key]
   (get-in @registry [key :value]))
 
-(defn put! [key value]
+(defn put!
+  "Sets signal `key` to `value` and calls each of its listeners with `value`."
+  [key value]
   (swap! registry (fn [r] (assoc-in (ensure-entry r key) [key :value] value)))
   (doseq [cb (get-in @registry [key :listeners])]
     (cb value)))
 
-(defn retire! [key]
+(defn retire!
+  "Removes signal `key` from the registry, along with its listeners."
+  [key]
   (swap! registry dissoc
     key))
 
-(defn listen! [key cb]
+(defn listen!
+  "Calls `cb` with each new value of signal `key`, starting with the current one."
+  [key cb]
   (swap! registry (fn [r]
                     (update-in (ensure-entry r key) [key :listeners] conj cb)))
   (cb (get-in @registry [key :value])))
