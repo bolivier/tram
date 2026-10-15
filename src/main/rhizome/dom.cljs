@@ -1,5 +1,6 @@
 (ns rhizome.dom
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [rhizome.events :as event]
             [rhizome.utils :refer [kw->string]]))
 
@@ -42,15 +43,13 @@
 (defn- control-name [control]
   (.getAttribute control "name"))
 
-(defn submittable?
-  "Whether a browser would include `control` when submitting its form."
+(defn- field?
+  "Whether `control` contributes a field to its form's edn, checked or not."
   [control]
   (and (not (str/blank? (control-name control)))
-       (not (.-disabled control))
+       (not (.matches control ":disabled"))
        (not= "BUTTON" (.-tagName control))
-       (not (contains? unsubmittable-types (.-type control)))
-       (or (not (contains? #{"checkbox" "radio"} (.-type control)))
-           (.-checked control))))
+       (not (contains? unsubmittable-types (.-type control)))))
 
 (def ^:private numeric-types
   #{"number" "range"})
@@ -114,32 +113,119 @@
                                     ""
                                     value))))
 
-(defn- collect-value [acc control-name value]
-  (if (contains? acc
-                 control-name)
-    (update acc
-            control-name
-            (fn [seen]
-              (conj (if (vector? seen)
-                      seen
-                      [seen])
-                    value)))
-    (assoc acc
-      control-name value)))
+(def ^:private declared-types
+  #{:int :vector :set [:vector :int] [:set :int]})
+
+(defn- declared-type [control]
+  (some-> (get control :rhizome.core/type)
+          edn/read-string))
+
+(defn- field-type [field-name controls]
+  (let [types (set (map declared-type controls))
+        type  (first types)]
+    (cond
+      (< 1 (count types))
+      (throw (ex-info "rhizome: controls sharing a name declare different rz/types"
+                      {:name field-name :types types}))
+
+      (and (some? type)
+           (not (contains? declared-types type)))
+      (throw (ex-info "rhizome: unknown rz/type"
+                      {:name field-name :type type}))
+
+      :else type)))
+
+(defn- collection-kind [type controls]
+  (cond
+    (contains? #{:vector :set} type)               type
+    (vector? type)                                 (first type)
+    (= "select-multiple" (.-type (first controls))) :vector))
+
+(defn- element-type [type]
+  (if (vector? type)
+    (second type)
+    (when (= :int type)
+      :int)))
+
+(defn- cast-int [value]
+  (let [number (if (string? value)
+                 (when (re-matches #"-?\d+" value)
+                   (js/Number value))
+                 value)]
+    (cond
+      (= "" value)                     nil
+      (js/Number.isSafeInteger number) number
+      :else                            value)))
+
+(defn- cast-value [element-type value]
+  (if (= :int element-type)
+    (cast-int value)
+    value))
+
+(defn- checkable? [control]
+  (contains? #{"checkbox" "radio"} (.-type control)))
+
+(defn- collected-values [control]
+  (cond
+    (= "select-multiple" (.-type control)) (control-value control)
+    (checkable? control)                   (when (.-checked control)
+                                             [(.-value control)])
+    :else                                  [(control-value control)]))
+
+(defn- single-value [controls]
+  (let [control (first controls)]
+    (cond
+      (= "radio" (.-type control))
+      (some #(when (.-checked %) (.-value %)) controls)
+
+      (and (checkbox? control)
+           (not (.hasAttribute control "value")))
+      (.-checked control)
+
+      (checkbox? control)
+      (when (.-checked control)
+        (.-value control))
+
+      :else (control-value control))))
+
+(defn- field-value [field-name controls]
+  (let [type (field-type field-name controls)
+        kind (collection-kind type controls)
+        cast (partial cast-value (element-type type))]
+    (cond
+      kind
+      (into (if (= :set kind) #{} [])
+            (comp (mapcat collected-values)
+                  (map cast))
+            controls)
+
+      (and (< 1 (count controls))
+           (not-every? #(= "radio" (.-type %)) controls))
+      (throw (ex-info "rhizome: controls sharing a name need a collection rz/type"
+                      {:name field-name}))
+
+      :else (cast (single-value controls)))))
+
+(defn- field-key [field-name]
+  (let [k (keyword field-name)]
+    (if (= k (try (edn/read-string (pr-str k))
+                  (catch :default _ nil)))
+      k
+      (throw (ex-info "rhizome: a field name must read back as an edn keyword"
+                      {:name field-name})))))
 
 (defn form->map
-  "A form's submittable controls as a map of keyword name to value.
+  "A form's fields as a map of keyword name to edn value.
 
   `.elements` holds every control the form owns, including ones tied to it by
-  a `form` attribute rather than by nesting. Names used more than once collect
-  into a vector, the way checkbox groups arrive."
+  a `form` attribute rather than by nesting. A field's shape follows its markup
+  and its `rz/type`, as the rhizome spec's FormEncoding contract lays out."
   [form]
-  (reduce (fn [acc control]
-            (collect-value acc
-                           (keyword (control-name control))
-                           (control-value control)))
-    {}
-    (filter submittable? (array-seq (.-elements form)))))
+  (into {}
+        (map (fn [[field-name controls]]
+               [(field-key field-name) (field-value field-name controls)]))
+        (group-by control-name
+                  (filter field? (array-seq (.-elements form))))))
 
 (defn form->files
   "A form's file controls as a map of keyword name to a vector of `File`s.

@@ -39,7 +39,7 @@
                         :value "Ilsa Lund"}]]]
              (is (= {:applicant "Ilsa Lund"} (sut/form->map form)))))
 
-(deftest form->map-skips-unchecked-boxes-test
+(deftest form->map-reads-an-unchecked-valued-box-as-nil-test
   (with-html [form
               [:form
                [:input {:name  "papers"
@@ -49,9 +49,23 @@
                         :name    "visa"
                         :type    "checkbox"
                         :value   "granted"}]]]
-             (is (= {:visa "granted"} (sut/form->map form)))))
+             (is (= {:papers nil
+                     :visa   "granted"}
+                    (sut/form->map form)))))
 
-(deftest form->map-skips-unselected-radios-test
+(deftest form->map-reads-a-valueless-box-as-a-boolean-test
+  (with-html [form
+              [:form
+               [:input {:checked true
+                        :name    "sober"
+                        :type    "checkbox"}]
+               [:input {:name "armed"
+                        :type "checkbox"}]]]
+             (is (= {:sober true
+                     :armed false}
+                    (sut/form->map form)))))
+
+(deftest form->map-reads-a-radio-group-as-its-checked-value-test
   (with-html [form
               [:form
                [:input {:name  "flight"
@@ -63,22 +77,190 @@
                         :value   "Lisbon"}]]]
              (is (= {:flight "Lisbon"} (sut/form->map form)))))
 
-(deftest form->map-collects-repeated-names-test
+(deftest form->map-reads-an-unchecked-radio-group-as-nil-test
   (with-html [form
               [:form
-               [:input {:checked true
-                        :name    "crew"
-                        :type    "checkbox"
-                        :value   "Rick"}]
-               [:input {:checked true
-                        :name    "crew"
-                        :type    "checkbox"
-                        :value   "Louis"}]
-               [:input {:checked true
-                        :name    "crew"
-                        :type    "checkbox"
-                        :value   "Sam"}]]]
-             (is (= {:crew ["Rick" "Louis" "Sam"]} (sut/form->map form)))))
+               [:input {:name  "flight"
+                        :type  "radio"
+                        :value "Berlin"}]
+               [:input {:name  "flight"
+                        :type  "radio"
+                        :value "Lisbon"}]]]
+             (is (= {:flight nil} (sut/form->map form)))))
+
+(deftest form->map-collects-a-vector-in-dom-order-test
+  (with-html [form
+              [:form
+               [:input {:checked           true
+                        :name              "crew"
+                        :rhizome.core/type ":vector"
+                        :type              "checkbox"
+                        :value             "Rick"}]
+               [:input {:name              "crew"
+                        :rhizome.core/type ":vector"
+                        :type              "checkbox"
+                        :value             "Ugarte"}]
+               [:input {:checked           true
+                        :name              "crew"
+                        :rhizome.core/type ":vector"
+                        :type              "checkbox"
+                        :value             "Sam"}]]]
+             (is (= {:crew ["Rick" "Sam"]} (sut/form->map form)))))
+
+(deftest form->map-collects-one-control-into-a-vector-test
+  (with-html [form
+              [:form
+               [:input {:name              "stops"
+                        :rhizome.core/type "[:vector :int]"
+                        :value             "5"}]]]
+             (is (= {:stops [5]} (sut/form->map form)))))
+
+(deftest form->map-collects-a-set-test
+  (with-html [form
+              [:form
+               [:input {:checked           true
+                        :name              "crew"
+                        :rhizome.core/type ":set"
+                        :type              "checkbox"
+                        :value             "Rick"}]
+               [:input {:name              "crew"
+                        :rhizome.core/type ":set"
+                        :type              "checkbox"
+                        :value             "Sam"}]]]
+             (is (= {:crew #{"Rick"}} (sut/form->map form)))))
+
+(deftest form->map-collects-nothing-checked-into-an-empty-set-test
+  (with-html [form
+              [:form
+               [:input {:name              "crew"
+                        :rhizome.core/type ":set"
+                        :type              "checkbox"
+                        :value             "Rick"}]]]
+             (is (= {:crew #{}} (sut/form->map form)))))
+
+(deftest form->map-collects-a-set-of-ints-test
+  (with-html [form
+              [:form
+               [:input {:checked           true
+                        :name              "label-ids"
+                        :rhizome.core/type "[:set :int]"
+                        :type              "checkbox"
+                        :value             "1"}]
+               [:input {:checked           true
+                        :name              "label-ids"
+                        :rhizome.core/type "[:set :int]"
+                        :type              "checkbox"
+                        :value             "3"}]]]
+             (is (= {:label-ids #{1 3}} (sut/form->map form)))))
+
+(deftest form->map-casts-a-select-to-an-int-test
+  (with-html [form
+              [:form
+               [:select {:name              "status-id"
+                         :rhizome.core/type ":int"}
+                [:option {:value "4"} "To do"]
+                [:option {:selected true
+                          :value    "12"}
+                 "Done"]]]]
+             (is (= {:status-id 12} (sut/form->map form)))))
+
+(deftest form->map-casts-a-blank-int-to-nil-test
+  (with-html [form
+              [:form
+               [:input {:name              "estimate"
+                        :rhizome.core/type ":int"
+                        :value             ""}]]]
+             (is (= {:estimate nil} (sut/form->map form)))))
+
+(deftest form->map-passes-an-uncastable-int-unchanged-test
+  (with-html [form
+              [:form
+               [:input {:name              "estimate"
+                        :rhizome.core/type ":int"
+                        :value             "12a"}]
+               [:input {:name              "ledger-id"
+                        :rhizome.core/type ":int"
+                        :value             "9007199254740993"}]
+               [:input {:name              "fare"
+                        :rhizome.core/type ":int"
+                        :type              "number"
+                        :value             "1.5"}]]]
+             (is (= {:estimate  "12a"
+                     :ledger-id "9007199254740993"
+                     :fare      1.5}
+                    (sut/form->map form)))))
+
+(deftest form->map-casts-a-multi-select-to-ints-test
+  (with-html [form
+              [:form
+               [:select {:multiple          true
+                         :name              "gate-ids"
+                         :rhizome.core/type ":int"}
+                [:option {:selected true
+                          :value    "2"}
+                 "Gate 2"]
+                [:option {:selected true
+                          :value    "7"}
+                 "Gate 7"]]]]
+             (is (= {:gate-ids [2 7]} (sut/form->map form)))))
+
+(deftest form->map-collects-a-multi-select-into-a-set-test
+  (with-html [form
+              [:form
+               [:select {:multiple          true
+                         :name              "cargo"
+                         :rhizome.core/type ":set"}
+                [:option {:selected true
+                          :value    "letters"}
+                 "letters"]
+                [:option {:value "gin"}
+                 "gin"]]]]
+             (is (= {:cargo #{"letters"}} (sut/form->map form)))))
+
+(deftest form->map-throws-on-a-repeated-untyped-name-test
+  (with-html [form
+              [:form
+               [:input {:name  "crew"
+                        :value "Rick"}]
+               [:input {:name  "crew"
+                        :value "Sam"}]]]
+             (is (thrown? js/Error (sut/form->map form)))))
+
+(deftest form->map-throws-on-mismatched-types-test
+  (with-html [form
+              [:form
+               [:input {:name              "crew"
+                        :rhizome.core/type ":vector"
+                        :value             "Rick"}]
+               [:input {:name              "crew"
+                        :rhizome.core/type ":set"
+                        :value             "Sam"}]]]
+             (is (thrown? js/Error (sut/form->map form)))))
+
+(deftest form->map-throws-on-an-unknown-type-test
+  (with-html [form
+              [:form
+               [:input {:name              "crew"
+                        :rhizome.core/type ":list"
+                        :value             "Rick"}]]]
+             (is (thrown? js/Error (sut/form->map form)))))
+
+(deftest form->map-throws-on-a-name-edn-cannot-read-back-test
+  (with-html [form
+              [:form
+               [:input {:name  "tags[]"
+                        :value "contraband"}]]]
+             (is (thrown? js/Error (sut/form->map form)))))
+
+(deftest form->map-skips-controls-in-a-disabled-fieldset-test
+  (with-html [form
+              [:form
+               [:fieldset {:disabled true}
+                [:input {:name  "applicant"
+                         :value "Ugarte"}]]
+               [:input {:name  "destination"
+                        :value "Lisbon"}]]]
+             (is (= {:destination "Lisbon"} (sut/form->map form)))))
 
 (deftest form->map-skips-disabled-controls-test
   (with-html [form
