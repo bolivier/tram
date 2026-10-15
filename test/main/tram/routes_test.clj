@@ -69,6 +69,13 @@
                      :q    "hello"}
                     nil)))))
 
+(deftest edn-body-coercion-decodes-strings
+  (let [coercer (coercion/-request-coercer sut/coercion
+                                           :body
+                                           [:map [:status-id :int]])]
+    (is (= {:status-id 12} (coercer {:status-id "12"} "application/edn")))
+    (is (= {:status-id 12} (coercer {:status-id 12} "application/edn")))))
+
 (deftest expand-healthcheck-entries
   (let
     [[_ _ healthcheck-route-data]

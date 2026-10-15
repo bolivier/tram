@@ -62,9 +62,11 @@
   Note, this assumes that the router is also constructed with the muuntaja
   formatter that converts form data into body-params."
   (rcm/create
-    (assoc-in rcm/default-options
-      [:transformers :body :formats "application/x-www-form-urlencoded"]
-      string->vector-transformer-provider)))
+    (update-in rcm/default-options
+               [:transformers :body :formats]
+               assoc
+               "application/x-www-form-urlencoded" string->vector-transformer-provider
+               "application/edn"                   rcm/string-transformer-provider)))
 
 (def json-casing-interceptor
   {:name  :tram/json-casing
