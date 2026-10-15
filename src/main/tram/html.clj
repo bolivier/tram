@@ -154,6 +154,10 @@
   [append! key value]
   (emit-directive-attr append! key value))
 
+(defmethod h/emit-attr :rhizome.core/type
+  [append! key value]
+  (emit-directive-attr append! key value))
+
 (defmethod h/emit-attr :href
   [append! key value]
   (append! (h/stringify key) "=\"")

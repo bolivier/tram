@@ -70,6 +70,17 @@
        output (String. (mfc/encode-to-bytes encoder hiccup "UTF-8"))]
       (is (= expected output)))))
 
+(deftest encode-rhizome-type-as-edn-test
+  (binding [*req* {:reitit.core/router sample-router}]
+    (let [encoder (sut/html-encoder nil)
+          render  (fn [type]
+                    (String. (mfc/encode-to-bytes encoder
+                                                  [:input {:rhizome.core/type type}]
+                                                  "UTF-8")))]
+      (is (= "<input rhizome_core___type=\":int\" />" (render :int)))
+      (is (= "<input rhizome_core___type=\"[:set :int]\" />"
+             (render [:set :int]))))))
+
 (deftest every-rhizome-trigger-expands-routes-test
   (binding [*req* {:reitit.core/router sample-router}]
     (doseq [trigger [:rhizome.core/click
