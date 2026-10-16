@@ -18,11 +18,11 @@
                "define-named-query" "defn"
                "define-out-transform" "defn"
                "defroutes" "def"
-               "do" [:noarg1-body {:list {:force-nl? true}}]
-               "if" [:arg1-body {:list {:force-nl? true}}]
+               "do" [:noarg1-body {:list {:force-nl? true} :next-inner {:list {:force-nl? false}}}]
+               "if" [:arg1-body {:list {:force-nl? true} :next-inner {:list {:force-nl? false}}}]
                "try" :flow-body
-               "when" [:arg1-body {:list {:force-nl? true}}]
-               "when-not" [:arg1-body {:list {:force-nl? true}}]
+               "when" [:arg1-body {:list {:force-nl? true} :next-inner {:list {:force-nl? false}}}]
+               "when-not" [:arg1-body {:list {:force-nl? true} :next-inner {:list {:force-nl? false}}}]
                "with-connection" :binding
                "with-mock-tram-config" :binding
                "with-same-output" :binding
